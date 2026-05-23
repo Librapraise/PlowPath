@@ -1,8 +1,8 @@
 # PlowPath — Current State Audit
 
-_Snapshot: 2026-05-21. Branch: `backend`._
+_Snapshot: 2026-05-23. Branch: `backend`._
 
-Honest, file-level inventory of what's built, what's stubbed, and what's missing. Pair this with [ROADMAP.md](ROADMAP.md) for the path forward.
+Honest, file-level inventory of what's built, what's stubbed, and what's missing after the Phase 0–3 push and the post-audit fix batch. Pair this with [ROADMAP.md](ROADMAP.md) for the path forward.
 
 ---
 
@@ -10,12 +10,12 @@ Honest, file-level inventory of what's built, what's stubbed, and what's missing
 
 | App | Maturity | Can it ship? |
 |---|---|---|
-| Backend (Express/PG/Redis) | ~75% — core CRUD + auth + sockets done | **No** — no tests, no jobs, no notifications, no password reset |
-| Web dashboard (React/Vite) | ~25% — login + live map only | **No** — no CRUD pages, no token refresh, no responsive layout |
-| Mobile (React Native) | ~30% — screens + offline GPS done | **No** — no `android/` or `ios/` folders, no background GPS, no push |
-| Infra / DevOps | ~10% — only local docker-compose | **No** — no Dockerfiles, no CI, no reverse proxy, no monitoring |
+| Backend (Express/PG/Redis) | ~90% — auth + 7 CRUDs + sockets + FCM + Twilio + Bull queues + 6/6 test suites | **Almost** — needs token-revocation list, more controller-test coverage, hosting |
+| Web dashboard (React/Vite) | ~75% — full CRUD across customers/drivers/storms/routes + live ops map + responsive Tailwind + 6/6 vitest tests | **Almost** — needs form refactor for the remaining 3 pages, deploy target |
+| Mobile (React Native) | ~85% — screens + offline GPS + background GPS + Sentry + keychain + STOP Route + offline stop queue | **Needs native verification** — never compiled on a real device on this host |
+| Infra / DevOps | ~30% — docker-compose + CI workflow (typecheck + lint + test for all three apps) | **No** — no Dockerfiles, no deploy target, no monitoring, no reverse proxy |
 
-**Deployment readiness: 3/10.** Functional MVP locally, nowhere near production.
+**Deployment readiness: 6/10.** Real product locally; one focused sprint of infra + native verification + form completion away from a pilot.
 
 ---
 
@@ -23,31 +23,29 @@ Honest, file-level inventory of what's built, what's stubbed, and what's missing
 
 ### What works (BUILT)
 
-- **Entry/server** — [backend/src/server.ts](../backend/src/server.ts): Express + Helmet + CORS + Morgan + rate limiting + graceful shutdown (SIGINT/SIGTERM, 10s timeout). `GET /health` returns env + timestamp.
-- **Config** — [backend/src/config/env.ts](../backend/src/config/env.ts): Zod-validated env (16 vars, `JWT_SECRET` ≥32 chars enforced). DB pool max 20, 30s idle. Redis via ioredis with retries.
-- **Auth** — [backend/src/controllers/auth.controller.ts](../backend/src/controllers/auth.controller.ts): `POST /auth/login` (email-or-phone identifier, bcrypt 10 rounds, JWT 12h + 30d refresh), `POST /auth/refresh`, `POST /auth/logout`. Rate-limited 5/15min.
-- **All 7 CRUD controllers** fully implemented with Zod input validation, soft deletes, parameterized SQL, transactions: `users`, `drivers`, `customers`, `storms`, `routes`, `tracking`, plus `auth`.
-- **Services**
-  - [backend/src/services/geocoding.service.ts](../backend/src/services/geocoding.service.ts) — Nominatim w/ `User-Agent`, 1100ms throttle for batches.
-  - [backend/src/services/routing.service.ts](../backend/src/services/routing.service.ts) — OSRM public endpoint, parses turn-by-turn steps.
-  - [backend/src/services/optimization.service.ts](../backend/src/services/optimization.service.ts) — Nearest-neighbor TSP via Turf, fine to ~500 stops.
-- **Migrations** — 6 SQL files in [backend/migrations/](../backend/migrations/): extensions, users, drivers, customers, storms+routes, GPS tracking. PostGIS `GEOGRAPHY(POINT, 4326)` + GIST indexes. All tables soft-delete via `deleted_at`.
-- **Seed** — [backend/seeds/seed.ts](../backend/seeds/seed.ts): idempotent (TRUNCATE CASCADE then insert) — 1 owner, 2 drivers, 10 Buffalo customers, 1 storm.
-- **Sockets** — [backend/src/sockets/index.ts](../backend/src/sockets/index.ts): JWT handshake auth, `driver:{id}` and `dashboard` rooms, `gps:update` broadcast.
-- **Rate limiting** — Redis-backed: 100/min general, 5/15min on auth.
+- **Entry/server** — [backend/src/server.ts](../backend/src/server.ts) + [backend/src/app.ts](../backend/src/app.ts): Express + Helmet + CORS + Morgan (with `/health` skip) + rate limiting + graceful shutdown. `GET /health` liveness, `GET /health/db` (real `SELECT 1`), `GET /health/redis` (real `PING`), `GET /api/v1` route discovery.
+- **Config** — Zod-validated env (≥32-char `JWT_SECRET` enforced); `pg.Pool` with `statement_timeout: 10000ms`; ioredis with retries.
+- **Auth** — [backend/src/controllers/auth.controller.ts](../backend/src/controllers/auth.controller.ts): `POST /auth/login` (phone-or-email identifier, bcrypt 10 rounds, JWT 12h + refresh 30d), `POST /auth/refresh`, `POST /auth/logout` (stateless — see gap #2). Rate-limited 5/15min.
+- **CRUD controllers** — users, drivers, customers, storms, routes, route_stops, tracking, twilio. All Zod-validated, parameterized SQL, soft-delete via `deleted_at`, transactional where needed.
+- **Services** — Nominatim geocoding (1.1s throttle + `User-Agent: PlowPath/1.0`), OSRM routing (steps + geometry), Turf-based nearest-neighbor TSP.
+- **Notifications** — `notification.service.ts` defines both FCM push and SMS Bull queues. SMS rate-limited to 1/hour/customer (Redis `plowpath:sms_limit:${customerId}`, 3600s TTL). Route generation enqueues a "New route assigned" push to the driver. Stop status changes enqueue customer SMS.
+- **Twilio** — `twilio.service.ts` + `twilio.controller.ts` implement TwiML voice IVR (press 1 confirm / press 2 skip), inbound SMS with STOP/UNSUBSCRIBE → opt-out, START/RESUBSCRIBE → opt-in, and the `POST /webhooks/twilio/sms-status` delivery receipt.
+- **Migrations** — 8 SQL files: extensions, users, drivers, customers, storms+routes, GPS tracking, `drivers.fcm_token`, and `customers.notify_sms` / `notify_voice` / `sms_opt_out_at` / `next_service_decision`. PostGIS `GEOGRAPHY(POINT, 4326)` + GIST indexes; soft-delete column on every table.
+- **Sockets** — JWT-handshake auth, `driver:{id}` and `dashboard` rooms, `gps:update` broadcast.
+- **Tests** — 6 jest suites, 33/33 cases passing, **93.19% statement coverage** on the covered files (auth, optimization, drivers, routes, twilio, /health e2e). `npm run migrate && npm test -- --coverage` is the canonical run.
+- **Lint** — `.eslintrc.js` present; `npm run lint` exits 0 (warnings on `any` only).
 
-### Gaps (in priority order)
+### Gaps (priority order)
 
-1. **No tests.** `jest` + `supertest` installed; zero test files. `npm test` runs with `--passWithNoTests`.
-2. **No background jobs.** `bull` is in `package.json` and never imported. No queues, no workers — so no SMS/push notifications, no async geocoding, no scheduled storm alerts.
+1. **Coverage extension.** `customers.controller`, `storms.controller`, `tracking.controller`, every `routes/*.routes.ts`, all `services/{geocoding,routing,notification,twilio}`, sockets, and middleware have no test files — they aren't in the 93% number. True repo coverage is much lower.
+2. **Token revocation is stateless.** `POST /auth/logout` does nothing server-side. Compromised tokens stay valid 12h. Needs Redis blocklist keyed by `jti`.
 3. **No password reset / email confirmation.** Locked-out users have no recovery path.
-4. **Token revocation is stateless.** `POST /auth/logout` does nothing server-side. Compromised tokens stay valid 12h. Needs Redis blocklist keyed by `jti`.
-5. **No notification service.** Twilio + Firebase env vars exist but no `notification.service.ts`.
-6. **No API docs.** No OpenAPI/Swagger. Frontend integration is by guesswork.
-7. **GPS ingest unthrottled.** `/tracking` accepts 500 points/request with no per-driver cap — a malicious or buggy client could flood the DB.
-8. **No circuit breakers** on Nominatim/OSRM. If they 503, customer creation and route generation fail with no fallback.
-9. **Socket.io single-instance.** No Redis adapter — horizontal scaling will break room broadcasts.
-10. **Logs to console only.** No file rotation, no aggregation, no Sentry.
+4. **No API docs.** No OpenAPI/Swagger. Web frontend integrates by reading controller source.
+5. **GPS ingest unthrottled per driver.** `/tracking` accepts 500 points/request; a malicious or buggy client could flood the DB.
+6. **No circuit breakers** on Nominatim/OSRM. If they 503, customer creation and route generation fail with no fallback.
+7. **Socket.io single-instance.** No `@socket.io/redis-adapter` — horizontal scaling will break broadcasts.
+8. **Backend Sentry not wired.** Mobile has Sentry; backend uses Winston only.
+9. **A2P 10DLC** brand approval pending on Twilio dashboard side (not a code item but a launch blocker for US SMS).
 
 ---
 
@@ -55,24 +53,24 @@ Honest, file-level inventory of what's built, what's stubbed, and what's missing
 
 ### What works (BUILT)
 
-- **Vite + React 18 + TS strict.** [web-dashboard/src/main.tsx](../web-dashboard/src/main.tsx), router with `/login` + `/` + `<ProtectedRoute>` guard.
-- **Login** — [web-dashboard/src/pages/LoginPage.tsx](../web-dashboard/src/pages/LoginPage.tsx): wired to `POST /auth/login`, stores token via Zustand + localStorage (`plowpath.auth`).
-- **Live ops map** — [web-dashboard/src/pages/LiveOpsPage.tsx](../web-dashboard/src/pages/LiveOpsPage.tsx): fetches `/tracking/latest`, subscribes to Socket.io `gps:update`, renders drivers on Leaflet/OSM.
-- **API client** — [web-dashboard/src/services/api.ts](../web-dashboard/src/services/api.ts): axios w/ Bearer interceptor, 401 → logout, 15s timeout.
-- **Map** — [web-dashboard/src/components/Map/LeafletMap.tsx](../web-dashboard/src/components/Map/LeafletMap.tsx): OSM tiles, attribution preserved, custom blue driver markers.
+- **Vite + React 18 + TS strict**, Tailwind 3.4 styling, lucide-react icons, custom Zustand `toastStore` + `ToastContainer`.
+- **Routing + layout** — `<ProtectedRoute>`, `<ErrorBoundary>` at app root, `DashboardLayout` with top nav + responsive sidebar, role-based menu filtering.
+- **Pages** — Login, LiveOps map (initial REST + Socket.io `gps:update` overlay), Customers (search/filter/pagination/create-edit modal with **geocode preview** + soft-delete confirm), Drivers (create with initial password, edit, deactivate), Storms (status transitions: planned → active → completed), Routes (filtered list, Generate Route wizard, detail page with `RoutePolyline` + stops table).
+- **Forms** — LoginPage and CustomersPage modal use `react-hook-form` + `@hookform/resolvers/zod` against shared schemas (`src/schemas/auth.schema.ts`, `src/schemas/customer.schema.ts`). Drivers/Storms/Routes still on vanilla `useState` (see gap #1).
+- **Stores** — `authStore`, `customersStore`, `driversStore`, `routesStore`, `stormsStore`, `toastStore`.
+- **API client** — axios with Bearer interceptor; 401 → `/auth/refresh` → retry-once → logout-on-failure.
+- **Map** — Leaflet on OSM tiles with required `© OpenStreetMap contributors` attribution. Custom driver markers. `RoutePolyline` rendered on Routes detail page.
+- **Tests** — Vitest + RTL, 6/6 page smoke tests pass.
+- **Build** — `npm run build` succeeds (~622 KB JS / 181 KB gzip after react-hook-form/zod addition).
+- **Lint** — `.eslintrc.cjs` present; `npm run lint` exits 0 (warnings on `any` only).
 
 ### Gaps
 
-1. **Almost no app.** Only 2 pages (login, live map). No CRUD UIs for routes, customers, drivers, storms — even though every backend endpoint exists.
-2. **No token refresh.** 401 immediately logs the user out. `refresh_token` is stored, never used.
-3. **Not responsive.** Hardcoded pixel sizes; the fixed 360px overlay card is unusable on phones/tablets.
-4. **No design system.** Inline `React.CSSProperties` everywhere. No Tailwind / MUI / Shadcn / CSS modules.
-5. **`RoutePolyline` component exists but is never rendered** — no route visualization on map.
-6. **No loading or error states.** API calls appear hung; errors show as raw text.
-7. **No global error boundary.**
-8. **No form validation.** Login accepts empty strings.
-9. **No env-specific config.** Single `.env`, no staging/prod split.
-10. **No tests.** No Vitest / Playwright / MSW.
+1. **`react-hook-form` not yet adopted in DriversPage / StormsPage / RoutesPage**. Form behavior works but it's vanilla `useState` (no schema validation, no inline error rendering). Follow-up.
+2. **Bundle is ~622 KB**, over Vite's 500 KB warning. Code-splitting + `manualChunks` for Leaflet would help.
+3. **No env-specific config.** Single `.env`, no staging/prod split.
+4. **No CSV import** for customers (Phase 1 didn't ship it; Phase 5 pilot needs it).
+5. **No analytics dashboard** (Phase 4 — financial breakdown, performance, seasonal trends).
 
 ---
 
@@ -80,27 +78,25 @@ Honest, file-level inventory of what's built, what's stubbed, and what's missing
 
 ### What works (BUILT)
 
-- **Navigation** — [mobile/src/navigation/RootNavigator.tsx](../mobile/src/navigation/RootNavigator.tsx): native-stack with `Login` / `Route` / `Navigation`, conditional on auth token.
-- **Screens** — Login, RouteScreen (today's routes), NavigationScreen (turn-by-turn text + SVG progress).
-- **GPS service** — [mobile/src/services/gps.service.ts](../mobile/src/services/gps.service.ts): foreground "whenInUse" permission, 10m distance filter, 30s Android interval.
-- **Offline GPS queue** — [mobile/src/services/offline.service.ts](../mobile/src/services/offline.service.ts): AsyncStorage `plowpath.gpsQueue.v1`, batches up to 200, NetInfo subscribe → auto-flush on reconnect.
-- **Route caching** — [mobile/src/services/route.service.ts](../mobile/src/services/route.service.ts): downloaded routes cached per-route in AsyncStorage.
-- **Auto-advance on arrival** — Turf distance check (30m) marks stop in-progress automatically.
-- **Required button copy present** — `Start Route`, `Mark In Progress`, `Mark Complete`, `Skip Property` all verified verbatim.
-- **No map tiles** — pure SVG route progress, no `react-native-maps`, no Google libs.
+- **Native projects** generated in `mobile/android/` + `mobile/ios/`. Android `AndroidManifest.xml` has FINE/COARSE LOCATION, FOREGROUND_SERVICE, FOREGROUND_SERVICE_LOCATION, POST_NOTIFICATIONS, plus the Transistor `LocationRequestService` + `TrackingService` declarations. iOS `Info.plist` has both location strings + `UIBackgroundModes` (location, fetch, remote-notification).
+- **Navigation** — native-stack with Login / Route / Navigation, conditional on auth token.
+- **Screens** — LoginScreen (with FCM permission request on success), RouteScreen (today's routes + offline banner), NavigationScreen (turn-by-turn text + SVG progress + STOP Route flow that marks remaining stops skipped, finalizes the route, pops back).
+- **GPS** — `gps.service.ts` (foreground permission helper) + `backgroundGps.service.ts` (Transistor `react-native-background-geolocation`, foreground-service notification "PlowPath is tracking your route", samples piped into the offline queue).
+- **Offline queues** — `offline.service.ts` exposes `enqueueGpsSample` + `enqueueStopStatus` (AsyncStorage keys `plowpath.gpsQueue.v1` + `plowpath.stopQueue.v1`) and `flushAllQueues` driven by NetInfo connectivity events. `OfflineStatusBar` component shows live queue depths.
+- **Route caching** — `route.service.ts` writes/loads per-route JSON to AsyncStorage so NavigationScreen works offline after the initial download.
+- **Auth storage** — `react-native-keychain` (service `'plowpath.auth'`), not plain AsyncStorage. 401 → refresh interceptor on axios client.
+- **Crash reporting** — `@sentry/react-native` installed; `sentry.ts` calls `Sentry.init / captureException / captureMessage` with console-only fallback when `SENTRY_DSN` is unset.
+- **Push notifications** — `push.service.ts` requests POST_NOTIFICATIONS (Android 13+), fetches FCM token, POSTs to `/drivers/me/fcm-token` on login.
+- **Required button copy verbatim** — `Start Route`, `Mark In Progress`, `Mark Complete`, `Skip Property`, `STOP Route`. **No `react-native-maps`, no Google libs, no map tiles.**
+- **Lint** — `.eslintrc.js` present; `npm run lint` exits 0 (warnings on `any` and unused React imports only).
 
 ### Gaps
 
-1. **No `android/` or `ios/` folders.** App cannot be compiled or installed on a device today. Must run `npx react-native init` template overlay or manually add native projects.
-2. **"STOP Route" button is missing** from NavigationScreen — CLAUDE.md mandates this copy, drivers can't gracefully exit mid-route.
-3. **Stop-status updates aren't queued offline.** `markStopStatus` in [mobile/src/services/route.service.ts](../mobile/src/services/route.service.ts) has a TODO and silently swallows failures — if a driver marks a stop complete offline, it's lost.
-4. **Foreground-only GPS.** When the app backgrounds (driver looks at maps app, screen lock), tracking stops. Needs background location + a foreground service on Android.
-5. **Tokens in plain-text AsyncStorage.** Should use `react-native-keychain`.
-6. **No token refresh** — same gap as web.
-7. **No push notifications.** `@react-native-firebase/messaging` installed, never initialized.
-8. **No `AndroidManifest.xml` / `Info.plist`** for permissions, Firebase, location usage strings.
-9. **No tests.**
-10. **No deep linking** — dispatch cannot route a driver to a specific route from a notification tap.
+1. **Never compiled on a device.** Background GPS, foreground-service notification, keychain, FCM registration, and Sentry need a real Android/iOS build to be verified end-to-end. The Windows host this repo lives on has no Android SDK / Xcode.
+2. **Transistor license** required (~$300/platform) before Play Store / App Store release. Free for dev/CI under their Apache build.
+3. **No jest / detox tests.** No `test` script in mobile/package.json.
+4. **No deep linking** — dispatcher can't push a route URL and have the app navigate to it.
+5. **`captureException` callsites only in NavigationScreen.** Other screens / services should adopt it for the same coverage.
 
 ---
 
@@ -108,31 +104,32 @@ Honest, file-level inventory of what's built, what's stubbed, and what's missing
 
 ### What works (BUILT)
 
-- **`docker-compose.yml`** — local `postgres:postgis-14-3.4` + `redis:7-alpine` with healthchecks and named volumes.
+- **`docker-compose.yml`** — `postgres:postgis-14-3.4` + `redis:7-alpine`, `.env`-driven creds (`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`), healthchecks, named volumes.
 - **`.gitignore`** — comprehensive: `node_modules`, `dist`, `.env`, build artifacts, IDE files, `mobile/android/build/`, `mobile/ios/Pods/`.
-- **README + CLAUDE.md** — usable quickstart and engineering invariants.
+- **CI workflow** — [.github/workflows/ci.yml](../.github/workflows/ci.yml) runs typecheck + lint + test for all three apps on push/PR to `main`.
+- **README + CLAUDE.md + CONTRIBUTING.md + SECURITY.md + ROADMAP.md + THIRD_PARTY_SETUP.md + DEPLOYMENT.md** — usable engineering surface.
 
 ### Gaps
 
-1. **No Dockerfiles** for backend, web, or anywhere. Cannot containerize the apps.
-2. **No CI/CD.** No `.github/workflows/`, no GitLab, no anything. No automated lint/test/build/deploy.
-3. **No reverse proxy.** No nginx/Caddy. No TLS. Apps would be exposed on raw ports.
-4. **No secrets management.** Hardcoded `plowpath:plowpath` Postgres creds in compose; `.env` placeholder `JWT_SECRET`.
-5. **No monitoring/APM.** No Sentry, no Datadog, no Prometheus, no log shipping.
+1. **No Dockerfiles** for backend, web, or mobile. Cannot containerize the apps.
+2. **No deploy target chosen.** Fly.io / Render / VPS / Kubernetes — TBD (see ROADMAP Phase 4).
+3. **No reverse proxy.** No nginx/Caddy. No TLS.
+4. **No secrets management.** `.env` files only; would need Vault / Doppler / Fly secrets for prod.
+5. **No monitoring / APM.** Mobile Sentry is wired but no DSN configured; backend Sentry absent.
 6. **No backups.** Docker volumes are ephemeral if containers are removed.
-7. **No production deploy target chosen.** Cloud / VPS / Kubernetes — undecided.
-8. **No Socket.io Redis adapter.** Horizontal scaling will break broadcasts.
-9. **No load test baseline.** Capacity unknown.
-10. **Public OSRM + Nominatim.** Fair-use only — will get rate-limited or blocked under production load.
+7. **No Socket.io Redis adapter.** Horizontal scaling will break broadcasts.
+8. **No load test baseline.** Capacity unknown.
+9. **Public OSRM + Nominatim.** Fair-use only — will get rate-limited or blocked under production load.
 
 ---
 
 ## Cross-cutting concerns
 
-- **Zero automated tests anywhere.** Backend, web, and mobile all have a `test` script and zero test files.
-- **No staging environment.** Implicitly: dev → prod, no middle.
+- **Lint configs** — all three apps now have a working ESLint setup; `npm run lint` exits 0 on each. Warnings (mostly `@typescript-eslint/no-explicit-any`) are tolerated.
+- **Test coverage** — backend tests 33/33 / 93% (on covered files); web tests 6/6 (one per page, page-level smoke only); mobile has no test runner.
+- **Phase 3 deps active** — `bull`, `firebase-admin`, `twilio`, `@sentry/react-native`, `@react-native-firebase/messaging`, `react-native-background-geolocation`, `react-hook-form` + `@hookform/resolvers` + `zod` are all installed and functionally wired (not just dormant).
+- **Port-5432 collision** on the dev host — `postgresql-x64-18` Windows service shadows the Docker postgres. The known workaround is to either stop the Windows service (admin elevation) or map Docker to host port 5433 and override `DATABASE_URL`. Not a code issue.
+- **No GDPR / CCPA path** for customer data hard-deletion despite soft-delete schema (PII is never purged).
 - **No data retention policy** on `gps_tracking` (it will grow unbounded).
-- **No GDPR / CCPA path** for customer data deletion despite soft-delete schema (PII is never purged).
-- **Phase 3 deps installed but dormant** — `bull`, `@react-native-firebase/messaging`, Twilio env vars all wired up syntactically and unused functionally.
 
-See [ROADMAP.md](ROADMAP.md) for the phased path to closing these gaps.
+See [ROADMAP.md](ROADMAP.md) for the phased path to closing the remaining gaps.
