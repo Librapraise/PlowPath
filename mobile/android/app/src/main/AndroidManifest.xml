@@ -26,5 +26,16 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+
+      <!-- react-native-background-geolocation (Transistor) foreground service.
+           Required for Android 14+ to keep tracking with the screen off. -->
+      <service
+        android:name="com.transistorsoft.locationmanager.service.LocationRequestService"
+        android:foregroundServiceType="location"
+        android:exported="false" />
+      <service
+        android:name="com.transistorsoft.locationmanager.service.TrackingService"
+        android:foregroundServiceType="location"
+        android:exported="false" />
     </application>
 </manifest>

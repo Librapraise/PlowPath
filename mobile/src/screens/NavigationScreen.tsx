@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as turf from '@turf/turf';
@@ -6,8 +6,11 @@ import { useAuthStore } from '../store/authStore';
 import {
   downloadRoute, loadRouteOffline, markStopStatus, type OfflineRoute, type RouteStop,
 } from '../services/route.service';
-import { clearWatch, requestLocationPermission, watchPosition, type GpsSample } from '../services/gps.service';
-import { enqueueGpsSample, flushAllQueues, subscribeToConnectivity } from '../services/offline.service';
+import { requestLocationPermission, type GpsSample } from '../services/gps.service';
+import {
+  configureBackgroundGps, startBackgroundGps, stopBackgroundGps,
+} from '../services/backgroundGps.service';
+import { flushAllQueues, subscribeToConnectivity } from '../services/offline.service';
 import RouteProgress from '../components/RouteProgress';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import TurnInstruction from '../components/TurnInstruction';
@@ -25,7 +28,6 @@ export default function NavigationScreen({ route, navigation }: Props) {
   const [currentStop, setCurrentStop] = useState<RouteStop | null>(null);
   const [distanceMi, setDistanceMi] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const watchId = useRef<number | null>(null);
 
   // Load route: prefer server (download); fall back to cached offline copy.
   useEffect(() => {
@@ -51,7 +53,8 @@ export default function NavigationScreen({ route, navigation }: Props) {
     return () => { cancelled = true; };
   }, [routeId]);
 
-  // GPS tracking — sends to backend, queues offline, auto-advances on arrival.
+  // Background GPS — keeps streaming with screen off / app backgrounded.
+  // Permission grant + sample enqueue + offline flush are owned by the service.
   useEffect(() => {
     if (!driverId || !currentStop) return;
 
@@ -62,19 +65,19 @@ export default function NavigationScreen({ route, navigation }: Props) {
         setError('Location permission denied. Navigation needs GPS.');
         return;
       }
-
-      watchId.current = watchPosition(
-        async (sample) => {
-          if (!active) return;
-          onGpsSample(sample);
-          await enqueueGpsSample({ ...sample, route_id: routeId });
-          void flushAllQueues(driverId);
-        },
-        (err) => {
-          setError(err.message);
-          captureException(err, { context: 'gps_watch_failed', routeId });
-        },
-      );
+      try {
+        await configureBackgroundGps({
+          driverId,
+          routeId,
+          onSample: (sample) => {
+            if (active) onGpsSample(sample);
+          },
+        });
+        await startBackgroundGps();
+      } catch (err) {
+        setError((err as Error).message);
+        captureException(err, { context: 'background_gps_start_failed', routeId });
+      }
     })();
 
     const unsubscribe = subscribeToConnectivity(() => {
@@ -84,7 +87,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
     return () => {
       active = false;
-      if (watchId.current != null) clearWatch(watchId.current);
+      void stopBackgroundGps();
       unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
