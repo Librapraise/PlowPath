@@ -1,0 +1,105 @@
+name: PlowPath CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-ci:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Backend Typecheck
+        run: |
+          cd backend
+          npm run typecheck
+
+      - name: Backend Lint
+        run: |
+          cd backend
+          npm run lint
+
+      - name: Backend Unit & Integration Tests
+        run: |
+          cd backend
+          npm test
+
+  web-dashboard-ci:
+    name: Web Dashboard CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: web-dashboard/package-lock.json
+
+      - name: Install Web Dashboard Dependencies
+        run: |
+          cd web-dashboard
+          npm ci
+
+      - name: Web Dashboard Typecheck
+        run: |
+          cd web-dashboard
+          npm run typecheck
+
+      - name: Web Dashboard Lint
+        run: |
+          cd web-dashboard
+          npm run lint
+
+      - name: Web Dashboard Production Build
+        run: |
+          cd web-dashboard
+          npm run build
+
+  mobile-ci:
+    name: Mobile App CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install Mobile App Dependencies
+        run: |
+          cd mobile
+          npm ci
+
+      - name: Mobile App Typecheck
+        run: |
+          cd mobile
+          npm run typecheck
+
+      - name: Mobile App Lint
+        run: |
+          cd mobile
+          npm run lint

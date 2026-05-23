@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgis/postgis:14-3.4
+    container_name: plowpath-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-plowpath}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-plowpath}
+      POSTGRES_DB: ${POSTGRES_DB:-plowpath}
+    ports:
+      - "5432:5432"
+    volumes:
+      - plowpath_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: plowpath-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - plowpath_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  plowpath_pgdata:
+  plowpath_redisdata:
