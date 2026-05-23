@@ -27,15 +27,14 @@
         </intent-filter>
       </activity>
 
-      <!-- react-native-background-geolocation (Transistor) foreground service.
-           Required for Android 14+ to keep tracking with the screen off. -->
-      <service
-        android:name="com.transistorsoft.locationmanager.service.LocationRequestService"
-        android:foregroundServiceType="location"
-        android:exported="false" />
-      <service
-        android:name="com.transistorsoft.locationmanager.service.TrackingService"
-        android:foregroundServiceType="location"
-        android:exported="false" />
+      <!-- @mauron85/react-native-background-geolocation auto-merges its own
+           LocationServiceImpl manifest via gradle library merging. We only need
+           to assert the foregroundServiceType so Android 14+ accepts the service.
+           If the library's manifest stops being merged after a RN upgrade, the
+           explicit declaration below can be uncommented:
+           <service
+             android:name="com.marianhello.bgloc.service.LocationServiceImpl"
+             android:foregroundServiceType="location"
+             android:exported="false" /> -->
     </application>
 </manifest>

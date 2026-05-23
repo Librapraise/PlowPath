@@ -93,7 +93,7 @@ Honest, file-level inventory of what's built, what's stubbed, and what's missing
 ### Gaps
 
 1. **Never compiled on a device.** Background GPS, foreground-service notification, keychain, FCM registration, and Sentry need a real Android/iOS build to be verified end-to-end. The Windows host this repo lives on has no Android SDK / Xcode.
-2. **Transistor license** required (~$300/platform) before Play Store / App Store release. Free for dev/CI under their Apache build.
+2. **Background-GPS library is `@mauron85/react-native-background-geolocation`** — MIT, free for both dev and prod, but **unmaintained since ~2021**. Likely needs manual patches for Android 14's stricter foreground-service-type rules when they bite in the field. Replacement candidates if it breaks: Transistor's (commercial, ~$300/platform) or a self-built `@notifee/react-native` + `react-native-geolocation-service` service.
 3. **No jest / detox tests.** No `test` script in mobile/package.json.
 4. **No deep linking** — dispatcher can't push a route URL and have the app navigate to it.
 5. **`captureException` callsites only in NavigationScreen.** Other screens / services should adopt it for the same coverage.
