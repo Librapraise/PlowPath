@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useCustomersStore, type Customer } from '../store/customersStore';
+import { customerSchema, type CustomerInput } from '../schemas/customer.schema';
 import { Search, Plus, Edit2, Trash2, Home, Landmark, CheckCircle, AlertTriangle, Eye } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -30,39 +33,48 @@ export default function CustomersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-  // Form State
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'active' | 'inactive' | 'prospect'>('active');
-  const [propertyType, setPropertyType] = useState<'residential' | 'commercial'>('residential');
-  const [drivewayType, setDrivewayType] = useState('');
-  const [accessNotes, setAccessNotes] = useState('');
-  const [notifySms, setNotifySms] = useState(true);
-  const [notifyVoice, setNotifyVoice] = useState(false);
-  
-  // Geocoding preview state
+  // Geocoding preview state (UI-only, not form data)
   const [previewCoords, setPreviewCoords] = useState<[number, number] | null>(null);
   const [previewName, setPreviewName] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  const blankCustomer: CustomerInput = {
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    status: 'active',
+    property_type: 'residential',
+    driveway_type: '',
+    access_notes: '',
+    notify_sms: true,
+    notify_voice: false,
+  };
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<CustomerInput>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: blankCustomer,
+  });
+
+  // Used by the "Verify" button so it can read the current address without
+  // forcing a controlled-input pattern.
+  const addressValue = watch('address');
+
   useEffect(() => {
     fetchCustomers();
+    // fetchCustomers is intentionally not in deps — store guarantees stable ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAddModal = () => {
     setEditingCustomer(null);
-    setName('');
-    setAddress('');
-    setPhone('');
-    setEmail('');
-    setStatus('active');
-    setPropertyType('residential');
-    setDrivewayType('');
-    setAccessNotes('');
-    setNotifySms(true);
-    setNotifyVoice(false);
+    reset(blankCustomer);
     setPreviewCoords(null);
     setPreviewName(null);
     setModalOpen(true);
@@ -70,28 +82,30 @@ export default function CustomersPage() {
 
   const openEditModal = (c: Customer) => {
     setEditingCustomer(c);
-    setName(c.name);
-    setAddress(c.address);
-    setPhone(c.phone || '');
-    setEmail(c.email || '');
-    setStatus(c.status);
-    setPropertyType(c.property_type);
-    setDrivewayType(c.driveway_type || '');
-    setAccessNotes(c.access_notes || '');
-    setNotifySms(c.notify_sms !== false);
-    setNotifyVoice(c.notify_voice === true);
+    reset({
+      name: c.name,
+      address: c.address,
+      phone: c.phone || '',
+      email: c.email || '',
+      status: c.status,
+      property_type: c.property_type,
+      driveway_type: c.driveway_type || '',
+      access_notes: c.access_notes || '',
+      notify_sms: c.notify_sms !== false,
+      notify_voice: c.notify_voice === true,
+    });
     setPreviewCoords([c.lat, c.lon]);
     setPreviewName(c.address);
     setModalOpen(true);
   };
 
   const handleVerifyAddress = async () => {
-    if (!address.trim()) return;
+    if (!addressValue?.trim()) return;
     setIsVerifying(true);
     try {
-      const res = await geocodePreview(address);
+      const res = await geocodePreview(addressValue);
       setPreviewCoords([res.lat, res.lon]);
-      setPreviewName(res.displayName || address);
+      setPreviewName(res.displayName || addressValue);
     } catch {
       // Error handled by store toast
     } finally {
@@ -99,31 +113,27 @@ export default function CustomersPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const data: any = {
-      name,
-      address,
-      phone: phone || null,
-      email: email || null,
-      status,
-      property_type: propertyType,
-      driveway_type: drivewayType || null,
-      access_notes: accessNotes || null,
-      notify_sms: notifySms,
-      notify_voice: notifyVoice,
+  const onSubmit = async (values: CustomerInput) => {
+    // Normalize empty strings → null so the backend doesn't store "" for optional fields.
+    const data = {
+      name: values.name,
+      address: values.address,
+      phone: values.phone || null,
+      email: values.email || null,
+      status: values.status,
+      property_type: values.property_type,
+      driveway_type: values.driveway_type || null,
+      access_notes: values.access_notes || null,
+      notify_sms: values.notify_sms,
+      notify_voice: values.notify_voice,
+      ...(previewCoords ? { lat: previewCoords[0], lon: previewCoords[1] } : {}),
     };
-
-    if (previewCoords) {
-      data.lat = previewCoords[0];
-      data.lon = previewCoords[1];
-    }
 
     try {
       if (editingCustomer) {
-        await updateCustomer(editingCustomer.customer_id, data);
+        await updateCustomer(editingCustomer.customer_id, data as Partial<Customer>);
       } else {
-        await createCustomer(data);
+        await createCustomer(data as Parameters<typeof createCustomer>[0]);
       }
       setModalOpen(false);
     } catch {
@@ -348,7 +358,7 @@ export default function CustomersPage() {
               {editingCustomer ? 'Modify Customer Profile' : 'Register New Customer Property'}
             </h3>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Side Inputs */}
                 <div className="space-y-4">
@@ -358,12 +368,12 @@ export default function CustomersPage() {
                     </label>
                     <input
                       type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. John Doe, Buffalo Mall"
+                      aria-invalid={errors.name ? 'true' : 'false'}
+                      {...register('name')}
                       className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50"
                     />
+                    {errors.name && <p className="text-xs text-red-400 font-semibold mt-1">{errors.name.message}</p>}
                   </div>
 
                   <div>
@@ -373,21 +383,21 @@ export default function CustomersPage() {
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        required
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
                         placeholder="e.g. 125 Main St, Buffalo NY"
+                        aria-invalid={errors.address ? 'true' : 'false'}
+                        {...register('address')}
                         className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50"
                       />
                       <button
                         type="button"
                         onClick={handleVerifyAddress}
-                        disabled={isVerifying || !address}
+                        disabled={isVerifying || !addressValue}
                         className="px-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer"
                       >
                         {isVerifying ? 'Verifying...' : 'Verify'}
                       </button>
                     </div>
+                    {errors.address && <p className="text-xs text-red-400 font-semibold mt-1">{errors.address.message}</p>}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -397,9 +407,8 @@ export default function CustomersPage() {
                       </label>
                       <input
                         type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
                         placeholder="555-0199"
+                        {...register('phone')}
                         className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50"
                       />
                     </div>
@@ -409,11 +418,12 @@ export default function CustomersPage() {
                       </label>
                       <input
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="john@example.com"
+                        aria-invalid={errors.email ? 'true' : 'false'}
+                        {...register('email')}
                         className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50"
                       />
+                      {errors.email && <p className="text-xs text-red-400 font-semibold mt-1">{errors.email.message}</p>}
                     </div>
                   </div>
 
@@ -423,8 +433,7 @@ export default function CustomersPage() {
                         Status
                       </label>
                       <select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as any)}
+                        {...register('status')}
                         className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-350 text-sm focus:outline-none focus:border-brand-500/50 cursor-pointer"
                       >
                         <option value="active">Active</option>
@@ -437,8 +446,7 @@ export default function CustomersPage() {
                         Property type
                       </label>
                       <select
-                        value={propertyType}
-                        onChange={(e) => setPropertyType(e.target.value as any)}
+                        {...register('property_type')}
                         className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-350 text-sm focus:outline-none focus:border-brand-500/50 cursor-pointer"
                       >
                         <option value="residential">Residential</option>
@@ -452,8 +460,7 @@ export default function CustomersPage() {
                       <input
                         type="checkbox"
                         id="notifySms"
-                        checked={notifySms}
-                        onChange={(e) => setNotifySms(e.target.checked)}
+                        {...register('notify_sms')}
                         className="w-4 h-4 text-brand-600 border-slate-800 rounded bg-slate-950 focus:ring-brand-500 focus:ring-offset-slate-900 cursor-pointer animate-fade-in"
                       />
                       <label htmlFor="notifySms" className="text-xs font-bold text-slate-300 cursor-pointer select-none">
@@ -464,8 +471,7 @@ export default function CustomersPage() {
                       <input
                         type="checkbox"
                         id="notifyVoice"
-                        checked={notifyVoice}
-                        onChange={(e) => setNotifyVoice(e.target.checked)}
+                        {...register('notify_voice')}
                         className="w-4 h-4 text-brand-600 border-slate-800 rounded bg-slate-950 focus:ring-brand-500 focus:ring-offset-slate-900 cursor-pointer animate-fade-in"
                       />
                       <label htmlFor="notifyVoice" className="text-xs font-bold text-slate-300 cursor-pointer select-none">
@@ -480,9 +486,8 @@ export default function CustomersPage() {
                     </label>
                     <input
                       type="text"
-                      value={drivewayType}
-                      onChange={(e) => setDrivewayType(e.target.value)}
                       placeholder="e.g. 2-car asphalt, gravel, steep slope"
+                      {...register('driveway_type')}
                       className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50"
                     />
                   </div>
@@ -492,10 +497,9 @@ export default function CustomersPage() {
                       Access notes (Optional)
                     </label>
                     <textarea
-                      value={accessNotes}
-                      onChange={(e) => setAccessNotes(e.target.value)}
                       placeholder="Gate code 4082, beware of dog on back lot"
                       rows={3}
+                      {...register('access_notes')}
                       className="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50"
                     />
                   </div>
@@ -563,10 +567,10 @@ export default function CustomersPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer"
                 >
-                  {isLoading ? 'Saving...' : editingCustomer ? 'Update Profile' : 'Register Customer'}
+                  {isSubmitting ? 'Saving...' : editingCustomer ? 'Update Profile' : 'Register Customer'}
                 </button>
               </div>
             </form>
