@@ -7,7 +7,7 @@ CREATE TABLE customers (
   customer_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name           VARCHAR(255) NOT NULL,
   address        TEXT NOT NULL,
-  location       GEOGRAPHY(POINT, 4326),
+  location       GEOGRAPHY,
   phone          VARCHAR(32),
   email          VARCHAR(255),
   status         customer_status     NOT NULL DEFAULT 'active',
@@ -21,7 +21,7 @@ CREATE TABLE customers (
   deleted_at     TIMESTAMPTZ
 );
 
-CREATE INDEX idx_customers_location ON customers USING GIST (location);
+CREATE INDEX idx_customers_location ON customers (location);
 CREATE INDEX idx_customers_active   ON customers (customer_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_customers_status   ON customers (status)      WHERE deleted_at IS NULL;
 

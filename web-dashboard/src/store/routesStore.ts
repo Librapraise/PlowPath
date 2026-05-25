@@ -51,6 +51,7 @@ interface RoutesState {
     start_lat?: number;
     start_lon?: number;
     include_directions?: boolean;
+    pass_number?: number;
   }) => Promise<void>;
   updateRouteStatus: (id: string, status: Route['status']) => Promise<void>;
   updateStopStatus: (routeId: string, stopId: string, status: RouteStop['status'], notes?: string) => Promise<void>;

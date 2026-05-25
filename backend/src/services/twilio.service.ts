@@ -56,11 +56,14 @@ export async function sendSms(payload: SmsPayload): Promise<{ sid?: string; mock
 /**
  * Generates custom TwiML XML markup for inbound IVR phone menus and DTMF callback updates.
  */
-export function generateIvrResponse(digit?: string): string {
+export function generateIvrResponse(digit?: string, greetingText?: string): string {
   const twiml = new twilio.twiml.VoiceResponse();
 
   if (!digit) {
-    // Phase 3 PRD: "voice menu -> press 1 to confirm service, 2 to skip this storm"
+    if (greetingText) {
+      twiml.say({ voice: 'Polly.Joey' as any }, greetingText);
+    }
+
     const gather = twiml.gather({
       numDigits: 1,
       action: '/api/v1/webhooks/twilio/voice',
@@ -70,14 +73,70 @@ export function generateIvrResponse(digit?: string): string {
     
     gather.say(
       { voice: 'Polly.Joey' as any },
-      'Hello! This is PlowPath. We are planning snow removal routes for the upcoming storm. ' +
-      'Please press 1 to confirm your service request, or press 2 to skip this storm.'
+      'Please press 1 to request emergency plowing service. ' +
+      'Press 2 for your status updates and service confirmation options. ' +
+      'Or press 3 for all other inquiries.'
     );
     
     // Fallback if no digit is pressed
     twiml.say({ voice: 'Polly.Joey' as any }, 'We did not receive any input. Goodbye.');
     twiml.hangup();
   } else if (digit === '1') {
+    twiml.say(
+      { voice: 'Polly.Joey' as any },
+      'Thank you. We have logged your emergency request. Our dispatch team is locating the closest active crew to route to your property. ' +
+      'We will send you an SMS alert with driver details as soon as they confirm. Goodbye!'
+    );
+    twiml.hangup();
+  } else if (digit === '2') {
+    const gather = twiml.gather({
+      numDigits: 1,
+      action: '/api/v1/webhooks/twilio/voice/status-decision',
+      method: 'POST',
+      timeout: 10,
+    });
+    
+    gather.say(
+      { voice: 'Polly.Joey' as any },
+      'Please press 1 to confirm your service request for this storm, or press 2 to skip this storm.'
+    );
+    
+    twiml.say({ voice: 'Polly.Joey' as any }, 'We did not receive any input. Goodbye.');
+    twiml.hangup();
+  } else if (digit === '3') {
+    twiml.say(
+      { voice: 'Polly.Joey' as any },
+      'For all other inquiries, please contact our support team at support at plow path dot app, or call our business office during normal operating hours. Goodbye!'
+    );
+    twiml.hangup();
+  } else {
+    // Handle invalid keypresses gracefully
+    const gather = twiml.gather({
+      numDigits: 1,
+      action: '/api/v1/webhooks/twilio/voice',
+      method: 'POST',
+      timeout: 10,
+    });
+    
+    gather.say(
+      { voice: 'Polly.Joey' as any },
+      'Invalid entry. Please press 1 to request emergency service. Press 2 for status options. Press 3 for other inquiries.'
+    );
+    
+    twiml.say({ voice: 'Polly.Joey' as any }, 'We did not receive any input. Goodbye.');
+    twiml.hangup();
+  }
+
+  return twiml.toString();
+}
+
+/**
+ * Generates custom TwiML for the nested confirm/skip status decision IVR sub-menu.
+ */
+export function generateIvrStatusDecisionResponse(digit?: string): string {
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  if (digit === '1') {
     twiml.say(
       { voice: 'Polly.Joey' as any },
       'Thank you! Your snow removal service is confirmed. Our crew will see you soon. Goodbye!'
@@ -90,10 +149,9 @@ export function generateIvrResponse(digit?: string): string {
     );
     twiml.hangup();
   } else {
-    // Handle invalid keypresses gracefully
     const gather = twiml.gather({
       numDigits: 1,
-      action: '/api/v1/webhooks/twilio/voice',
+      action: '/api/v1/webhooks/twilio/voice/status-decision',
       method: 'POST',
       timeout: 10,
     });

@@ -95,7 +95,8 @@ export async function update(req: Request, res: Response): Promise<void> {
   if (body.phone !== undefined) push('phone = ?', body.phone);
   if (body.hourly_rate !== undefined) push('hourly_rate = ?', body.hourly_rate);
   if (body.vehicle_type !== undefined) push('vehicle_type = ?', body.vehicle_type);
-  if (body.status !== undefined) push('status = ?', body.status);
+  if (body.status !== undefined) push('status = ?::driver_status', body.status);
+
 
   if (fields.length === 0) throw HttpError.badRequest('No updatable fields supplied');
 

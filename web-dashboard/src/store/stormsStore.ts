@@ -10,6 +10,7 @@ export interface StormEvent {
   forecasted_accumulation: number | null;
   actual_accumulation: number | null;
   status: 'planned' | 'active' | 'completed' | 'cancelled';
+  passes_count?: number | null;
   created_at: string;
   updated_at: string;
 }

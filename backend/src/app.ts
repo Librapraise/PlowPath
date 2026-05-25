@@ -16,6 +16,7 @@ import stormRoutes from './routes/storms.routes';
 import routeRoutes from './routes/routes.routes';
 import trackingRoutes from './routes/tracking.routes';
 import twilioRoutes from './routes/twilio.routes';
+import signRoutes from './routes/signs.routes';
 
 const app = express();
 
@@ -54,6 +55,22 @@ app.get('/health/redis', async (_req: Request, res: Response) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     res.status(503).json({ status: 'error', redis: 'disconnected', error: message });
+  }
+});
+
+app.get('/health/twilio', async (_req: Request, res: Response) => {
+  try {
+    const isConfigured = !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_PHONE_NUMBER);
+    if (!isConfigured) {
+      return res.status(200).json({ status: 'mocked', twilio: 'mock_mode_active', details: 'Twilio keys missing; running in dry-run mode.' });
+    }
+    // Verify outbound API reachability to Twilio gateway
+    const axios = require('axios');
+    const response = await axios.get('https://api.twilio.com', { timeout: 3000 });
+    res.json({ status: 'ok', twilio: 'connected', apiStatus: response.status });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(503).json({ status: 'error', twilio: 'unreachable', error: message });
   }
 });
 
@@ -118,6 +135,7 @@ app.use('/api/v1/storms', stormRoutes);
 app.use('/api/v1/routes', routeRoutes);
 app.use('/api/v1/tracking', trackingRoutes);
 app.use('/api/v1/webhooks/twilio', twilioRoutes);
+app.use('/api/v1/signs', signRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Route not found' } });

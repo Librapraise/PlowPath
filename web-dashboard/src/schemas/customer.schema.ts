@@ -13,6 +13,10 @@ export const customerSchema = z.object({
   access_notes: z.string().optional().or(z.literal('')),
   notify_sms: z.boolean().default(true),
   notify_voice: z.boolean().default(false),
+  // Phase 3.5 Fields
+  outstanding_balance: z.number().optional().default(0.00),
+  payment_status: z.enum(['paid', 'pending', 'overdue']).default('pending'),
+  sign_status: z.enum(['installed', 'removed', 'needs_service']).default('removed'),
   // Geocode preview fills these from Nominatim; user can override.
   lat: z
     .union([z.number().min(-90).max(90), z.nan()])

@@ -3,13 +3,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import RouteScreen from '../screens/RouteScreen';
 import NavigationScreen from '../screens/NavigationScreen';
+import InAppHistoryScreen from '../screens/InAppHistoryScreen';
+import SignRouteScreen from '../screens/SignRouteScreen';
 import { useAuthStore } from '../store/authStore';
-
-export type RootStackParamList = {
-  Login: undefined;
-  Route: undefined;
-  Navigation: { routeId: string };
-};
+import { type RootStackParamList } from '../services/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -22,6 +19,8 @@ export default function RootNavigator() {
         <>
           <Stack.Screen name="Route" component={RouteScreen} options={{ title: 'Today\'s Route' }} />
           <Stack.Screen name="Navigation" component={NavigationScreen} options={{ title: 'Navigation' }} />
+          <Stack.Screen name="History" component={InAppHistoryScreen} options={{ title: 'Notification History' }} />
+          <Stack.Screen name="SignRoute" component={SignRouteScreen} options={{ title: 'Sign Crew Operations' }} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Start Shift' }} />

@@ -8,6 +8,7 @@ import { Plus, Navigation, MapPin, Eye, Search, Check, ShieldAlert, Clock, Compa
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import RoutePolyline from '../components/Map/RoutePolyline';
+import CustomSelect from '../components/CustomSelect';
 
 // Leaflet map center utility
 function FocusRouteMap({ bounds }: { bounds: L.LatLngBounds | null }) {
@@ -61,6 +62,7 @@ export default function RoutesPage() {
   const [customStart, setCustomStart] = useState(false);
   const [startLat, setStartLat] = useState('42.8864'); // Default Buffalo center
   const [startLon, setStartLon] = useState('-78.8784');
+  const [passNumber, setPassNumber] = useState('1');
 
   // Broadcast SMS Fields
   const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -129,6 +131,7 @@ export default function RoutesPage() {
       driver_id: driverId,
       route_name: routeName,
       customer_ids: selectedCustomerIds,
+      pass_number: parseInt(passNumber) || 1,
     };
 
     if (customStart) {
@@ -182,8 +185,8 @@ export default function RoutesPage() {
     <div className="h-[calc(100vh-69px)] flex flex-col md:flex-row overflow-hidden font-sans">
       
       {/* LEFT SIDEBAR: Routes Roster List */}
-      <div className="w-full md:w-80 border-r border-slate-900 bg-slate-900/40 flex flex-col justify-between shrink-0">
-        <div className="p-4 border-b border-slate-900 flex items-center justify-between">
+      <div className="w-full md:w-80 glass-panel border-t-0 border-b-0 border-l-0 flex flex-col justify-between shrink-0 z-10">
+        <div className="p-4 border-b border-slate-800/40 bg-slate-950/20 flex items-center justify-between">
           <h3 className="font-extrabold text-white text-base">Storm Routes</h3>
           <button
             onClick={() => {
@@ -191,9 +194,10 @@ export default function RoutesPage() {
               setDriverId('');
               setRouteName(`Route - ${new Date().toLocaleDateString()}`);
               setSelectedCustomerIds([]);
+              setPassNumber('1');
               setWizardOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-650 hover:bg-brand-550 text-white text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 shadow-md shadow-brand-500/10"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white text-xs font-bold rounded-lg cursor-pointer transition-all btn-press shadow-md shadow-brand-500/20 ring-1 ring-white/10"
           >
             <Plus className="w-4 h-4" /> New Route
           </button>
@@ -215,10 +219,10 @@ export default function RoutesPage() {
                 <div
                   key={r.route_id}
                   onClick={() => setSelectedRouteId(r.route_id)}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer relative group overflow-hidden animate-plow-sweep ${
                     isSelected
-                      ? 'bg-slate-900 border-brand-500/30 shadow-lg shadow-brand-500/5'
-                      : 'bg-slate-900/40 border-slate-850 hover:bg-slate-900/80 hover:border-slate-800'
+                      ? 'glass-card border-brand-500/30 shadow-glow-brand'
+                      : 'bg-slate-900/20 border-slate-800/40 hover:bg-slate-900/40 hover:border-slate-800/60'
                   }`}
                 >
                   <h4 className="font-bold text-white text-sm leading-snug">{r.route_name}</h4>
@@ -229,7 +233,7 @@ export default function RoutesPage() {
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800/40 text-[10px] text-slate-400 font-semibold">
                     <div className="flex items-center gap-1">
                       <Compass className="w-3.5 h-3.5 text-slate-550" />
-                      <span>{r.total_distance.toFixed(1)} miles</span>
+                      <span>{Number(r.total_distance || 0).toFixed(1)} miles</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-slate-550" />
@@ -244,11 +248,11 @@ export default function RoutesPage() {
       </div>
 
       {/* RIGHT WORKSPACE: Detail & Polyline Map */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#0a0f1a] overflow-hidden relative">
         {currentRoute ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Renders details header */}
-            <div className="p-4 bg-slate-900/60 border-b border-slate-900 flex flex-wrap items-center justify-between gap-4">
+            <div className="p-4 glass-panel border-t-0 border-l-0 border-r-0 flex flex-wrap items-center justify-between gap-4 z-10">
               <div>
                 <h3 className="text-lg font-black text-white">{currentRoute.route_name}</h3>
                 <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 font-semibold">
@@ -261,7 +265,7 @@ export default function RoutesPage() {
               {/* Status Indicator */}
               <div className="flex items-center gap-4 text-xs font-mono font-bold">
                 <span className="px-3 py-1 bg-slate-900 border border-slate-800 rounded-lg text-slate-300">
-                  Total Miles: {currentRoute.total_distance.toFixed(2)}
+                  Total Miles: {Number(currentRoute.total_distance || 0).toFixed(2)}
                 </span>
                 {currentRoute.status === 'assigned' && (
                   <span className="px-2.5 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 rounded-full">
@@ -284,7 +288,7 @@ export default function RoutesPage() {
             {/* Split Map and Stops Table */}
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
               {/* Left Side: Leaflet OSM Map */}
-              <div className="flex-1 relative min-h-[300px] lg:min-h-0 bg-slate-900">
+              <div className="flex-1 relative min-h-[300px] lg:min-h-0 bg-[#0a0f1a]">
                 <MapContainer
                   center={[42.8864, -78.8784]}
                   zoom={12}
@@ -322,8 +326,8 @@ export default function RoutesPage() {
               </div>
 
               {/* Right Side: Stops List */}
-              <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-slate-900 bg-slate-900/30 flex flex-col overflow-hidden">
-                <div className="p-3.5 border-b border-slate-900 bg-slate-900/80 font-extrabold text-xs uppercase tracking-widest text-slate-400">
+              <div className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-slate-800/40 bg-slate-950/40 flex flex-col overflow-hidden backdrop-blur-md z-10">
+                <div className="p-3.5 border-b border-slate-800/40 bg-slate-950/60 font-extrabold text-xs uppercase tracking-widest text-slate-400">
                   Optimized Stop Sequence
                 </div>
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-800/40 p-2 space-y-1.5">
@@ -346,16 +350,17 @@ export default function RoutesPage() {
                         </span>
 
                         {/* Dispatch Status Override Dropdown */}
-                        <select
+                        <CustomSelect
+                          options={[
+                            { value: 'pending', label: 'Pending', colorDot: '#ef4444' },
+                            { value: 'in_progress', label: 'In Progress', colorDot: '#f97316' },
+                            { value: 'completed', label: 'Completed', colorDot: '#10b981' },
+                            { value: 'skipped', label: 'Skipped', colorDot: '#64748b' },
+                          ]}
                           value={stop.status}
-                          onChange={(e) => updateStopStatus(currentRoute.route_id, stop.stop_id, e.target.value as any)}
-                          className="px-2 py-1 bg-slate-950 border border-slate-800 rounded-md text-[10px] font-bold text-slate-350 focus:outline-none focus:border-brand-500 cursor-pointer"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="skipped">Skipped</option>
-                        </select>
+                          onChange={(val) => updateStopStatus(currentRoute.route_id, stop.stop_id, val as any)}
+                          className="w-28 sm:w-32 shrink-0"
+                        />
                       </div>
                       
                       <div className="text-[10px] text-slate-450 mt-1 pl-7 font-medium leading-relaxed truncate">
@@ -380,21 +385,22 @@ export default function RoutesPage() {
                 </div>
 
                 {/* Broadcast Panel */}
-                <div className="p-4 border-t border-slate-900 bg-slate-900/50 space-y-3 shrink-0">
+                <div className="p-4 border-t border-slate-800/40 bg-slate-950/60 space-y-3 shrink-0">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                       SMS Broadcast Tool 📣
                     </span>
-                    <select
+                    <CustomSelect
+                      options={[
+                        { value: 'custom', label: 'Custom Text' },
+                        { value: 'pre_storm', label: 'Pre-Storm Template' },
+                        { value: 'en_route', label: 'Active Neighbor' },
+                        { value: 'delay', label: 'Storm Delay Template' },
+                      ]}
                       value={selectedTemplate}
-                      onChange={(e) => handleTemplateChange(e.target.value)}
-                      className="px-2 py-1 bg-slate-950 border border-slate-850 rounded-md text-[10px] font-bold text-slate-350 focus:outline-none cursor-pointer"
-                    >
-                      <option value="custom">Custom Text</option>
-                      <option value="pre_storm">Pre-Storm Template</option>
-                      <option value="en_route">Active Neighbor Template</option>
-                      <option value="delay">Storm Delay Template</option>
-                    </select>
+                      onChange={(val) => handleTemplateChange(val)}
+                      className="w-32 sm:w-40 shrink-0"
+                    />
                   </div>
                   
                   <textarea
@@ -406,7 +412,7 @@ export default function RoutesPage() {
                     placeholder="Enter custom broadcast message to send to all route contacts..."
                     rows={3}
                     maxLength={160}
-                    className="w-full p-2.5 bg-slate-950 border border-slate-850 rounded-lg text-slate-200 text-xs focus:outline-none focus:border-brand-500/50 resize-none"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none"
                   />
                   
                   <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold">
@@ -418,7 +424,7 @@ export default function RoutesPage() {
                     type="button"
                     onClick={handleSendBroadcast}
                     disabled={isBroadcasting || !broadcastMessage.trim()}
-                    className="w-full py-2 bg-gradient-to-r from-brand-650 to-indigo-650 hover:from-brand-550 hover:to-indigo-550 disabled:opacity-40 text-white font-bold text-xs rounded-lg shadow transition-all active:scale-98 cursor-pointer"
+                    className="w-full py-2 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow transition-all btn-press cursor-pointer ring-1 ring-white/10"
                   >
                     {isBroadcasting ? 'Broadcasting SMS...' : 'Send SMS Broadcast'}
                   </button>
@@ -444,8 +450,8 @@ export default function RoutesPage() {
       {/* Route Generation Wizard Modal */}
       {wizardOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setWizardOpen(false)}></div>
-          <div className="relative bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl p-6 sm:p-8 animate-slide-in space-y-6">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setWizardOpen(false)}></div>
+          <div className="relative glass-card rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl p-6 sm:p-8 animate-scale-up space-y-6 gradient-border">
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
               <Compass className="w-6 h-6 text-brand-400" /> Route Optimizer Wizard
             </h3>
@@ -456,53 +462,70 @@ export default function RoutesPage() {
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                     1. Select Storm Event
                   </label>
-                  <select
-                    required
+                  <CustomSelect
+                    options={[
+                      { value: '', label: 'Choose Active/Planned Storm' },
+                      ...storms
+                        .filter((s) => s.status !== 'completed' && s.status !== 'cancelled')
+                        .map((s) => ({
+                          value: s.storm_id,
+                          label: `${s.name} (${s.status.toUpperCase()})`,
+                          colorDot: s.status === 'active' ? '#10b981' : '#f59e0b',
+                        })),
+                    ]}
                     value={stormId}
-                    onChange={(e) => setStormId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-350 text-sm focus:outline-none"
-                  >
-                    <option value="">Choose Active/Planned Storm</option>
-                    {storms.filter((s) => s.status !== 'completed' && s.status !== 'cancelled').map((s) => (
-                      <option key={s.storm_id} value={s.storm_id}>
-                        {s.name} ({s.status.toUpperCase()})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setStormId(val)}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
                     2. Select Driver
                   </label>
-                  <select
-                    required
+                  <CustomSelect
+                    options={[
+                      { value: '', label: 'Choose Active Operator' },
+                      ...drivers
+                        .filter((d) => d.status === 'active')
+                        .map((d) => ({
+                          value: d.driver_id,
+                          label: `${d.name} (${d.vehicle_type || 'Truck'})`,
+                          colorDot: '#10b981',
+                        })),
+                    ]}
                     value={driverId}
-                    onChange={(e) => setDriverId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-350 text-sm focus:outline-none"
-                  >
-                    <option value="">Choose Active Operator</option>
-                    {drivers.filter((d) => d.status === 'active').map((d) => (
-                      <option key={d.driver_id} value={d.driver_id}>
-                        {d.name} ({d.vehicle_type || 'Truck'})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setDriverId(val)}
+                  />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Route Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={routeName}
-                  onChange={(e) => setRouteName(e.target.value)}
-                  placeholder="e.g. North Buffalo Commercial Route A"
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm focus:outline-none"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Route Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={routeName}
+                    onChange={(e) => setRouteName(e.target.value)}
+                    placeholder="e.g. North Buffalo Commercial Route A"
+                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Plow Pass Number
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={passNumber}
+                    onChange={(e) => setPassNumber(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
+                  />
+                </div>
               </div>
 
               {/* Starting Coordinates toggle */}
@@ -513,7 +536,7 @@ export default function RoutesPage() {
                     type="checkbox"
                     checked={customStart}
                     onChange={(e) => setCustomStart(e.target.checked)}
-                    className="w-4 h-4 text-brand-500 rounded border-slate-800 bg-slate-950"
+                    className="w-4 h-4 text-brand-600 border-slate-800 rounded bg-slate-950 focus:ring-brand-500 focus:ring-offset-slate-900 cursor-pointer"
                   />
                 </div>
                 {customStart && (
@@ -525,7 +548,7 @@ export default function RoutesPage() {
                         step="0.000001"
                         value={startLat}
                         onChange={(e) => setStartLat(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none"
+                        className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
                       />
                     </div>
                     <div>
@@ -535,7 +558,7 @@ export default function RoutesPage() {
                         step="0.000001"
                         value={startLon}
                         onChange={(e) => setStartLon(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:outline-none"
+                        className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
                       />
                     </div>
                   </div>
@@ -555,11 +578,11 @@ export default function RoutesPage() {
                     placeholder="Search properties by name/address..."
                     value={custSearch}
                     onChange={(e) => setCustSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none placeholder:text-slate-600"
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all placeholder:text-slate-600 font-medium"
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto border border-slate-850 rounded-xl p-2 divide-y divide-slate-850 space-y-1 bg-slate-950/40">
+                <div className="flex-1 overflow-y-auto border border-slate-800/80 rounded-xl p-2 divide-y divide-slate-800/50 space-y-1 bg-slate-950/40">
                   {filteredCustomers.map((c) => {
                     const isChecked = selectedCustomerIds.includes(c.customer_id);
                     return (
@@ -595,14 +618,14 @@ export default function RoutesPage() {
                 <button
                   type="button"
                   onClick={() => setWizardOpen(false)}
-                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold text-sm rounded-xl transition-all cursor-pointer"
+                  className="px-5 py-2.5 bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 font-semibold text-sm rounded-xl transition-all cursor-pointer border border-slate-700/40"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading || selectedCustomerIds.length === 0}
-                  className="px-6 py-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/15 transition-all active:scale-95 cursor-pointer"
+                  className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
                   {isLoading ? 'Optimizing path...' : 'Generate & Optimize Route'}
                 </button>

@@ -6,6 +6,7 @@ import { useDriversStore } from '../store/driversStore';
 import { useRoutesStore, type Route } from '../store/routesStore';
 import { useStormsStore } from '../store/stormsStore';
 import LeafletMap from '../components/Map/LeafletMap';
+import CustomSelect from '../components/CustomSelect';
 import {
   Search, ShieldAlert, Clock, Compass, Truck, Phone, Navigation,
   ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, CheckCircle2,
@@ -34,6 +35,7 @@ export default function LiveOpsPage() {
 
   const [positions, setPositions] = useState<Record<string, DriverPosition>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [urgentRequest, setUrgentRequest] = useState<any>(null);
 
   // UX controls
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
@@ -49,7 +51,11 @@ export default function LiveOpsPage() {
     fetchDrivers();
     fetchRoutes();
     fetchStorms();
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   }, []);
+
 
   // Fetch telemetry and connect to websocket
   useEffect(() => {
@@ -76,6 +82,15 @@ export default function LiveOpsPage() {
       // Reactive real-time breadcrumbs append
       if (selectedDriverId === p.driver_id && showBreadcrumbs) {
         setBreadcrumbs((prev) => [[p.lat, p.lon], ...prev]);
+      }
+    });
+
+    socket.on('urgent_request:update', (payload: any) => {
+      if (payload.status === 'assigned' || payload.status === 'expired') {
+        setUrgentRequest(null);
+        fetchRoutes(); // refresh route data
+      } else {
+        setUrgentRequest(payload);
       }
     });
 
@@ -165,16 +180,18 @@ export default function LiveOpsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-slate-100 p-6 font-sans">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0f1a] text-slate-100 p-6 font-sans relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-brand-500/[0.06] blur-[120px] pointer-events-none"></div>
         <div className="relative flex items-center justify-center mb-8">
-          <div className="absolute w-24 h-24 rounded-full bg-brand-500/20 animate-ping opacity-75"></div>
-          <div className="absolute w-16 h-16 rounded-full bg-brand-500/40 animate-pulse"></div>
-          <div className="w-12 h-12 rounded-full border-4 border-brand-500 border-t-transparent animate-spin"></div>
+          <div className="absolute w-24 h-24 rounded-full bg-brand-500/15 animate-ping opacity-75"></div>
+          <div className="absolute w-16 h-16 rounded-full bg-brand-500/25 animate-pulse"></div>
+          <div className="w-12 h-12 rounded-full border-4 border-brand-400 border-t-transparent animate-spin"></div>
         </div>
-        <h2 className="text-xl font-bold tracking-tight text-white mb-2 animate-pulse">
+        <h2 className="text-xl font-bold tracking-tight text-white mb-2 animate-pulse relative">
           Synchronizing Live Fleet Telemetry
         </h2>
-        <p className="text-sm text-slate-400 max-w-xs text-center font-semibold">
+        <p className="text-sm text-slate-400 max-w-xs text-center font-medium relative">
           Connecting to PlowPath telemetry stream and retrieving latest active GPS signals...
         </p>
       </div>
@@ -185,13 +202,13 @@ export default function LiveOpsPage() {
   const currentSelectedDriver = enrichedDrivers.find((d) => d.driver_id === selectedDriverId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-69px)] bg-slate-950 text-slate-100 overflow-hidden font-sans relative">
+    <div className="flex flex-col h-[calc(100vh-69px)] bg-[#0a0f1a] text-slate-100 overflow-hidden font-sans relative">
       
       {/* Dynamic Telemetry Info Header Ribbon */}
-      <div className="flex flex-wrap items-center justify-between px-6 py-2.5 bg-slate-900 border-b border-slate-900 gap-4 text-xs font-semibold select-none z-10">
+      <div className="flex flex-wrap items-center justify-between px-6 py-2.5 glass-panel border-t-0 border-l-0 border-r-0 gap-4 text-xs font-semibold select-none z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-slate-400">
-            <Activity className="w-4 h-4 text-emerald-500" />
+            <Activity className="w-4 h-4 text-emerald-400" />
             <span>Operational Roster:</span>
             <strong className="text-slate-200">{enrichedDrivers.filter(d => d.isOnline).length} / {drivers.length} Online</strong>
           </div>
@@ -204,23 +221,41 @@ export default function LiveOpsPage() {
         </div>
 
         {activeStorm ? (
-          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <div className="flex items-center gap-2 px-3 py-1 frost-glow-card text-emerald-400 rounded-full animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 telemetry-ping"></span>
             <span>Storm Event: <strong>{activeStorm.name}</strong></span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800 text-slate-400 rounded-full">
+          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700/30">
             <span className="w-2 h-2 rounded-full bg-slate-600"></span>
             <span>No Active Storm Event</span>
           </div>
         )}
       </div>
 
+      {/* Emergency Active Alert Warning Ribbon */}
+      {urgentRequest && (
+        <div className="bg-red-950/90 border-b border-red-500/25 px-6 py-3 flex items-center justify-between text-xs font-bold text-red-400 animate-pulse z-[99] shadow-glow-red select-none backdrop-blur-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shrink-0"></span>
+            <span className="tracking-wide">
+              🚨 ACTIVE EMERGENCY PLOWING REQUEST: Notifying nearest driver "{urgentRequest.driverName || 'crew'}"...
+              Distance: {urgentRequest.distanceMeters ? (urgentRequest.distanceMeters / 1609.34).toFixed(2) : '0.00'} miles away. 
+              (Attempt {urgentRequest.attempt} / {urgentRequest.maxAttempts})
+            </span>
+          </div>
+          <div className="px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <span>Escalation Timer Active: 5 Minutes</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden relative">
         
         {/* SIDEBAR: Active Fleet Roster list */}
         {sidebarOpen && (
-          <div className="w-80 md:w-96 border-r border-slate-900 bg-slate-900/50 flex flex-col justify-between shrink-0 z-10 backdrop-blur-sm">
+          <div className="absolute lg:relative top-0 bottom-0 left-0 w-72 md:w-80 lg:w-96 h-full glass-panel border-t-0 border-b-0 border-l-0 flex flex-col justify-between shrink-0 z-[2000] bg-[#0a0f1a]/95 backdrop-blur-md lg:bg-transparent">
+
             <div className="p-4 border-b border-slate-900 space-y-3.5">
               <div className="flex items-center justify-between">
                 <h3 className="font-extrabold text-white text-base">Fleet Operations</h3>
@@ -244,12 +279,12 @@ export default function LiveOpsPage() {
                   placeholder="Search fleet, vehicles..."
                   value={driverSearch}
                   onChange={(e) => setDriverSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs focus:outline-none placeholder:text-slate-600 font-semibold"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-brand-500/40 placeholder:text-slate-600 font-medium transition-all"
                 />
               </div>
 
               {/* Custom filter buttons */}
-              <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-850">
+              <div className="grid grid-cols-3 gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800/60">
                 <button
                   onClick={() => setFilterType('all')}
                   className={`py-1 text-[10px] font-extrabold rounded-lg uppercase tracking-wider transition-all cursor-pointer ${
@@ -309,10 +344,10 @@ export default function LiveOpsPage() {
                     <div
                       key={d.driver_id}
                       onClick={() => handleSelectDriver(isSelected ? null : d.driver_id)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative group ${
+                      className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer relative group ${
                         isSelected
-                          ? 'bg-slate-900 border-brand-500/40 shadow-lg'
-                          : 'bg-slate-900/40 border-slate-850/60 hover:bg-slate-900 hover:border-slate-800'
+                          ? 'glass-card border-brand-500/30 shadow-glow-brand'
+                          : 'bg-slate-900/20 border-slate-800/40 hover:bg-slate-900/40 hover:border-slate-800/60'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -324,7 +359,7 @@ export default function LiveOpsPage() {
                         }`}>
                           {initials}
                           <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-900 ${
-                            d.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'
+                            d.isOnline ? 'bg-emerald-500 telemetry-ping' : 'bg-slate-600'
                           }`}></span>
                         </div>
 
@@ -351,7 +386,7 @@ export default function LiveOpsPage() {
                                 <span className="truncate">{d.route.route_name}</span>
                                 <span>{stopRatioString}</span>
                               </div>
-                              <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-850">
+                              <div className="w-full bg-slate-950/60 rounded-full h-1.5 overflow-hidden border border-slate-800/50">
                                 <div
                                   className="bg-brand-500 h-1.5 rounded-full transition-all duration-500"
                                   style={{ width: `${progressPercent}%` }}
@@ -372,13 +407,16 @@ export default function LiveOpsPage() {
         {/* Floating Sidebar Toggle Action */}
         <button
           onClick={() => setSidebarOpen((prev) => !prev)}
-          className="absolute left-4 top-4 z-[999] p-2 bg-slate-900 border border-slate-800 rounded-xl hover:bg-slate-800 text-slate-350 hover:text-white transition-all shadow-xl shadow-slate-950/40 cursor-pointer active:scale-95 flex items-center justify-center"
+          className={`absolute top-4 z-[9999] p-2 glass-panel rounded-xl hover:bg-white/5 text-slate-400 hover:text-white transition-all duration-300 shadow-xl cursor-pointer btn-press flex items-center justify-center ${
+            sidebarOpen ? 'left-[304px] md:left-[336px] lg:left-[400px]' : 'left-4'
+          }`}
         >
+
           {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
 
         {/* WORKSPACE AREA: Leaflet OSM Map and Sliding Telemetry Details Drawer */}
-        <div className="flex-1 relative w-full h-full bg-slate-900 flex overflow-hidden">
+        <div className="flex-1 relative w-full h-full bg-[#0a0f1a] flex overflow-hidden">
           
           <div className="flex-1 relative h-full w-full">
             <LeafletMap
@@ -394,9 +432,9 @@ export default function LiveOpsPage() {
 
           {/* Collapsible details overlay for selected driver */}
           {selectedDriverId && currentSelectedDriver && (
-            <div className="absolute top-4 right-4 bottom-4 w-96 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl z-[999] flex flex-col overflow-hidden animate-slide-in">
+            <div className="absolute top-4 right-4 bottom-4 w-96 glass-panel rounded-2xl shadow-2xl z-[999] flex flex-col overflow-hidden animate-slide-in">
               {/* Drawer Header details */}
-              <div className="p-4 border-b border-slate-800 bg-slate-950/30 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-800/40 bg-slate-950/20 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0 ${
                     currentSelectedDriver.isOnline
@@ -534,16 +572,17 @@ export default function LiveOpsPage() {
                           </div>
 
                           {/* Quick stop status override dropdown */}
-                          <select
+                          <CustomSelect
+                            options={[
+                              { value: 'pending', label: 'Pending', colorDot: '#ef4444' },
+                              { value: 'in_progress', label: 'In Progress', colorDot: '#f97316' },
+                              { value: 'completed', label: 'Completed', colorDot: '#10b981' },
+                              { value: 'skipped', label: 'Skipped', colorDot: '#64748b' },
+                            ]}
                             value={stop.status}
-                            onChange={(e) => updateStopStatus(selectedDriverRoute.route_id, stop.stop_id, e.target.value as any)}
-                            className="px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[9px] font-extrabold text-slate-450 focus:outline-none focus:border-brand-500 cursor-pointer"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="skipped">Skipped</option>
-                          </select>
+                            onChange={(val) => updateStopStatus(selectedDriverRoute.route_id, stop.stop_id, val as any)}
+                            className="w-28 sm:w-32 shrink-0"
+                          />
                         </div>
                       ))}
                     </div>
@@ -560,8 +599,8 @@ export default function LiveOpsPage() {
 
           {/* Full Screen Empty Fleet State Overlay */}
           {Object.keys(positions).length === 0 && (
-            <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 select-none">
-              <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl text-center space-y-6">
+            <div className="absolute inset-0 bg-[#0a0f1a]/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-6 select-none">
+              <div className="max-w-md w-full glass-card rounded-2xl p-8 shadow-2xl text-center space-y-6 gradient-border">
                 <div className="flex justify-center">
                   <div className="w-16 h-16 bg-brand-500/10 border border-brand-500/20 rounded-full flex items-center justify-center text-brand-400 animate-pulse">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">

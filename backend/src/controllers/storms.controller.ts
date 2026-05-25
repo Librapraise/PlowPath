@@ -9,6 +9,7 @@ const createSchema = z.object({
   end_time: z.string().datetime().optional(),
   forecasted_accumulation: z.number().nonnegative().optional(),
   status: z.enum(['planned', 'active', 'completed', 'cancelled']).optional(),
+  passes_count: z.number().int().positive().optional(),
 });
 
 const updateSchema = createSchema.partial().extend({
@@ -18,7 +19,7 @@ const updateSchema = createSchema.partial().extend({
 export async function list(_req: Request, res: Response): Promise<void> {
   const { rows } = await query(
     `SELECT storm_id, name, start_time, end_time, forecasted_accumulation, actual_accumulation,
-            status, created_at, updated_at
+            status, passes_count, created_at, updated_at
        FROM storm_events
       WHERE deleted_at IS NULL
       ORDER BY COALESCE(start_time, created_at) DESC`,
@@ -29,7 +30,7 @@ export async function list(_req: Request, res: Response): Promise<void> {
 export async function getOne(req: Request, res: Response): Promise<void> {
   const { rows } = await query(
     `SELECT storm_id, name, start_time, end_time, forecasted_accumulation, actual_accumulation,
-            status, created_at, updated_at
+            status, passes_count, created_at, updated_at
        FROM storm_events
       WHERE storm_id = $1 AND deleted_at IS NULL`,
     [req.params.id],
@@ -41,16 +42,17 @@ export async function getOne(req: Request, res: Response): Promise<void> {
 export async function create(req: Request, res: Response): Promise<void> {
   const body = createSchema.parse(req.body);
   const { rows } = await query(
-    `INSERT INTO storm_events (name, start_time, end_time, forecasted_accumulation, status)
-     VALUES ($1, $2, $3, $4, COALESCE($5, 'planned'))
+    `INSERT INTO storm_events (name, start_time, end_time, forecasted_accumulation, status, passes_count)
+     VALUES ($1, $2, $3, $4, COALESCE($5::storm_status, 'planned'), COALESCE($6, 1))
      RETURNING storm_id, name, start_time, end_time, forecasted_accumulation, actual_accumulation,
-               status, created_at, updated_at`,
+               status, passes_count, created_at, updated_at`,
     [
       body.name,
       body.start_time ?? null,
       body.end_time ?? null,
       body.forecasted_accumulation ?? null,
       body.status ?? null,
+      body.passes_count ?? null,
     ],
   );
   res.status(201).json(rows[0]);
@@ -70,7 +72,8 @@ export async function update(req: Request, res: Response): Promise<void> {
   if (body.end_time !== undefined) push('end_time = ?', body.end_time);
   if (body.forecasted_accumulation !== undefined) push('forecasted_accumulation = ?', body.forecasted_accumulation);
   if (body.actual_accumulation !== undefined) push('actual_accumulation = ?', body.actual_accumulation);
-  if (body.status !== undefined) push('status = ?', body.status);
+  if (body.status !== undefined) push('status = ?::storm_status', body.status);
+  if (body.passes_count !== undefined) push('passes_count = ?', body.passes_count);
 
   if (fields.length === 0) throw HttpError.badRequest('No updatable fields supplied');
 
@@ -79,8 +82,8 @@ export async function update(req: Request, res: Response): Promise<void> {
     `UPDATE storm_events SET ${fields.join(', ')}, updated_at = NOW()
       WHERE storm_id = $${params.length} AND deleted_at IS NULL
       RETURNING storm_id, name, start_time, end_time, forecasted_accumulation, actual_accumulation,
-                status, created_at, updated_at`,
-    params,
+                status, passes_count, created_at, updated_at`,
+    [...params],
   );
   if (!rows[0]) throw HttpError.notFound();
   res.json(rows[0]);

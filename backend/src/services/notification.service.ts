@@ -36,7 +36,26 @@ if (firebaseProjectId && firebaseClientEmail && firebasePrivateKey) {
 
 // 3. Register the async Bull queue processor.
 pushQueue.process(async (job) => {
-  const { driverId, title, body } = job.data;
+  const { driverId, title, body, data, isSeasonalReminder, action } = job.data;
+
+  if (isSeasonalReminder) {
+    logger.info(`[BULL CRON] Processing seasonal sign reminder for action: ${action}`);
+    const { rows: drivers } = await query<{ driver_id: string }>(
+      `SELECT driver_id FROM drivers WHERE deleted_at IS NULL`
+    );
+    for (const d of drivers) {
+      await enqueuePushNotification(
+        d.driver_id,
+        action === 'install' ? 'Install Yard Signs' : 'Remove Yard Signs',
+        action === 'install'
+          ? 'Winter is coming! Please view the sign route to install yard signs.'
+          : 'Winter is over! Please view the sign route to remove yard signs.',
+        { screen: 'SignRoute', action }
+      );
+    }
+    return;
+  }
+
   logger.debug(`Processing push notification job ${job.id} for driver ${driverId}`);
 
   try {
@@ -55,12 +74,12 @@ pushQueue.process(async (job) => {
     const token = driver.fcm_token;
     if (!token) {
       logger.info(`Driver "${driver.name}" (${driverId}) has no registered fcm_token; simulating push alert.`);
-      logger.info(`[MOCK PUSH ALERT] To: ${driver.name} | Title: "${title}" | Body: "${body}"`);
+      logger.info(`[MOCK PUSH ALERT] To: ${driver.name} | Title: "${title}" | Body: "${body}" | Data: ${JSON.stringify(data)}`);
       return;
     }
 
     if (!firebaseInitialized) {
-      logger.info(`[DRY RUN PUSH] Live Firebase credentials not loaded. Target: ${token} | Title: "${title}" | Body: "${body}"`);
+      logger.info(`[DRY RUN PUSH] Live Firebase credentials not loaded. Target: ${token} | Title: "${title}" | Body: "${body}" | Data: ${JSON.stringify(data)}`);
       return;
     }
 
@@ -71,6 +90,7 @@ pushQueue.process(async (job) => {
         title,
         body,
       },
+      data: data || {}, // Pass key-value payload for deep-linking and categories
       android: {
         priority: 'high',
         notification: {
@@ -98,9 +118,14 @@ pushQueue.process(async (job) => {
 /**
  * Enqueues a push notification job into the Redis-backed Bull queue.
  */
-export async function enqueuePushNotification(driverId: string, title: string, body: string): Promise<void> {
+export async function enqueuePushNotification(
+  driverId: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<void> {
   await pushQueue.add(
-    { driverId, title, body },
+    { driverId, title, body, data },
     {
       attempts: 3,
       backoff: {
@@ -195,4 +220,30 @@ export async function enqueueSmsNotification(
       removeOnComplete: true,
     },
   );
+}
+
+// Register repeatable jobs for seasonal sign transitions (FR-4.3.6)
+export async function scheduleSeasonalReminders(): Promise<void> {
+  try {
+    const repeatableJobs = await pushQueue.getRepeatableJobs();
+    for (const job of repeatableJobs) {
+      await pushQueue.removeRepeatableByKey(job.key);
+    }
+
+    // Schedule Oct 15
+    await pushQueue.add(
+      { isSeasonalReminder: true, action: 'install' },
+      { repeat: { cron: '0 9 15 10 *' } }
+    );
+
+    // Schedule Apr 15
+    await pushQueue.add(
+      { isSeasonalReminder: true, action: 'remove' },
+      { repeat: { cron: '0 9 15 4 *' } }
+    );
+
+    logger.info('Scheduled repeatable seasonal sign-transition Bull cron jobs');
+  } catch (err) {
+    logger.error('Failed to schedule seasonal reminders', err);
+  }
 }

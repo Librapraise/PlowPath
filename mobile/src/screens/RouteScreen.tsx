@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../services/navigation';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import { subscribeToConnectivity, flushAllQueues } from '../services/offline.service';
 
@@ -88,6 +88,14 @@ export default function RouteScreen({ navigation }: Props) {
         )}
       />
 
+      <TouchableOpacity
+        style={styles.signBtn}
+        onPress={() => navigation.navigate('SignRoute')}
+        accessibilityRole="button"
+      >
+        <Text style={styles.signText}>Sign Crew Operations</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={logout} style={styles.secondaryBtn}>
         <Text style={styles.secondaryText}>End Shift</Text>
       </TouchableOpacity>
@@ -113,6 +121,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   primaryText: { color: 'white', fontSize: 18, fontWeight: '600' },
+  signBtn: {
+    minHeight: 60, backgroundColor: '#6366F1', borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center', marginTop: 12,
+  },
+  signText: { color: 'white', fontSize: 16, fontWeight: '700' },
   secondaryBtn: {
     minHeight: 60, borderWidth: 1, borderColor: '#ccc', borderRadius: 6,
     alignItems: 'center', justifyContent: 'center', marginTop: 12,

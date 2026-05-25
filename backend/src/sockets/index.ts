@@ -66,3 +66,13 @@ export function broadcastGpsUpdate(update: GpsUpdatePayload): void {
   if (!io) return;
   io.to(DASHBOARD_ROOM).emit('gps:update', update);
 }
+
+export function broadcastRouteUpdate(payload: { route_id: string; status: string; driver_id?: string }): void {
+  if (!io) return;
+  io.to(DASHBOARD_ROOM).emit('route:update', payload);
+}
+
+export function broadcastUrgentRequestUpdate(payload: any): void {
+  if (!io) return;
+  io.to(DASHBOARD_ROOM).emit('urgent_request:update', payload);
+}

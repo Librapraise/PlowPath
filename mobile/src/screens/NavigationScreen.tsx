@@ -15,7 +15,7 @@ import RouteProgress from '../components/RouteProgress';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import TurnInstruction from '../components/TurnInstruction';
 import { captureException } from '../services/sentry';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../services/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Navigation'>;
 

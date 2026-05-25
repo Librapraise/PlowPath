@@ -73,8 +73,8 @@ export async function latestForAll(_req: Request, res: Response): Promise<void> 
   const { rows } = await query(
     `SELECT DISTINCT ON (driver_id)
             driver_id,
-            ST_Y(location::geometry) AS lat,
-            ST_X(location::geometry) AS lon,
+            ST_Y(location::geography) AS lat,
+            ST_X(location::geography) AS lon,
             speed_mps, heading_deg, accuracy_m, recorded_at
        FROM gps_tracking
       ORDER BY driver_id, recorded_at DESC`,
@@ -97,8 +97,8 @@ export async function driverHistory(req: Request, res: Response): Promise<void> 
   params.push(limit);
 
   const { rows } = await query(
-    `SELECT ST_Y(location::geometry) AS lat,
-            ST_X(location::geometry) AS lon,
+    `SELECT ST_Y(location::geography) AS lat,
+            ST_X(location::geography) AS lon,
             speed_mps, heading_deg, accuracy_m, recorded_at, route_id
        FROM gps_tracking
       WHERE driver_id = $1 ${whereSince}

@@ -17,6 +17,10 @@ export interface Customer {
   notify_sms?: boolean;
   notify_voice?: boolean;
   next_service_decision?: 'confirm' | 'skip' | null;
+  // Phase 3.5 Fields
+  outstanding_balance?: number;
+  payment_status?: 'paid' | 'pending' | 'overdue';
+  sign_status?: 'installed' | 'removed' | 'needs_service';
   created_at: string;
   updated_at: string;
 }

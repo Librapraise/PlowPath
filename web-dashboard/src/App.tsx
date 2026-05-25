@@ -5,6 +5,7 @@ import CustomersPage from './pages/CustomersPage';
 import DriversPage from './pages/DriversPage';
 import StormsPage from './pages/StormsPage';
 import RoutesPage from './pages/RoutesPage';
+import FinancePage from './pages/FinancePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -60,6 +61,16 @@ export default function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <RoutesPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/finance"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <FinancePage />
             </DashboardLayout>
           </ProtectedRoute>
         }

@@ -16,6 +16,7 @@ const generateSchema = z.object({
   start_lon: z.number().min(-180).max(180).optional(),
   // If false, skips OSRM (faster, useful for very large routes or local dev offline).
   include_directions: z.boolean().default(true),
+  pass_number: z.number().int().positive().optional(),
 });
 
 const updateStopSchema = z.object({
@@ -36,8 +37,8 @@ export async function generate(req: Request, res: Response): Promise<void> {
 
   const { rows: customers } = await query<CustomerRow>(
     `SELECT customer_id, name, address,
-            ST_Y(location::geometry) AS lat,
-            ST_X(location::geometry) AS lon
+            ST_Y(location::geography) AS lat,
+            ST_X(location::geography) AS lon
        FROM customers
       WHERE customer_id = ANY($1::uuid[]) AND deleted_at IS NULL AND location IS NOT NULL`,
     [body.customer_ids],
@@ -89,16 +90,17 @@ export async function generate(req: Request, res: Response): Promise<void> {
     );
     const routeId = routeRes.rows[0].route_id;
 
+    const passNumber = body.pass_number ?? 1;
     // Batch-insert stops in the optimized sequence.
     const values: string[] = [];
     const params: unknown[] = [];
     ordered.forEach((stop, idx) => {
-      params.push(routeId, stop.id, idx + 1);
+      params.push(routeId, stop.id, idx + 1, passNumber);
       const i = params.length;
-      values.push(`($${i - 2}, $${i - 1}, $${i})`);
+      values.push(`($${i - 3}, $${i - 2}, $${i - 1}, $${i})`);
     });
     await client.query(
-      `INSERT INTO route_stops (route_id, customer_id, sequence_number) VALUES ${values.join(', ')}`,
+      `INSERT INTO route_stops (route_id, customer_id, sequence_number, pass_number) VALUES ${values.join(', ')}`,
       params,
     );
 
@@ -169,10 +171,10 @@ export async function getOne(req: Request, res: Response): Promise<void> {
   if (!route) throw HttpError.notFound();
 
   const { rows: stops } = await query(
-    `SELECT s.stop_id, s.sequence_number, s.status, s.arrival_time, s.completion_time, s.notes,
+    `SELECT s.stop_id, s.sequence_number, s.status, s.arrival_time, s.completion_time, s.notes, s.pass_number,
             c.customer_id, c.name, c.address, c.access_notes, c.phone,
-            ST_Y(c.location::geometry) AS lat,
-            ST_X(c.location::geometry) AS lon
+            ST_Y(c.location::geography) AS lat,
+            ST_X(c.location::geography) AS lon
        FROM route_stops s
        JOIN customers c ON c.customer_id = s.customer_id
       WHERE s.route_id = $1
