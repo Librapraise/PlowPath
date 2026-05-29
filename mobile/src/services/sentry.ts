@@ -22,6 +22,12 @@ export function initSentry(): void {
       tracesSampleRate: __DEV__ ? 1.0 : 0.2,
       // Don't capture spurious dev-mode reload errors.
       enabled: !__DEV__ || !!process.env.SENTRY_FORCE_DEV,
+      // Adds more context data to events (IP address, cookies, user, etc.)
+      sendDefaultPii: true,
+      // Configure Session Replay
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1,
+      integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
     });
     console.log('[SENTRY] SDK initialized successfully.');
     isSentryEnabled = true;

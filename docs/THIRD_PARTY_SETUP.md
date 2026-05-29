@@ -93,8 +93,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md#step-4-deploy-backend-to-flyio) for the full s
 1. Sign up at https://fly.io (credit card required even on free tier — they bill ~$0 if you stay under the included resources).
 2. Install `flyctl`.
 3. From `backend/`: `fly launch --no-deploy --name plowpath-api-staging`.
-4. Edit `fly.toml` (see DEPLOYMENT.md for full config).
-5. Set all secrets (see DEPLOYMENT.md).
+4. Edit `fly.toml` (see [DEPLOYMENT.md](DEPLOYMENT.md#step-4-deploy-backend-to-flyio) for full config).
+5. Set all secrets (see [DEPLOYMENT.md](DEPLOYMENT.md#step-4-deploy-backend-to-flyio)).
 6. `fly deploy`.
 
 ### Cost estimate (single-region, 2 shared-cpu-1x machines, 512 MB):

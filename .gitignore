@@ -56,6 +56,9 @@ mobile/ios/*.xcworkspace/xcuserdata/
 # Vite
 web-dashboard/.vite/
 
+# Sentry
+sentry.properties
+
 # Misc
 *.pid
 *.seed
