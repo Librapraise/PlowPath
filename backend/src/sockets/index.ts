@@ -82,3 +82,7 @@ export function broadcastUrgentRequestUpdate(payload: any): void {
   if (!io) return;
   io.to(DASHBOARD_ROOM).emit('urgent_request:update', payload);
 }
+
+export function getIo(): SocketIOServer | null {
+  return io;
+}

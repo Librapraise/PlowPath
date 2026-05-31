@@ -104,6 +104,14 @@ export default function RouteScreen({ navigation }: Props) {
         <Text style={styles.settingsText}>Driver Settings</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.shiftSwapBtn}
+        onPress={() => navigation.navigate('ShiftSwap')}
+        accessibilityRole="button"
+      >
+        <Text style={styles.shiftSwapText}>Shift Handover Console ♻️</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={logout} style={styles.secondaryBtn}>
         <Text style={styles.secondaryText}>End Shift</Text>
       </TouchableOpacity>
@@ -113,7 +121,7 @@ export default function RouteScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f4f6f8' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'white' },
+  center: { flex: 1, alignItems: 'center', justifycontent: 'center', padding: 24, backgroundColor: 'white' },
   heading: { fontSize: 24, fontWeight: '700', color: '#000', marginBottom: 16 },
   error: { color: '#DC3545', marginBottom: 12 },
   muted: { color: '#666', marginTop: 24, textAlign: 'center' },
@@ -139,6 +147,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 12,
   },
   settingsText: { color: 'white', fontSize: 16, fontWeight: '700' },
+  shiftSwapBtn: {
+    minHeight: 60, backgroundColor: '#10B981', borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center', marginTop: 12,
+  },
+  shiftSwapText: { color: 'white', fontSize: 16, fontWeight: '700' },
   secondaryBtn: {
     minHeight: 60, borderWidth: 1, borderColor: '#ccc', borderRadius: 6,
     alignItems: 'center', justifyContent: 'center', marginTop: 12,

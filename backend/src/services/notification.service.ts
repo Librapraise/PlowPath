@@ -5,6 +5,8 @@ import { query } from '../config/db';
 import { logger } from '../utils/logger';
 import { redis } from '../config/redis';
 import { sendSms } from './twilio.service';
+import { fetchWeatherAlerts } from './weather.service';
+import { getIo } from '../sockets';
 
 // 1. Initialize the Bull Queue powered by the standard Redis URL.
 export const pushQueue = new Queue('push-notifications', env.REDIS_URL);
@@ -298,5 +300,41 @@ export async function scheduleSeasonalReminders(): Promise<void> {
     logger.info('Scheduled repeatable seasonal sign-transition Bull cron jobs');
   } catch (err) {
     logger.error('Failed to schedule seasonal reminders', err);
+  }
+}
+
+// 6. Initialize weather queue
+export const weatherQueue = new Queue('weather-updates', env.REDIS_URL);
+
+weatherQueue.process(async (job) => {
+  logger.info(`[BULL CRON] Processing 15-minute weather sync worker...`);
+  try {
+    const data = await fetchWeatherAlerts();
+    const ioServer = getIo();
+    if (ioServer) {
+      ioServer.to('dashboard').emit('weather:update', data);
+      ioServer.emit('driver:weather:update', data);
+    }
+    logger.info(`[BULL CRON] Weather sync complete: ${JSON.stringify(data)}`);
+  } catch (err) {
+    logger.error('Failed to run weather update Bull task:', err);
+    throw err;
+  }
+});
+
+export async function scheduleWeatherUpdates(): Promise<void> {
+  try {
+    const repeatableJobs = await weatherQueue.getRepeatableJobs();
+    for (const job of repeatableJobs) {
+      await weatherQueue.removeRepeatableByKey(job.key);
+    }
+    // Repeat every 15 minutes
+    await weatherQueue.add(
+      { action: 'check' },
+      { repeat: { cron: '*/15 * * * *' } }
+    );
+    logger.info('Scheduled repeatable 15-minute weather sync Bull cron job');
+  } catch (err) {
+    logger.error('Failed to schedule weather updates', err);
   }
 }

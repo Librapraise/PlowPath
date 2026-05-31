@@ -9,6 +9,7 @@ export interface AuthPayload {
   sub: string;
   role: UserRole;
   driverId?: string;
+  orgId?: string;
 }
 
 declare global {

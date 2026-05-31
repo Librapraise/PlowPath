@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { pool, query } from '../config/db';
 import { HttpError } from '../utils/httpError';
+import { getIo } from '../sockets';
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -142,3 +143,31 @@ export async function updateFcmToken(req: Request, res: Response): Promise<void>
 
   res.json(rows[0]);
 }
+
+const alertSchema = z.object({
+  message: z.string().min(1).max(1000),
+});
+
+export async function alertDriver(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw HttpError.unauthorized();
+  const { id } = req.params;
+  const { message } = alertSchema.parse(req.body);
+
+  // 1. Send via WebSocket if online
+  const ioServer = getIo();
+  if (ioServer) {
+    ioServer.to(`driver:${id}`).emit('dispatch:alert', { message });
+  }
+
+  // 2. Send via FCM Push Notification (Bull queue)
+  const { enqueuePushNotification } = require('../services/notification.service');
+  await enqueuePushNotification(
+    id,
+    '🚨 High-Priority Dispatch Alert',
+    message,
+    { type: 'dispatch_alert', message }
+  );
+
+  res.json({ success: true, message: 'Alert dispatched to driver successfully' });
+}
+

@@ -9,6 +9,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import RoutePolyline from '../components/Map/RoutePolyline';
 import CustomSelect from '../components/CustomSelect';
+import { api } from '../services/api';
 
 // Leaflet map center utility
 function FocusRouteMap({ bounds }: { bounds: L.LatLngBounds | null }) {
@@ -63,6 +64,54 @@ export default function RoutesPage() {
   const [startLat, setStartLat] = useState('42.8864'); // Default Buffalo center
   const [startLon, setStartLon] = useState('-78.8784');
   const [passNumber, setPassNumber] = useState('1');
+
+  // Drag and Drop States
+  const [localStops, setLocalStops] = useState<RouteStop[]>([]);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (currentRoute?.stops) {
+      setLocalStops(currentRoute.stops);
+    }
+  }, [currentRoute]);
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggingIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggingIdx === null || draggingIdx === targetIdx) return;
+
+    const updated = [...localStops];
+    const draggedItem = updated[draggingIdx];
+    updated.splice(draggingIdx, 1);
+    updated.splice(targetIdx, 0, draggedItem);
+
+    setDraggingIdx(targetIdx);
+    setLocalStops(updated);
+  };
+
+  const handleDragEnd = async () => {
+    if (!currentRoute || draggingIdx === null) return;
+    setDraggingIdx(null);
+
+    try {
+      const reorderedStops = localStops.map((stop, idx) => ({
+        stop_id: stop.stop_id,
+        sequence_number: idx + 1,
+      }));
+
+      await api.put(`/routes/${currentRoute.route_id}`, { stops: reorderedStops });
+      useToastStore.getState().addToast('Route sequences overridden successfully', 'success');
+      fetchRouteDetails(currentRoute.route_id);
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message ?? 'Failed to reorder route sequence';
+      useToastStore.getState().addToast(msg, 'error');
+      if (currentRoute.stops) setLocalStops(currentRoute.stops);
+    }
+  };
 
   // Broadcast SMS Fields
   const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -331,8 +380,17 @@ export default function RoutesPage() {
                   Optimized Stop Sequence
                 </div>
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-800/40 p-2 space-y-1.5">
-                  {currentRoute.stops?.map((stop) => (
-                    <div key={stop.stop_id} className="p-3 bg-slate-900/40 border border-slate-850/60 rounded-xl hover:border-slate-800 transition-all text-xs font-semibold">
+                  {localStops.map((stop, idx) => (
+                    <div
+                      key={stop.stop_id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`p-3 bg-slate-900/40 border border-slate-850/60 rounded-xl hover:border-slate-800 transition-all text-xs font-semibold cursor-grab active:cursor-grabbing ${
+                        draggingIdx === idx ? 'opacity-40 scale-95 border-brand-500/30' : ''
+                      }`}
+                    >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
                           <span className={`w-5.5 h-5.5 rounded-full flex items-center justify-center font-black ${

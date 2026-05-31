@@ -7,13 +7,15 @@ interface Props {
   name?: string;
   vehicleType?: string;
   isSelected?: boolean;
+  isStale?: boolean;
   onClick?: () => void;
 }
 
-const createDriverIcon = (initials: string, isSelected: boolean) => {
-  const bg = isSelected ? '#38b0f8' : '#0f172a';
-  const border = isSelected ? '#ffffff' : '#38b0f8';
-  const shadow = isSelected ? '0 0 12px rgba(56, 176, 248, 0.8)' : '0 2px 6px rgba(0,0,0,0.5)';
+const createDriverIcon = (initials: string, isSelected: boolean, isStale: boolean) => {
+  const bg = isStale ? '#334155' : (isSelected ? '#38b0f8' : '#0f172a');
+  const border = isStale ? '#64748b' : (isSelected ? '#ffffff' : '#38b0f8');
+  const shadow = isStale ? '0 1px 3px rgba(0,0,0,0.3)' : (isSelected ? '0 0 12px rgba(56, 176, 248, 0.8)' : '0 2px 6px rgba(0,0,0,0.5)');
+  const opacityStyle = isStale ? 'opacity: 0.6;' : '';
   
   return L.divIcon({
     className: `plowpath-driver-marker-${driverIdInitials(initials)}`,
@@ -21,7 +23,7 @@ const createDriverIcon = (initials: string, isSelected: boolean) => {
       <div style="
         width: 32px; height: 32px; border-radius: 50%;
         background: ${bg}; border: 2px solid ${border};
-        box-shadow: ${shadow};
+        box-shadow: ${shadow}; ${opacityStyle}
         display: flex; align-items: center; justify-content: center;
         color: white; font-weight: 800; font-size: 11px;
         transition: all 0.2s ease;
@@ -35,7 +37,7 @@ function driverIdInitials(name: string) {
   return name.replace(/[^a-zA-Z]/g, '').toLowerCase().slice(0, 4);
 }
 
-export default function DriverMarker({ driver, name = 'Driver', vehicleType = 'Plow Truck', isSelected = false, onClick }: Props) {
+export default function DriverMarker({ driver, name = 'Driver', vehicleType = 'Plow Truck', isSelected = false, isStale = false, onClick }: Props) {
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -48,7 +50,7 @@ export default function DriverMarker({ driver, name = 'Driver', vehicleType = 'P
   return (
     <Marker
       position={[driver.lat, driver.lon]}
-      icon={createDriverIcon(initials, isSelected)}
+      icon={createDriverIcon(initials, isSelected, isStale)}
       eventHandlers={{
         click: () => {
           if (onClick) onClick();

@@ -7,6 +7,7 @@ export type RootStackParamList = {
   History: undefined;
   SignRoute: undefined;
   Settings: undefined;
+  ShiftSwap: undefined;
 };
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();

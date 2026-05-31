@@ -29,6 +29,7 @@ type UserRow = {
   password_hash: string;
   role: UserRole;
   name: string;
+  org_id: string | null;
 };
 
 function isEmail(s: string): boolean {
@@ -50,7 +51,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   try {
     const column = isEmail(identifier) ? 'email' : 'phone';
     const { rows } = await query<UserRow>(
-      `SELECT u.user_id, u.email, u.phone, u.password_hash, u.role, u.name
+      `SELECT u.user_id, u.email, u.phone, u.password_hash, u.role, u.name, u.org_id
          FROM users u
         WHERE u.${column} = $1 AND u.deleted_at IS NULL
         LIMIT 1`,
@@ -78,7 +79,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       driverId = dr.rows[0]?.driver_id;
     }
 
-    const { access, refresh } = signTokens({ sub: user.user_id, role: user.role, driverId });
+    const { access, refresh } = signTokens({ sub: user.user_id, role: user.role, driverId, orgId: user.org_id ?? undefined });
     logger.info('Authentication success: ip=%s identifier_hash=%s role=%s userId=%s', req.ip, identifierHash, user.role, user.user_id);
 
     res.json({
@@ -91,6 +92,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         name: user.name,
         role: user.role,
         driver_id: driverId ?? null,
+        org_id: user.org_id ?? null,
       },
     });
   } catch (error) {
@@ -120,6 +122,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     sub: payload.sub,
     role: payload.role,
     driverId: payload.driverId,
+    orgId: payload.orgId,
   });
   logger.info('Token refresh success: ip=%s token_hash=%s userId=%s', req.ip, tokenHash, payload.sub);
   res.json({ token: access, refresh_token: nextRefresh });
