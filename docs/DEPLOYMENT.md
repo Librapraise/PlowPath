@@ -231,10 +231,10 @@ Repeat with `plowpath-api` (prod) when ready.
    - Root directory: `/`
 4. Env vars (per environment):
    - **Preview** (every PR): `VITE_API_URL=https://plowpath-api-staging.fly.dev/api/v1`, `VITE_WS_URL=wss://plowpath-api-staging.fly.dev`
-   - **Production**: `VITE_API_URL=https://api.plowpath.app/api/v1`, `VITE_WS_URL=wss://api.plowpath.app`
+   - **Production**: `VITE_API_URL=https://api.plowpath.ca/api/v1`, `VITE_WS_URL=wss://api.plowpath.ca`
 5. Custom domains:
-   - `dashboard.plowpath.app` → production
-   - `staging.plowpath.app` → preview branch alias
+   - `dashboard.plowpath.ca` → production
+   - `staging.plowpath.ca` → staging / preview branch alias
 
 Cloudflare handles TLS, edge caching, and DDoS automatically.
 
@@ -478,11 +478,11 @@ Recommend **EAS Build** + **EAS Submit** if you adopt the Expo dev-client model 
 
 | Subdomain | Points to | Purpose |
 |---|---|---|
-| `plowpath.app` | Cloudflare Pages | Marketing site (later) |
-| `dashboard.plowpath.app` | Cloudflare Pages (prod branch) | Web dashboard |
-| `staging.plowpath.app` | Cloudflare Pages (preview alias) | Staging dashboard |
-| `api.plowpath.app` | Fly.io (prod) | Backend API + Socket.io |
-| `api-staging.plowpath.app` | Fly.io (staging) | Staging backend |
+| `plowpath.ca` | Cloudflare Pages | Marketing site (later) |
+| `dashboard.plowpath.ca` | Cloudflare Pages (prod branch) | Web dashboard |
+| `staging.plowpath.ca` | Cloudflare Workers (staging deploy) | Staging dashboard |
+| `api.plowpath.ca` | Fly.io (prod) | Backend API + Socket.io |
+| `api-staging.plowpath.ca` | Fly.io (staging) | Staging backend |
 | `osrm.plowpath.app` | Your OSRM VM | Self-hosted routing |
 | `nominatim.plowpath.app` | Your Nominatim VM (optional) | Self-hosted geocoding |
 

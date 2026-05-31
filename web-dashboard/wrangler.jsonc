@@ -6,5 +6,13 @@
   "assets": {
     // Vite writes its output here; this is what gets uploaded to Cloudflare's edge
     "directory": "./dist"
-  }
+  },
+  // Custom domain routing — add staging.plowpath.ca here so wrangler deploy
+  // registers the route automatically. Swap for dashboard.plowpath.ca on prod.
+  "routes": [
+    {
+      "pattern": "staging.plowpath.ca/*",
+      "zone_name": "plowpath.ca"
+    }
+  ]
 }
