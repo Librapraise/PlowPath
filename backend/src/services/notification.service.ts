@@ -146,6 +146,59 @@ smsQueue.process(async (job) => {
   logger.debug(`Processing SMS notification job ${job.id} of type "${type}" for customer ${customerId}`);
 
   try {
+    // Check Quiet Hours configuration from database settings
+    const { rows: settingsRows } = await query(
+      'SELECT settings FROM organization_settings LIMIT 1'
+    );
+    
+    if (settingsRows.length > 0) {
+      const osSettings = settingsRows[0].settings as any;
+      const qh = osSettings?.quiet_hours;
+      
+      if (qh && qh.enabled) {
+        const now = new Date();
+        const currentHours = now.getHours().toString().padStart(2, '0');
+        const currentMins = now.getMinutes().toString().padStart(2, '0');
+        const currentTimeStr = `${currentHours}:${currentMins}`;
+        
+        const { start, end } = qh;
+        let isQuiet = false;
+        if (start <= end) {
+          isQuiet = currentTimeStr >= start && currentTimeStr <= end;
+        } else {
+          isQuiet = currentTimeStr >= start || currentTimeStr <= end;
+        }
+        
+        if (isQuiet) {
+          logger.info(`[QUIET HOURS ACTIVE] SMS to customer ${customerId} postponed. Enqueuing for execution after quiet hours.`);
+          
+          const [endHour, endMin] = end.split(':').map(Number);
+          const targetDate = new Date();
+          targetDate.setHours(endHour, endMin, 0, 0);
+          
+          if (targetDate.getTime() <= now.getTime()) {
+            targetDate.setDate(targetDate.getDate() + 1);
+          }
+          
+          const delayMs = targetDate.getTime() - now.getTime();
+          
+          // Re-enqueue the job in Bull with the computed delay
+          await smsQueue.add(
+            { customerId, type, body, bypassLimit },
+            {
+              delay: delayMs,
+              attempts: 3,
+              backoff: {
+                type: 'exponential',
+                delay: 5000,
+              },
+              removeOnComplete: true,
+            }
+          );
+          return; // Abort present execution
+        }
+      }
+    }
     // Fetch customer details from database
     const { rows } = await query<{
       phone: string | null;

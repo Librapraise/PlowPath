@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { api } from '../services/api';
 import { useAuthStore, type AuthUser } from '../store/authStore';
@@ -21,14 +22,32 @@ const EyeOffIcon = ({ color }: { color: string }) => (
   </Svg>
 );
 
+const VEHICLE_OPTIONS = [
+  'Light Duty Pickup',
+  'Medium Duty Plow',
+  'Heavy Duty Salt Spreader',
+  'Tractor/Loader',
+];
+
 // Copy is locked per Copy Requirements doc — drivers operate this in gloves.
 export default function LoginScreen() {
   const setSession = useAuthStore((s) => s.setSession);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState('Light Duty Pickup');
+  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Load last chosen vehicle from storage
+    AsyncStorage.getItem('plowpath.activeVehicle').then((val) => {
+      if (val) {
+        setSelectedVehicle(val);
+      }
+    });
+  }, []);
 
   async function onSubmit() {
     setError(null);
@@ -38,6 +57,23 @@ export default function LoginScreen() {
         '/auth/login',
         { identifier, password },
       );
+
+      // Save chosen vehicle to local storage
+      await AsyncStorage.setItem('plowpath.activeVehicle', selectedVehicle);
+
+      // If logging in as a driver, update vehicle type on backend
+      if (data.user.driver_id) {
+        try {
+          // Temporarily attach authorization header manually as store isn't populated yet
+          await api.put(`/drivers/${data.user.driver_id}`, 
+            { vehicle_type: selectedVehicle },
+            { headers: { Authorization: `Bearer ${data.token}` } }
+          );
+        } catch (backendErr) {
+          console.warn('[LOGIN] Failed to update vehicle on backend:', backendErr);
+        }
+      }
+
       setSession({ token: data.token, refreshToken: data.refresh_token, user: data.user });
       
       // Request FCM permissions and register token with backend in the background
@@ -84,6 +120,52 @@ export default function LoginScreen() {
           {showPassword ? <EyeOffIcon color="#666" /> : <EyeIcon color="#666" />}
         </TouchableOpacity>
       </View>
+
+      <Text style={styles.label}>Active Vehicle</Text>
+      <TouchableOpacity
+        onPress={() => setShowVehicleDropdown((prev) => !prev)}
+        style={styles.dropdownHeader}
+        accessibilityRole="button"
+        accessibilityLabel={`Selected vehicle: ${selectedVehicle}. Double tap to change.`}
+      >
+        <Text style={styles.dropdownHeaderText}>{selectedVehicle}</Text>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth={2.5}>
+          {showVehicleDropdown ? (
+            <Path d="M18 15l-6-6-6 6" />
+          ) : (
+            <Path d="M6 9l6 6 6-6" />
+          )}
+        </Svg>
+      </TouchableOpacity>
+
+      {showVehicleDropdown && (
+        <View style={styles.dropdownList}>
+          {VEHICLE_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.dropdownOption,
+                selectedVehicle === option && styles.dropdownOptionSelected,
+              ]}
+              onPress={() => {
+                setSelectedVehicle(option);
+                setShowVehicleDropdown(false);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${option}`}
+            >
+              <Text
+                style={[
+                  styles.dropdownOptionText,
+                  selectedVehicle === option && styles.dropdownOptionTextSelected,
+                ]}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -135,6 +217,52 @@ const styles = StyleSheet.create({
     padding: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  dropdownHeader: {
+    minHeight: 60,
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 6,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+  },
+  dropdownHeaderText: {
+    fontSize: 18,
+    color: '#000',
+    fontWeight: '500',
+  },
+  dropdownList: {
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderRadius: 6,
+    marginTop: 4,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  dropdownOption: {
+    minHeight: 50,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#E6F0FA',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  dropdownOptionTextSelected: {
+    color: '#2E75B6',
+    fontWeight: '700',
   },
   error: { color: '#DC3545', marginTop: 16, fontSize: 16 },
   button: {

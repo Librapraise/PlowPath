@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
     "@turf/turf": "^6.5.0",
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",

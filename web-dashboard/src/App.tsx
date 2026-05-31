@@ -6,6 +6,7 @@ import DriversPage from './pages/DriversPage';
 import StormsPage from './pages/StormsPage';
 import RoutesPage from './pages/RoutesPage';
 import FinancePage from './pages/FinancePage';
+import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 
@@ -71,6 +72,17 @@ export default function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <FinancePage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <SettingsPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

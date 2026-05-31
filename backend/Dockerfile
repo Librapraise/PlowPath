@@ -40,6 +40,6 @@ FROM base
 # Copy built application
 COPY --from=build /app /app
 
-# Start the server by default, this can be overwritten at runtime
+# Start the server by default, running database migrations first
 EXPOSE 3000
-CMD [ "npm", "run", "start" ]
+CMD [ "sh", "-c", "npm run migrate && npm run start" ]

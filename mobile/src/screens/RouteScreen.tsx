@@ -96,6 +96,14 @@ export default function RouteScreen({ navigation }: Props) {
         <Text style={styles.signText}>Sign Crew Operations</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.settingsBtn}
+        onPress={() => navigation.navigate('Settings')}
+        accessibilityRole="button"
+      >
+        <Text style={styles.settingsText}>Driver Settings</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={logout} style={styles.secondaryBtn}>
         <Text style={styles.secondaryText}>End Shift</Text>
       </TouchableOpacity>
@@ -126,6 +134,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 12,
   },
   signText: { color: 'white', fontSize: 16, fontWeight: '700' },
+  settingsBtn: {
+    minHeight: 60, backgroundColor: '#475569', borderRadius: 6,
+    alignItems: 'center', justifyContent: 'center', marginTop: 12,
+  },
+  settingsText: { color: 'white', fontSize: 16, fontWeight: '700' },
   secondaryBtn: {
     minHeight: 60, borderWidth: 1, borderColor: '#ccc', borderRadius: 6,
     alignItems: 'center', justifyContent: 'center', marginTop: 12,

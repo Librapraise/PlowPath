@@ -17,6 +17,7 @@ import routeRoutes from './routes/routes.routes';
 import trackingRoutes from './routes/tracking.routes';
 import twilioRoutes from './routes/twilio.routes';
 import signRoutes from './routes/signs.routes';
+import settingsRoutes from './routes/settings.routes';
 
 const app = express();
 
@@ -123,6 +124,10 @@ app.get('/api/v1', (_req: Request, res: Response) => {
         latest: 'GET /api/v1/tracking/latest',
         driverHistory: 'GET /api/v1/tracking/driver/:id',
       },
+      settings: {
+        get: 'GET /api/v1/settings',
+        update: 'PUT /api/v1/settings',
+      },
     },
   });
 });
@@ -136,6 +141,7 @@ app.use('/api/v1/routes', routeRoutes);
 app.use('/api/v1/tracking', trackingRoutes);
 app.use('/api/v1/webhooks/twilio', twilioRoutes);
 app.use('/api/v1/signs', signRoutes);
+app.use('/api/v1/settings', settingsRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Route not found' } });

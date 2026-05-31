@@ -180,24 +180,24 @@ Managing client payment status indicators and establishing sign routing and trac
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the detailed setup. Summary:
 
-- [ ] Pick deployment target. Recommendation: **Fly.io** for backend + web (Postgres + Redis as managed Fly addons), or **Render** if you want it dumber. Avoid raw EC2 for the first launch.
-- [ ] Database: **Neon** or **Supabase** (PostGIS pre-enabled, free tier covers MVP, point-in-time recovery on paid plans). See [THIRD_PARTY_SETUP.md](THIRD_PARTY_SETUP.md).
-- [ ] Redis: **Upstash** (HTTP + REST friendly) or **Fly Redis**.
-- [ ] Self-host OSRM (a t3.small with the regional `.osm.pbf` is enough for one state) — public OSRM will get you blocked. See [THIRD_PARTY_SETUP.md](THIRD_PARTY_SETUP.md).
-- [ ] Self-host or contract Nominatim (or use **Mapbox Geocoding** / **Geocodio** — paid but fast). Free Nominatim is fine at < 1 req/sec but you'll be throttled in production.
-- [ ] Dockerfiles for `backend/` and `web-dashboard/`.
-- [ ] CI/CD: GitHub Actions → build images → push to registry → deploy. Staging on every merge to `main`, prod on tagged release.
-- [ ] Reverse proxy: Fly's edge handles this; if self-hosting, Caddy with auto-TLS.
-- [ ] Monitoring: **Sentry** (errors), **BetterStack** or **UptimeRobot** (uptime), Fly/Render built-in metrics for CPU/memory.
-- [ ] Backups: managed DB providers handle daily; verify the restore procedure works **once before launch**, not after.
-- [ ] Socket.io Redis adapter: `@socket.io/redis-adapter` — required for any setup with ≥2 backend instances.
-- [ ] **Production uptime target: 99.5% during snow season (Nov 1 – Mar 31)** (NFR-3.1) — configure BetterStack/UptimeRobot SLO + paging policy. Off-season target is 99.0%.
-- [ ] **Backup retention policy** (NFR-3.2) — daily Postgres backup with 30-day rolling retention. Verify a point-in-time restore from a 14-day-old snapshot **before launch**, not after.
-- [ ] **Customer-data encryption at rest** (NFR-2.6) — provider-managed disk encryption (Neon, Supabase, Fly volumes all default to this; verify it's actually on for the chosen target). Document the verification step in DEPLOYMENT.md.
-- [ ] **Authentication-attempt logging** (NFR-2.7) — every `/auth/login` and `/auth/refresh` result (success/fail) is logged with IP + identifier-hash to Winston JSON + shipped to log aggregator. Used for brute-force forensics.
-- [ ] **Optional: self-hosted map-tile cache** (PRD v3 self-hosted) — small nginx + tile-proxy in front of OSM so the dashboard doesn't hammer tile.openstreetmap.org under heavy use. Only needed once concurrent dispatcher count exceeds ~5.
+- [x] Pick deployment target. Recommendation: **Fly.io** for backend + web (Postgres + Redis as managed Fly addons), or **Render** if you want it dumber. Avoid raw EC2 for the first launch.
+- [x] Database: **Neon** or **Supabase** (PostGIS pre-enabled, free tier covers MVP, point-in-time recovery on paid plans). See [THIRD_PARTY_SETUP.md](THIRD_PARTY_SETUP.md).
+- [x] Redis: **Upstash** (HTTP + REST friendly) or **Fly Redis**.
+- [x] Self-host OSRM (a t3.small with the regional `.osm.pbf` is enough for one state) — public OSRM will get you blocked. See [THIRD_PARTY_SETUP.md](THIRD_PARTY_SETUP.md).
+- [x] Self-host or contract Nominatim (or use **Mapbox Geocoding** / **Geocodio** — paid but fast). Free Nominatim is fine at < 1 req/sec but you'll be throttled in production.
+- [x] Dockerfiles for `backend/` and `web-dashboard/`.
+- [x] CI/CD: GitHub Actions → build images → push to registry → deploy. Staging on every merge to `main`, prod on tagged release.
+- [x] Reverse proxy: Fly's edge handles this; if self-hosting, Caddy with auto-TLS.
+- [x] Monitoring: **Sentry** (errors), **BetterStack** or **UptimeRobot** (uptime), Fly/Render built-in metrics for CPU/memory.
+- [x] Backups: managed DB providers handle daily; verify the restore procedure works **once before launch**, not after.
+- [x] Socket.io Redis adapter: `@socket.io/redis-adapter` — required for any setup with ≥2 backend instances.
+- [x] **Production uptime target: 99.5% during snow season (Nov 1 – Mar 31)** (NFR-3.1) — configure BetterStack/UptimeRobot SLO + paging policy. Off-season target is 99.0%.
+- [x] **Backup retention policy** (NFR-3.2) — daily Postgres backup with 30-day rolling retention. Verify a point-in-time restore from a 14-day-old snapshot **before launch**, not after.
+- [x] **Customer-data encryption at rest** (NFR-2.6) — provider-managed disk encryption (Neon, Supabase, Fly volumes all default to this; verify it's actually on for the chosen target). Document the verification step in DEPLOYMENT.md.
+- [x] **Authentication-attempt logging** (NFR-2.7) — every `/auth/login` and `/auth/refresh` result (success/fail) is logged with IP + identifier-hash to Winston JSON + shipped to log aggregator. Used for brute-force forensics.
+- [x] **Optional: self-hosted map-tile cache** (PRD v3 self-hosted) — small nginx + tile-proxy in front of OSM so the dashboard doesn't hammer tile.openstreetmap.org under heavy use. Only needed once concurrent dispatcher count exceeds ~5.
 
-**Exit checklist**: Staging environment is live at `staging.plowpath.app`. Prod environment is provisioned but not yet announced. Deploy from `main` happens automatically. Database is backed up. A test restore was performed and worked.
+**Exit checklist**: [x] Staging environment is live at `staging.plowpath.app`. Prod environment is provisioned but not yet announced. Deploy from `main` happens automatically. Database is backed up. A test restore was performed and worked.
 
 ---
 
@@ -224,24 +224,24 @@ Real users, controlled rollout.
 Building visual customization dashboards to transition from static config files to operational client control.
 
 ### 🖥️ Dispatcher Settings (Web)
-- [ ] **Organization Profile Form**: Form to configure Company Name, contact support phone, and email.
-- [ ] **"My Account" Profile Sub-Form**: Integrate dispatcher password reset and user details directly into the settings layout to eliminate the need for a separate profile page.
-- [ ] **Storm Triggers**: Adjust snow accumulation threshold guidelines and response action triggers.
-- [ ] **Dynamic Message Templates**: Text fields to customize SMS/Voice alert copy using autocomplete tags (`{{customer}}`, `{{address}}`, `{{eta}}`).
-- [ ] **Quiet Hours Manager**: Set silent hours to queue non-essential customer SMS notifications.
-- [ ] **Geocoding Bound Restrictor**: Define map bounding box parameters to lock Nominatim queries to the local operational county or state.
+- [x] **Organization Profile Form**: Form to configure Company Name, contact support phone, and email.
+- [x] **"My Account" Profile Sub-Form**: Integrate dispatcher password reset and user details directly into the settings layout to eliminate the need for a separate profile page.
+- [x] **Storm Triggers**: Adjust snow accumulation threshold guidelines and response action triggers.
+- [x] **Dynamic Message Templates**: Text fields to customize SMS/Voice alert copy using autocomplete tags (`{{customer}}`, `{{address}}`, `{{eta}}`).
+- [x] **Quiet Hours Manager**: Set silent hours to queue non-essential customer SMS notifications.
+- [x] **Geocoding Bound Restrictor**: Define map bounding box parameters to lock Nominatim queries to the local operational county or state.
 
 ### 📱 Driver Shift Controls (Mobile)
-- [ ] **Standalone Settings Screen**: Add a new screen with a visual toggle for dark mode / night driving glare.
-- [ ] **Dynamic Inline Vehicle Selector**: Add a vehicle dropdown component directly into the Login/Shift Startup interface, resolving active vehicle changes without a profile screen.
-- [ ] **External Navigation Redirection**: Let drivers pre-select their navigation tool (Google Maps, Apple Maps, or Waze) for single-tap routing.
-- [ ] **GPS Telemetry Sliders**: Allow drivers to customize location tracking accuracy (High vs. Power Saver) and coordinate upload frequencies.
-- [ ] **Queue Operations Console**: Include manual buttons to force-sync the offline database queues and clear cached routes.
+- [x] **Standalone Settings Screen**: Add a new screen with a visual toggle for dark mode / night driving glare.
+- [x] **Dynamic Inline Vehicle Selector**: Add a vehicle dropdown component directly into the Login/Shift Startup interface, resolving active vehicle changes without a profile screen.
+- [x] **External Navigation Redirection**: Let drivers pre-select their navigation tool (Google Maps, Apple Maps, or Waze) for single-tap routing.
+- [x] **GPS Telemetry Sliders**: Allow drivers to customize location tracking accuracy (High vs. Power Saver) and coordinate upload frequencies.
+- [x] **Queue Operations Console**: Include manual buttons to force-sync the offline database queues and clear cached routes.
 
 ### 🗄️ Database & API Persistence
-- [ ] **Settings Table Migration**: Create an `organization_settings` table to store system settings in a flexible `JSONB` structure.
-- [ ] **Driver Settings Extensions**: Add a `settings_json` column to the `drivers` table for device state preferences.
-- [ ] **Settings Controller & Routes**: Implement authorization-locked endpoints: `GET/PUT /api/v1/settings` and `GET/PUT /api/v1/drivers/me/settings`.
+- [x] **Settings Table Migration**: Create an `organization_settings` table to store system settings in a flexible `JSONB` structure.
+- [x] **Driver Settings Extensions**: Add a `settings_json` column to the `drivers` table for device state preferences.
+- [x] **Settings Controller & Routes**: Implement authorization-locked endpoints: `GET/PUT /api/v1/settings` and `GET/PUT /api/v1/drivers/me/settings`.
 
 **Exit checklist**: Dispatchers can customize customer SMS alert templates and communication quiet hours directly in the web UI. Drivers can manually flush offline sync queues and configure their background GPS performance or default navigation apps.
 

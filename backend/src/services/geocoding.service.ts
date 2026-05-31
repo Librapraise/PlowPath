@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { sleep } from '../utils/sleep';
 import { logger } from '../utils/logger';
 import { HttpError } from '../utils/httpError';
+import { query } from '../config/db';
 
 const NOMINATIM_FAIR_USE_DELAY_MS = 1100;
 
@@ -27,9 +28,24 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
   if (!trimmed) throw HttpError.badRequest('Address is empty');
 
   try {
+    const { rows: settingsRows } = await query(
+      'SELECT settings FROM organization_settings LIMIT 1'
+    );
+    
+    const params: Record<string, any> = { q: trimmed, format: 'json', limit: 1, addressdetails: 0 };
+    
+    if (settingsRows.length > 0) {
+      const osSettings = settingsRows[0].settings as any;
+      if (osSettings?.geocoding_bounds) {
+        const b = osSettings.geocoding_bounds;
+        params.viewbox = `${b.min_lon},${b.max_lat},${b.max_lon},${b.min_lat}`;
+        params.bounded = 1;
+      }
+    }
+
     const { data } = await client.get<Array<{ lat: string; lon: string; display_name: string }>>(
       '/search',
-      { params: { q: trimmed, format: 'json', limit: 1, addressdetails: 0 } },
+      { params },
     );
 
     if (!data || data.length === 0) {
