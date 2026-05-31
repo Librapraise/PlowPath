@@ -6,7 +6,7 @@ This document contains a tailored, mobile-optimized WhatsApp update. It is desig
 
 ## Strategic WhatsApp Update (Copy & Paste)
 
-Hey *[Client Name]*! Quick update on the PlowPath app progress. We are making excellent progress on Phase 3 (Notifications & Dispatch)! The core backend communication engine is officially wired up. 🛠️ 
+Quick update on the PlowPath app progress. We are making excellent progress on Phase 3 (Notifications & Dispatch)! The core backend communication engine is officially wired up. 🛠️ 
 
 Here’s a non-technical breakdown of the main infrastructure we’ve been implementing and calibrating:
 
@@ -21,7 +21,7 @@ Here’s a non-technical breakdown of the main infrastructure we’ve been imple
 • *Safeguards & Compliance:* Implementing industry-standard STOP/HELP replies to handle automatic legal opt-outs and anti-spam limits.
 
 *Phase 3: Cost-Savings Breakthrough* 💰
-• *Licensing Savings:* Excellent news—we successfully pre-configured open-source background tracking tools, **saving you a minimum of $349/year in recurring commercial software licenses**.
+• *Licensing Savings:* Excellent news, we successfully pre-configured open-source background tracking tools, **saving you a minimum of $349/year in recurring commercial software licenses**.
 • *Free Maps & Search:* Configured Mapbox to run on a free tier giving us 100,000 free address searches and 50,000 free map loads per month.
 • *Free Error Logs:* Pre-wired Sentry error tracking entirely within their free developer tier (5,000 logs/mo).
 

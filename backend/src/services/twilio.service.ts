@@ -178,7 +178,7 @@ export function generateSmsResponse(body: string): string {
   if (normalized === 'STOP' || normalized === 'UNSUBSCRIBE') {
     twiml.message('You have been successfully unsubscribed from PlowPath alerts. Reply START to re-enable.');
   } else if (normalized === 'HELP') {
-    twiml.message('PlowPath Alerts: Receive snow clearing updates. Reply STOP to opt-out, or email support at plowpath.app.');
+    twiml.message('PlowPath Alerts: Receive snow clearing updates. Reply STOP to opt-out, or email support at plowpath.ca.');
   } else if (normalized === 'START') {
     twiml.message('Welcome back to PlowPath alerts! You have successfully re-subscribed.');
   } else {

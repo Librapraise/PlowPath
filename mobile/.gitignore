@@ -1,0 +1,50 @@
+# React Native & Expo Mobile .gitignore
+
+# Dependencies
+node_modules/
+
+# Android build outputs and caches
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# Android signing keys (sensitive keys should never be committed)
+*.keystore
+*.jks
+!android/app/debug.keystore
+
+# iOS build outputs, CocoaPods, and Xcode workspace state
+ios/build/
+ios/DerivedData/
+ios/Pods/
+ios/.xcode.env.local
+ios/**/*.xcworkspace/xcuserdata/
+ios/**/*.xcuserdatad
+ios/**/project.xcworkspace/xcuserdata/
+ios/**/xcuserdata/
+.idea/
+.DS_Store
+
+# Sensitive Configuration & API Keys (Firebase, Sentry, Environment variables)
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+
+# Sentry
+sentry.properties
+android/sentry.properties
+ios/sentry.properties
+
+# Firebase Configuration Files (contains API keys/sensitive project details)
+android/app/google-services.json
+ios/GoogleService-Info.plist
+ios/*/GoogleService-Info.plist
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output

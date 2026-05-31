@@ -1,4 +1,7 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import { z } from 'zod';
 
 const schema = z.object({
@@ -16,6 +19,7 @@ const schema = z.object({
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
+  SENTRY_DSN: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -23,6 +27,9 @@ if (!parsed.success) {
   // Print readable errors and crash early — don't boot with invalid config.
   // eslint-disable-next-line no-console
   console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
+  if (process.env.NODE_ENV === 'test') {
+    throw new Error(`Invalid environment variables in test: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`);
+  }
   process.exit(1);
 }
 

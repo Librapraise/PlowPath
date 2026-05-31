@@ -75,6 +75,13 @@ jobs:
           cd web-dashboard
           npm run build
 
+      - name: Upload Source Maps to Sentry
+        run: npx @sentry/cli sourcemaps upload --release ${{ github.sha }} web-dashboard/dist
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: plowpath
+          SENTRY_PROJECT: web
+
   mobile-ci:
     name: Mobile App CI
     runs-on: ubuntu-latest

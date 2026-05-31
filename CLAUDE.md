@@ -63,6 +63,8 @@ npx tsc --noEmit       # type-check only (no native build needed)
 - **Web map** — only place that loads tiles: [web-dashboard/src/components/Map/LeafletMap.tsx](web-dashboard/src/components/Map/LeafletMap.tsx). OSM tile URL + `© OpenStreetMap contributors` attribution.
 - **Mobile offline queue** — [mobile/src/services/offline.service.ts](mobile/src/services/offline.service.ts). GPS updates enqueue to AsyncStorage when offline, flush when reconnected.
 - **Mobile button copy** — must match `Start Route`, `Mark In Progress`, `Mark Complete`, `Skip Property`, `STOP Route` exactly (Copy Requirements doc).
+- **B2B Subcontracting & Fatigue Systems** — all database migrations, API controllers, RLS rules, real-time broadcasts, and mobile offline queues must strictly adhere to the technical specifications defined in the [B2B Subcontracting & Fatigue Specification](docs/B2B_SUBCONTRACTING_ARCHITECTURE.md).
+
 
 ## Anti-patterns — DO NOT
 

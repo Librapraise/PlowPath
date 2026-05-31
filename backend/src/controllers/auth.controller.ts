@@ -2,10 +2,16 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { env } from '../config/env';
 import { query } from '../config/db';
 import { HttpError } from '../utils/httpError';
+import { logger } from '../utils/logger';
 import type { AuthPayload, UserRole } from '../middleware/auth.middleware';
+
+function hashIdentifier(id: string): string {
+  return crypto.createHash('sha256').update(id).digest('hex');
+}
 
 const loginSchema = z.object({
   identifier: z.string().min(3, 'identifier (phone or email) is required'),
@@ -39,61 +45,83 @@ function signTokens(payload: AuthPayload) {
 
 export async function login(req: Request, res: Response): Promise<void> {
   const { identifier, password } = loginSchema.parse(req.body);
+  const identifierHash = hashIdentifier(identifier);
 
-  const column = isEmail(identifier) ? 'email' : 'phone';
-  const { rows } = await query<UserRow>(
-    `SELECT u.user_id, u.email, u.phone, u.password_hash, u.role, u.name
-       FROM users u
-      WHERE u.${column} = $1 AND u.deleted_at IS NULL
-      LIMIT 1`,
-    [identifier],
-  );
-
-  const user = rows[0];
-  if (!user) throw HttpError.unauthorized('Invalid credentials');
-
-  const ok = await bcrypt.compare(password, user.password_hash);
-  if (!ok) throw HttpError.unauthorized('Invalid credentials');
-
-  let driverId: string | undefined;
-  if (user.role === 'driver') {
-    const dr = await query<{ driver_id: string }>(
-      'SELECT driver_id FROM drivers WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1',
-      [user.user_id],
+  try {
+    const column = isEmail(identifier) ? 'email' : 'phone';
+    const { rows } = await query<UserRow>(
+      `SELECT u.user_id, u.email, u.phone, u.password_hash, u.role, u.name
+         FROM users u
+        WHERE u.${column} = $1 AND u.deleted_at IS NULL
+        LIMIT 1`,
+      [identifier],
     );
-    driverId = dr.rows[0]?.driver_id;
-  }
 
-  const { access, refresh } = signTokens({ sub: user.user_id, role: user.role, driverId });
-  res.json({
-    token: access,
-    refresh_token: refresh,
-    user: {
-      user_id: user.user_id,
-      email: user.email,
-      phone: user.phone,
-      name: user.name,
-      role: user.role,
-      driver_id: driverId ?? null,
-    },
-  });
+    const user = rows[0];
+    if (!user) {
+      logger.warn('Authentication failure: ip=%s identifier_hash=%s reason=%s', req.ip, identifierHash, 'User not found');
+      throw HttpError.unauthorized('Invalid credentials');
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) {
+      logger.warn('Authentication failure: ip=%s identifier_hash=%s reason=%s', req.ip, identifierHash, 'Password incorrect');
+      throw HttpError.unauthorized('Invalid credentials');
+    }
+
+    let driverId: string | undefined;
+    if (user.role === 'driver') {
+      const dr = await query<{ driver_id: string }>(
+        'SELECT driver_id FROM drivers WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1',
+        [user.user_id],
+      );
+      driverId = dr.rows[0]?.driver_id;
+    }
+
+    const { access, refresh } = signTokens({ sub: user.user_id, role: user.role, driverId });
+    logger.info('Authentication success: ip=%s identifier_hash=%s role=%s userId=%s', req.ip, identifierHash, user.role, user.user_id);
+
+    res.json({
+      token: access,
+      refresh_token: refresh,
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        phone: user.phone,
+        name: user.name,
+        role: user.role,
+        driver_id: driverId ?? null,
+      },
+    });
+  } catch (error) {
+    if (!(error instanceof HttpError)) {
+      logger.error('Authentication error: ip=%s identifier_hash=%s error=%s', req.ip, identifierHash, (error as Error).message);
+    }
+    throw error;
+  }
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {
   const { refresh_token } = refreshSchema.parse(req.body);
+  const tokenHash = hashIdentifier(refresh_token);
   let payload: AuthPayload & { typ?: string };
   try {
     payload = jwt.verify(refresh_token, env.JWT_SECRET) as AuthPayload & { typ?: string };
-  } catch {
+  } catch (error) {
+    logger.warn('Token refresh failure: ip=%s token_hash=%s reason=%s', req.ip, tokenHash, 'Invalid refresh token');
     throw HttpError.unauthorized('Invalid refresh token');
   }
-  if (payload.typ !== 'refresh') throw HttpError.unauthorized('Wrong token type');
+  if (payload.typ !== 'refresh') {
+    logger.warn('Token refresh failure: ip=%s token_hash=%s reason=%s', req.ip, tokenHash, 'Wrong token type');
+    throw HttpError.unauthorized('Wrong token type');
+  }
 
   const { access, refresh: nextRefresh } = signTokens({
     sub: payload.sub,
     role: payload.role,
     driverId: payload.driverId,
   });
+  logger.info('Token refresh success: ip=%s token_hash=%s userId=%s', req.ip, tokenHash, payload.sub);
   res.json({ token: access, refresh_token: nextRefresh });
 }
 

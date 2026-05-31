@@ -4,11 +4,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './navigation/RootNavigator';
 import { initSentry } from './services/sentry';
 import { navigationRef } from './services/navigation';
+import * as Sentry from '@sentry/react-native';
 
 // Initialize Sentry crash reporting
 initSentry();
 
-export default function App() {
+export default Sentry.wrap(function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer ref={navigationRef}>
@@ -16,4 +17,4 @@ export default function App() {
       </NavigationContainer>
     </SafeAreaProvider>
   );
-}
+});

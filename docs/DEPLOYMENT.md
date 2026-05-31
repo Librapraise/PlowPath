@@ -201,7 +201,7 @@ Verify your ioredis config in [backend/src/config/redis.ts](../backend/src/confi
    fly secrets set JWT_SECRET="$(openssl rand -hex 32)"
    fly secrets set JWT_EXPIRES_IN="12h"
    fly secrets set JWT_REFRESH_EXPIRES_IN="30d"
-   fly secrets set CORS_ORIGINS="https://staging.plowpath.app"
+   fly secrets set CORS_ORIGINS="https://staging.plowpath.ca"
    fly secrets set NOMINATIM_USER_AGENT="PlowPath/1.0 (admin@plowpath.app)"
    fly secrets set NOMINATIM_BASE_URL="https://nominatim.openstreetmap.org"  # or your self-hosted
    fly secrets set OSRM_BASE_URL="https://osrm.plowpath.app"                  # your self-hosted
@@ -240,11 +240,12 @@ Cloudflare handles TLS, edge caching, and DDoS automatically.
 
 ---
 
-## Step 6 — Self-host OSRM
+## Step 6 — Self-host OSRM on Fly.io
 
-Public OSRM (`router.project-osrm.org`) is **fair-use only** and will block production traffic. Self-host costs less than $10/month for one US state.
+Public OSRM (`router.project-osrm.org`) is **fair-use only** and will block production traffic. We self-host OSRM on Fly.io using a small machine profile with persistent volume storage for less than $10/month.
 
-On a Fly VM, Hetzner box, or any small VPS with ≥4GB RAM and ≥20GB disk:
+### 1. Pre-process the OSM Map Data Locally or on a VPS
+Because map extraction is CPU and memory intensive, pre-process the `.osm.pbf` file into the `.osrm` format before deploying to the small Fly VM:
 
 ```bash
 # Get regional OSM extract (example: New York state, ~250MB)
@@ -254,22 +255,47 @@ wget https://download.geofabrik.de/north-america/us/new-york-latest.osm.pbf
 docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/new-york-latest.osm.pbf
 docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-partition /data/new-york-latest.osrm
 docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-customize /data/new-york-latest.osrm
-
-# Run the server
-docker run -d --restart unless-stopped -p 5000:5000 \
-  -v "${PWD}:/data" --name osrm \
-  osrm/osrm-backend osrm-routed --algorithm mld /data/new-york-latest.osrm
 ```
 
-Put it behind Caddy for TLS:
-```caddyfile
-osrm.plowpath.app {
-  reverse_proxy localhost:5000
-  # Restrict to your backend's egress IP if Fly provides static egress
-}
-```
+### 2. Prepare the Fly.io Deployment for OSRM
+1. Create a Fly app for OSRM:
+   ```bash
+   fly apps create plowpath-osrm
+   ```
+2. Create a persistent storage volume (e.g., 10GB is enough for pre-processed New York state):
+   ```bash
+   fly volumes create osrm_data --size 10 --region iad
+   ```
+3. Upload the pre-processed `.osrm` files to the persistent volume (you can SFTP / scp into a temporary interactive Fly machine, or build a lightweight preloaded Docker image if your data fits inside the image).
+4. Create an `osrm-fly/fly.toml` configuration:
+   ```toml
+   app = "plowpath-osrm"
+   primary_region = "iad"
 
-Refresh the extract monthly with a cron (`osm-pbf` changes as OpenStreetMap updates).
+   [mounts]
+     source = "osrm_data"
+     destination = "/data"
+
+   [http_service]
+     internal_port = 5000
+     force_https = true
+     auto_stop_machines = false
+     auto_start_machines = true
+     min_machines_running = 1
+
+   [[vm]]
+     cpu_kind = "shared"
+     cpus = 1
+     memory_mb = 1024
+   ```
+5. Deploy using the official OSRM image pointing to the mounted data volume:
+   ```bash
+   fly deploy --image osrm/osrm-backend:latest --command "osrm-routed --algorithm mld /data/new-york-latest.osrm"
+   ```
+
+Put it behind Fly's default auto-TLS Edge or Caddy for secure calls. Set the `OSRM_BASE_URL` secret on your primary backend app to `https://plowpath-osrm.fly.dev`.
+
+Refresh the extract monthly using a lightweight automation cron job.
 
 ---
 
@@ -395,26 +421,38 @@ Verify with `fly scale count 2` then connecting two browser tabs and confirming 
 3. Web: `npm i @sentry/react`. Wrap router with `Sentry.ErrorBoundary`.
 4. Mobile: `npm i @sentry/react-native`, follow their setup wizard for native config.
 
-### Uptime
-BetterStack heartbeat hitting `https://api.plowpath.app/health` every 30s. Alerts → email + SMS for downtime > 2 min.
+### Uptime & SLA Target (NFR-3.1)
+- **Production Uptime SLA**: PlowPath targets a **99.5% uptime** during the active snow season (November 1 – March 31) and **99.0%** during the off-season.
+- **Heartbeat & Monitoring**: BetterStack heartbeats are configured to query the backend health discovery API endpoint (`https://api.plowpath.app/health`) every 30 seconds.
+- **Alert Routing**: If a downtime condition persists for more than **2 minutes**, BetterStack will trigger a PagerDuty escalation rule notifying the designated team **email address**.
 
 ### Logs
 Fly captures stdout. View live: `fly logs -a plowpath-api`. For long-term retention, ship to **BetterStack Logs** ($20/mo) or **Axiom** (free tier 500GB/mo).
 
 ---
 
-## Step 10 — Backups & disaster recovery
+## Step 10 — Backups, Disaster Recovery, and Encryption
 
-Neon's paid plan ($19/mo per project) includes **7-day point-in-time recovery**. Turn this on for prod before launch. Test the restore procedure:
-
-1. In Neon, create a branch from `main` at "1 hour ago".
-2. Point a scratch backend at the branch's connection string.
-3. Verify data integrity.
-4. Tear down.
-
-Document the result in a runbook ([RUNBOOKS.md](RUNBOOKS.md) — create this when you have your first real incident).
+### 1. Database Backup Retention Policy (NFR-3.2)
+Neon or Supabase paid tiers are utilized to manage production databases. The database backup configuration consists of:
+- **Daily Backups**: Enforced automatic database backups scheduled during low-traffic off-hours.
+- **Retention**: A strict **30-day rolling retention policy** is configured for all daily database snapshots.
+- **Point-in-Time Recovery (PITR)**: Enables recovery down to the exact second for any point within the preceding 14 days.
+- **Pre-Launch Verification**: A verification test is required prior to public launch. This must be executed by creating a Neon branch from a 14-day-old database snapshot, running a temporary scratch backend instance against it, verifying table integrity, and tearing the branch down. Document results in `docs/RUNBOOKS.md`.
 
 For Redis: Upstash auto-replicates. You're using Redis as a cache + Bull queue — losing it is annoying but not catastrophic. Jobs in Bull will be lost if Redis dies mid-flight; design jobs to be **idempotent** (e.g., "send notification for route X" should check a `notifications_sent` table before sending so a duplicate replay doesn't double-text a customer).
+
+### 2. Customer-Data Encryption at Rest (NFR-2.6)
+PlowPath enforces disk-level and volume-level encryption for all sensitive customer and telemetry data:
+- **Provider-Managed Disk Encryption**: The selected managed PostgreSQL instance (Neon/Supabase) must have cloud-managed disk encryption at rest enabled (AES-256 via KMS keys, active by default).
+- **Fly.io Volume Encryption**: Fly.io persistent volumes (e.g. OSRM data and Redis storage) are automatically encrypted at rest using LUKS with device-unique keys.
+- **Verification Runbook**:
+  1. For Fly volumes, execute:
+     ```bash
+     fly volumes list
+     ```
+     Inspect the `ENCRYPTED` flag to ensure it registers as `true`.
+  2. For the database, log into the Neon or Supabase Cloud Console, navigate to **Project Settings -> Security**, and confirm the status of AWS KMS disk encryption.
 
 ---
 

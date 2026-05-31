@@ -1,0 +1,10 @@
+{
+  // PlowPath Dispatcher Web Dashboard — Cloudflare Workers static-asset deployment
+  // Docs: https://developers.cloudflare.com/workers/static-assets/
+  "name": "plowpath-dashboard",
+  "compatibility_date": "2026-05-31",
+  "assets": {
+    // Vite writes its output here; this is what gets uploaded to Cloudflare's edge
+    "directory": "./dist"
+  }
+}

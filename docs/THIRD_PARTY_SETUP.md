@@ -93,8 +93,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md#step-4-deploy-backend-to-flyio) for the full s
 1. Sign up at https://fly.io (credit card required even on free tier — they bill ~$0 if you stay under the included resources).
 2. Install `flyctl`.
 3. From `backend/`: `fly launch --no-deploy --name plowpath-api-staging`.
-4. Edit `fly.toml` (see DEPLOYMENT.md for full config).
-5. Set all secrets (see DEPLOYMENT.md).
+4. Edit `fly.toml` (see [DEPLOYMENT.md](DEPLOYMENT.md#step-4-deploy-backend-to-flyio) for full config).
+5. Set all secrets (see [DEPLOYMENT.md](DEPLOYMENT.md#step-4-deploy-backend-to-flyio)).
 6. `fly deploy`.
 
 ### Cost estimate (single-region, 2 shared-cpu-1x machines, 512 MB):
@@ -284,51 +284,19 @@ Apple has rejected apps for less. Make this clear.
 
 ## 10. OSRM — Self-hosted routing
 
-Public OSRM is fair-use only and gets rate-limited under any real load. Self-host.
+Public OSRM is fair-use only and gets rate-limited under any real load. **Always self-host for production.**
+
+For a comprehensive walkthrough of local Docker testing, automated VPS deployment scripts, automatic zero-downtime updates, HTTPS reverse proxying with Caddy, and multi-state map merging, see the dedicated **[OSRM Setup Guide](file:///c:/Users/folfe/Downloads/plowpath/docs/OSRM_SETUP.md)**.
 
 ### Easiest option: small VPS
 
-1. Get a VPS with ≥4 GB RAM, ≥20 GB disk. Recommendations:
-   - **Hetzner CX21** (~€5/mo, EU) or **CX22** (US/East).
-   - **DigitalOcean Basic 4GB** (~$24/mo, US options).
-   - **Fly.io VM** (`fly machine run osrm/osrm-backend ...`, ~$10/mo).
-2. SSH in, install Docker.
-3. Download regional OSM extract from https://download.geofabrik.de/:
-   ```bash
-   wget https://download.geofabrik.de/north-america/us/new-york-latest.osm.pbf
-   ```
-4. Pre-process (one-time, ~10 min for a state):
-   ```bash
-   docker run -t -v "$PWD:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/new-york-latest.osm.pbf
-   docker run -t -v "$PWD:/data" osrm/osrm-backend osrm-partition /data/new-york-latest.osrm
-   docker run -t -v "$PWD:/data" osrm/osrm-backend osrm-customize /data/new-york-latest.osrm
-   ```
-5. Run the server:
-   ```bash
-   docker run -d --restart unless-stopped -p 5000:5000 -v "$PWD:/data" \
-     --name osrm osrm/osrm-backend \
-     osrm-routed --algorithm mld /data/new-york-latest.osrm
-   ```
-6. Front with Caddy for HTTPS:
-   ```caddyfile
-   osrm.plowpath.app {
-     reverse_proxy localhost:5000
-   }
-   ```
-7. Update `OSRM_BASE_URL` Fly secret to `https://osrm.plowpath.app`.
-8. Add a monthly cron to refresh the OSM extract:
-   ```bash
-   0 3 1 * * cd /opt/osrm && wget -N https://download.geofabrik.de/north-america/us/new-york-latest.osm.pbf && bash reprocess.sh
-   ```
+1. Get a VPS with ≥4 GB RAM, ≥20 GB disk (e.g. **Hetzner CX22** for ~$5/mo or **DigitalOcean Basic 4GB** for ~$24/mo).
+2. Follow the detailed steps in [OSRM_SETUP.md](file:///c:/Users/folfe/Downloads/plowpath/docs/OSRM_SETUP.md) to install Docker, pre-process your regional OpenStreetMap (`.osm.pbf`) extract, and expose OSRM securely using Caddy.
+3. Update `OSRM_BASE_URL` Fly secret to `https://osrm.plowpath.app`.
 
 ### Costs
-- Hetzner CX22: ~$5/mo all-in.
-- VS public OSRM: free but unreliable. **Always self-host for production.**
-
-### Multi-state expansion
-If you expand beyond one state, either:
-- Concat multiple extracts with `osmium merge ny.pbf pa.pbf nj.pbf -o northeast.pbf` and reprocess.
-- Or run multiple OSRM instances behind a region-aware router.
+- VPS (Hetzner CX22 / DO 4GB): ~$5–$24/mo.
+- Let's Encrypt SSL via Caddy: Free.
 
 ---
 

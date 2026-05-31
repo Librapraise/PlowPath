@@ -1,8 +1,10 @@
 import type { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, type Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { env, corsOrigins } from '../config/env';
 import { logger } from '../utils/logger';
+import { redis } from '../config/redis';
 import type { AuthPayload } from '../middleware/auth.middleware';
 
 let io: SocketIOServer | null = null;
@@ -22,6 +24,10 @@ export function initSockets(httpServer: HttpServer): SocketIOServer {
     cors: { origin: corsOrigins, credentials: true },
     path: '/socket.io',
   });
+
+  const pubClient = redis.duplicate();
+  const subClient = redis.duplicate();
+  io.adapter(createAdapter(pubClient, subClient));
 
   // JWT handshake — the same access token the REST API uses.
   io.use((socket, next) => {

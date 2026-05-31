@@ -49,12 +49,29 @@ mobile/ios/Pods/
 mobile/ios/build/
 mobile/ios/DerivedData/
 mobile/ios/*.xcworkspace/xcuserdata/
+mobile/ios/**/*.xcuserdatad
+mobile/ios/**/project.xcworkspace/xcuserdata/
+mobile/ios/**/xcuserdata/
+mobile/ios/.xcode.env.local
 *.jks
 *.keystore
 !debug.keystore
 
+# Mobile Firebase Configurations & Secrets
+mobile/android/app/google-services.json
+mobile/ios/GoogleService-Info.plist
+mobile/ios/*/GoogleService-Info.plist
+mobile/fastlane/report.xml
+mobile/fastlane/Preview.html
+mobile/fastlane/screenshots/
+mobile/fastlane/test_output
+
+
 # Vite
 web-dashboard/.vite/
+
+# Sentry
+sentry.properties
 
 # Misc
 *.pid
