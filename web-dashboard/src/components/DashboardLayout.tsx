@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { Activity, Users, Truck, CloudSnow, Navigation, LogOut, Menu, X, Zap, Coins, Settings } from 'lucide-react';
+import { Activity, Users, Truck, CloudSnow, Navigation, LogOut, Menu, X, Zap, Coins, Settings, BarChart3 } from 'lucide-react';
 import ToastContainer from './ToastContainer';
 import { io } from 'socket.io-client';
 
@@ -43,6 +43,7 @@ export default function DashboardLayout({ children }: Props) {
     { to: '/storms', label: 'Storms', icon: CloudSnow, roles: ['owner', 'manager'] },
     { to: '/routes', label: 'Routes', icon: Navigation, roles: ['owner', 'manager'] },
     { to: '/finance', label: 'Finance & Signs', icon: Coins, roles: ['owner', 'manager'] },
+    { to: '/analytics', label: 'Business Intelligence', icon: BarChart3, roles: ['owner', 'manager'] },
     { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'manager'] },
   ];
 

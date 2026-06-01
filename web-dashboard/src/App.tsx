@@ -12,6 +12,7 @@ const RoutesPage = lazy(() => import('./pages/RoutesPage'));
 const FinancePage = lazy(() => import('./pages/FinancePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const HomeownerTrackingPortal = lazy(() => import('./pages/HomeownerTrackingPortal'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 
 const PageSpinner = () => (
   <div className="flex h-full w-full items-center justify-center bg-slate-950 p-12 text-slate-400">
@@ -82,6 +83,16 @@ export default function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <FinancePage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AnalyticsPage />
               </DashboardLayout>
             </ProtectedRoute>
           }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useToastStore } from '../store/toastStore';
-import { Settings, Shield, Bell, CloudSnow, Globe, User, Lock, Sparkles, Phone, Mail } from 'lucide-react';
+import { Settings, Shield, Bell, CloudSnow, Globe, User, Lock, Sparkles, Phone, Mail, Coins } from 'lucide-react';
 
 interface OrgSettings {
   settings_id: string;
@@ -26,6 +26,13 @@ interface OrgSettings {
       max_lat: number;
       max_lon: number;
     } | null;
+    pricing?: {
+      residential_rate: number;
+      commercial_rate: number;
+      fuel_price_per_gallon: number;
+      vehicle_mpg: number;
+      overhead_percentage: number;
+    } | null;
   };
 }
 
@@ -39,7 +46,7 @@ interface UserProfile {
 
 export default function SettingsPage() {
   const addToast = useToastStore((s) => s.addToast);
-  const [activeTab, setActiveTab] = useState<'org' | 'account' | 'notifications' | 'geocoding'>('org');
+  const [activeTab, setActiveTab] = useState<'org' | 'account' | 'pricing' | 'notifications' | 'geocoding'>('org');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -59,6 +66,13 @@ export default function SettingsPage() {
   const [minLon, setMinLon] = useState('-80.0');
   const [maxLat, setMaxLat] = useState('45.0');
   const [maxLon, setMaxLon] = useState('-70.0');
+
+  // Pricing State
+  const [residentialRate, setResidentialRate] = useState('50.0');
+  const [commercialRate, setCommercialRate] = useState('150.0');
+  const [fuelPrice, setFuelPrice] = useState('3.75');
+  const [vehicleMpg, setVehicleMpg] = useState('10.0');
+  const [overheadPercentage, setOverheadPercentage] = useState('15.0');
 
   // Account State
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -97,6 +111,14 @@ export default function SettingsPage() {
           setMinLon(String(org.settings.geocoding_bounds.min_lon));
           setMaxLat(String(org.settings.geocoding_bounds.max_lat));
           setMaxLon(String(org.settings.geocoding_bounds.max_lon));
+        }
+
+        if (org.settings.pricing) {
+          setResidentialRate(String(org.settings.pricing.residential_rate));
+          setCommercialRate(String(org.settings.pricing.commercial_rate));
+          setFuelPrice(String(org.settings.pricing.fuel_price_per_gallon));
+          setVehicleMpg(String(org.settings.pricing.vehicle_mpg));
+          setOverheadPercentage(String(org.settings.pricing.overhead_percentage));
         }
 
         const user = userRes.data;
@@ -140,6 +162,13 @@ export default function SettingsPage() {
             min_lon: parseFloat(minLon),
             max_lat: parseFloat(maxLat),
             max_lon: parseFloat(maxLon),
+          },
+          pricing: {
+            residential_rate: parseFloat(residentialRate),
+            commercial_rate: parseFloat(commercialRate),
+            fuel_price_per_gallon: parseFloat(fuelPrice),
+            vehicle_mpg: parseFloat(vehicleMpg),
+            overhead_percentage: parseFloat(overheadPercentage),
           },
         },
       };
@@ -210,6 +239,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'org', label: 'Company Profile', icon: Shield },
     { id: 'account', label: 'My Account', icon: User },
+    { id: 'pricing', label: 'Financial Billing Rates', icon: Coins },
     { id: 'notifications', label: 'Alert Layouts & Quiet Hours', icon: Bell },
     { id: 'geocoding', label: 'Geocoding Bounding Boxes', icon: Globe },
   ] as const;
@@ -347,6 +377,128 @@ export default function SettingsPage() {
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
                   {saving ? 'Saving changes...' : 'Save Company Profile'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* TAB 3: Financial Billing Rates */}
+          {activeTab === 'pricing' && (
+            <form onSubmit={handleSaveOrgSettings} className="space-y-6">
+              <div className="border-b border-slate-800/40 pb-4">
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <Coins className="w-5 h-5 text-brand-400" /> Financial Billing Rates & Estimates
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">Customize default customer pricing, fuel parameters, and overhead ratios to run automatic storm calculations</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
+                    Residential Plow Rate ($ per Stop)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={residentialRate}
+                      onChange={(e) => setResidentialRate(e.target.value)}
+                      placeholder="50.00"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-semibold font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
+                    Commercial Plow Rate ($ per Stop)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={commercialRate}
+                      onChange={(e) => setCommercialRate(e.target.value)}
+                      placeholder="150.00"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-semibold font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
+                    Fuel Cost ($ per Gallon)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={fuelPrice}
+                      onChange={(e) => setFuelPrice(e.target.value)}
+                      placeholder="3.75"
+                      className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-semibold font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
+                    Truck Fuel Economy (MPG)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      required
+                      value={vehicleMpg}
+                      onChange={(e) => setVehicleMpg(e.target.value)}
+                      placeholder="10.0"
+                      className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-semibold font-mono"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-550 font-sans">mpg</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
+                    Overhead Allocation (%)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      required
+                      value={overheadPercentage}
+                      onChange={(e) => setOverheadPercentage(e.target.value)}
+                      placeholder="15.0"
+                      className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-semibold font-mono"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-550 font-sans">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-slate-800/40">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
+                >
+                  {saving ? 'Saving changes...' : 'Save Billing Rates'}
                 </button>
               </div>
             </form>

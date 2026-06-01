@@ -31,6 +31,16 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Forgot/Reset Password State
+  const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
+  const [resetIdentifier, setResetIdentifier] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -54,6 +64,50 @@ export default function LoginPage() {
         (err as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message ??
         'Login failed';
       setServerError(message);
+    }
+  }
+
+  async function handleRequestCode(e: React.FormEvent) {
+    e.preventDefault();
+    setResetError(null);
+    setSendingCode(true);
+    try {
+      await api.post('/auth/forgot-password', { identifier: resetIdentifier });
+      setView('reset');
+    } catch (err: any) {
+      const message = err?.response?.data?.error?.message ?? 'Failed to send verification code';
+      setResetError(message);
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetError(null);
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Confirm password does not match new password');
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      await api.post('/auth/reset-password', {
+        identifier: resetIdentifier,
+        token: resetCode,
+        newPassword,
+      });
+      setView('login');
+      setResetIdentifier('');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setServerError(null);
+      alert('Password updated successfully! Please log in with your new password.');
+    } catch (err: any) {
+      const message = err?.response?.data?.error?.message ?? 'Failed to reset password';
+      setResetError(message);
+    } finally {
+      setResettingPassword(false);
     }
   }
 
@@ -99,81 +153,222 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-          {/* Identity Identifier Input */}
-          <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Phone or Email
-            </label>
-            <div className="relative group">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+        {view === 'login' && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+            {/* Identity Identifier Input */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Phone or Email
+              </label>
+              <div className="relative group">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+                <input
+                  type="text"
+                  autoComplete="username"
+                  placeholder="dispatcher@plowpath.com"
+                  aria-invalid={errors.identifier ? 'true' : 'false'}
+                  {...register('identifier')}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
+                />
+              </div>
+              {errors.identifier && (
+                <p className="text-xs text-red-400 font-semibold pl-1">{errors.identifier.message}</p>
+              )}
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('forgot');
+                    setServerError(null);
+                  }}
+                  className="text-[10px] font-bold text-brand-400 hover:text-brand-300 transition-colors uppercase tracking-wider cursor-pointer"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative group">
+                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••••••"
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  {...register('password')}
+                  className="w-full pl-10 pr-11 py-3 bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-white/5 cursor-pointer flex items-center justify-center"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs text-red-400 font-semibold pl-1">{errors.password.message}</p>
+              )}
+            </div>
+
+            {/* Server-side error alert */}
+            {serverError && (
+              <div className="p-3 bg-red-500/[0.08] border border-red-500/20 text-red-400 rounded-xl flex items-start gap-2 text-xs font-semibold animate-shake">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{serverError}</span>
+              </div>
+            )}
+
+            {/* Submit Sign-In Action */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3.5 mt-2 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 transition-all btn-press cursor-pointer flex items-center justify-center gap-2 ring-1 ring-white/10"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin"></span>
+                  Establishing Session...
+                </>
+              ) : (
+                'Access Dashboard'
+              )}
+            </button>
+          </form>
+        )}
+
+        {view === 'forgot' && (
+          <form onSubmit={handleRequestCode} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Phone or Email
+              </label>
+              <div className="relative group">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+                <input
+                  type="text"
+                  required
+                  value={resetIdentifier}
+                  onChange={(e) => setResetIdentifier(e.target.value)}
+                  placeholder="dispatcher@plowpath.com"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
+                />
+              </div>
+            </div>
+
+            {resetError && (
+              <div className="p-3 bg-red-500/[0.08] border border-red-500/20 text-red-400 rounded-xl flex items-start gap-2 text-xs font-semibold">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={sendingCode}
+              className="w-full py-3.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 transition-all btn-press cursor-pointer flex items-center justify-center gap-2 ring-1 ring-white/10"
+            >
+              {sendingCode ? 'Sending reset code...' : 'Request Reset Code'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setView('login');
+                setResetError(null);
+              }}
+              className="w-full py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-350 hover:text-slate-200 transition-all text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Back to Login
+            </button>
+          </form>
+        )}
+
+        {view === 'reset' && (
+          <form onSubmit={handleResetPassword} className="space-y-5">
+            <div className="p-3.5 bg-brand-500/[0.04] border border-brand-500/10 text-brand-400/90 rounded-xl text-xs font-medium leading-relaxed">
+              If an active account exists, a 6-digit verification code has been dispatched.
+            </div>
+
+            {/* Token Code Input */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                6-Digit Verification Code
+              </label>
               <input
                 type="text"
-                autoComplete="username"
-                placeholder="dispatcher@plowpath.com"
-                aria-invalid={errors.identifier ? 'true' : 'false'}
-                {...register('identifier')}
-                className="w-full pl-10 pr-4 py-3 bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
+                required
+                maxLength={6}
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                placeholder="e.g. 123456"
+                className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-mono font-black text-center tracking-[0.2em] text-lg"
               />
             </div>
-            {errors.identifier && (
-              <p className="text-xs text-red-400 font-semibold pl-1">{errors.identifier.message}</p>
-            )}
-          </div>
 
-          {/* Password Input */}
-          <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Password
-            </label>
-            <div className="relative group">
-              <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-brand-400 transition-colors" />
+            {/* New Password Input */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                New Password
+              </label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••••••"
-                aria-invalid={errors.password ? 'true' : 'false'}
-                {...register('password')}
-                className="w-full pl-10 pr-11 py-3 bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min. 6 chars"
+                className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-white/5 cursor-pointer flex items-center justify-center"
-                title={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
             </div>
-            {errors.password && (
-              <p className="text-xs text-red-400 font-semibold pl-1">{errors.password.message}</p>
-            )}
-          </div>
 
-          {/* Server-side error alert */}
-          {serverError && (
-            <div className="p-3 bg-red-500/[0.08] border border-red-500/20 text-red-400 rounded-xl flex items-start gap-2 text-xs font-semibold animate-shake">
-              <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{serverError}</span>
+            {/* Confirm Password Input */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Confirm password"
+                className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800/80 focus:border-brand-500/60 focus:ring-2 focus:ring-brand-500/20 rounded-xl text-slate-100 placeholder:text-slate-600 text-sm focus:outline-none transition-all font-medium"
+              />
             </div>
-          )}
 
-          {/* Submit Sign-In Action */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3.5 mt-2 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 transition-all btn-press cursor-pointer flex items-center justify-center gap-2 ring-1 ring-white/10"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin"></span>
-                Establishing Session...
-              </>
-            ) : (
-              'Access Dashboard'
+            {resetError && (
+              <div className="p-3 bg-red-500/[0.08] border border-red-500/20 text-red-400 rounded-xl flex items-start gap-2 text-xs font-semibold">
+                <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{resetError}</span>
+              </div>
             )}
-          </button>
-        </form>
+
+            <button
+              type="submit"
+              disabled={resettingPassword}
+              className="w-full py-3.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-bold text-sm rounded-xl shadow-lg shadow-brand-500/20 hover:shadow-brand-500/30 transition-all btn-press cursor-pointer flex items-center justify-center gap-2 ring-1 ring-white/10"
+            >
+              {resettingPassword ? 'Resetting password...' : 'Establish New Password'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setView('forgot');
+                setResetError(null);
+              }}
+              className="w-full py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-350 hover:text-slate-200 transition-all text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Back
+            </button>
+          </form>
+        )}
 
         <div className="text-center pt-1">
           <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-[0.15em] select-none">

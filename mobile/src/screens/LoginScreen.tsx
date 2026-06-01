@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { api } from '../services/api';
@@ -39,6 +39,16 @@ export default function LoginScreen() {
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Forgot Password State
+  const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
+  const [resetIdentifier, setResetIdentifier] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     // Load last chosen vehicle from storage
@@ -87,97 +97,284 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleRequestCode() {
+    if (!resetIdentifier) {
+      setResetError('Phone number or email is required.');
+      return;
+    }
+    setResetError(null);
+    setSendingCode(true);
+    try {
+      await api.post('/auth/forgot-password', { identifier: resetIdentifier });
+      setView('reset');
+    } catch (err: any) {
+      const message = err?.response?.data?.error?.message ?? 'Failed to send verification code.';
+      setResetError(message);
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    setResetError(null);
+    if (!resetCode) {
+      setResetError('Verification code is required.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setResetError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Confirm password does not match new password.');
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      await api.post('/auth/reset-password', {
+        identifier: resetIdentifier,
+        token: resetCode,
+        newPassword,
+      });
+      setView('login');
+      setResetIdentifier('');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setResetError(null);
+      Alert.alert('Success', 'Password updated successfully! Please log in with your new password.');
+    } catch (err: any) {
+      const message = err?.response?.data?.error?.message ?? 'Failed to reset password.';
+      setResetError(message);
+    } finally {
+      setResettingPassword(false);
+    }
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Start Shift</Text>
+      <Text style={styles.title}>
+        {view === 'login' ? 'Start Shift' : view === 'forgot' ? 'Forgot Password' : 'Reset Password'}
+      </Text>
 
-      <Text style={styles.label}>Phone number</Text>
-      <TextInput
-        value={identifier}
-        onChangeText={setIdentifier}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="default"
-        style={styles.input}
-        accessibilityLabel="Phone number or email"
-      />
+      {view === 'login' && (
+        <>
+          <Text style={styles.label}>Phone number</Text>
+          <TextInput
+            value={identifier}
+            onChangeText={setIdentifier}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="default"
+            style={styles.input}
+            accessibilityLabel="Phone number or email"
+          />
 
-      <Text style={styles.label}>Password</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          style={styles.textInputStyle}
-          accessibilityLabel="Password"
-        />
-        <TouchableOpacity
-          onPress={() => setShowPassword((prev) => !prev)}
-          style={styles.eyeButton}
-          accessibilityRole="button"
-          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-        >
-          {showPassword ? <EyeOffIcon color="#666" /> : <EyeIcon color="#666" />}
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Active Vehicle</Text>
-      <TouchableOpacity
-        onPress={() => setShowVehicleDropdown((prev) => !prev)}
-        style={styles.dropdownHeader}
-        accessibilityRole="button"
-        accessibilityLabel={`Selected vehicle: ${selectedVehicle}. Double tap to change.`}
-      >
-        <Text style={styles.dropdownHeaderText}>{selectedVehicle}</Text>
-        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth={2.5}>
-          {showVehicleDropdown ? (
-            <Path d="M18 15l-6-6-6 6" />
-          ) : (
-            <Path d="M6 9l6 6 6-6" />
-          )}
-        </Svg>
-      </TouchableOpacity>
-
-      {showVehicleDropdown && (
-        <View style={styles.dropdownList}>
-          {VEHICLE_OPTIONS.map((option) => (
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              style={styles.textInputStyle}
+              accessibilityLabel="Password"
+            />
             <TouchableOpacity
-              key={option}
-              style={[
-                styles.dropdownOption,
-                selectedVehicle === option && styles.dropdownOptionSelected,
-              ]}
-              onPress={() => {
-                setSelectedVehicle(option);
-                setShowVehicleDropdown(false);
-              }}
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={styles.eyeButton}
               accessibilityRole="button"
-              accessibilityLabel={`Select ${option}`}
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             >
-              <Text
-                style={[
-                  styles.dropdownOptionText,
-                  selectedVehicle === option && styles.dropdownOptionTextSelected,
-                ]}
-              >
-                {option}
-              </Text>
+              {showPassword ? <EyeOffIcon color="#666" /> : <EyeIcon color="#666" />}
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              setView('forgot');
+              setError(null);
+            }}
+            style={styles.forgotBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot Password"
+          >
+            <Text style={styles.forgotBtnText}>Forgot password?</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.label}>Active Vehicle</Text>
+          <TouchableOpacity
+            onPress={() => setShowVehicleDropdown((prev) => !prev)}
+            style={styles.dropdownHeader}
+            accessibilityRole="button"
+            accessibilityLabel={`Selected vehicle: ${selectedVehicle}. Double tap to change.`}
+          >
+            <Text style={styles.dropdownHeaderText}>{selectedVehicle}</Text>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth={2.5}>
+              {showVehicleDropdown ? (
+                <Path d="M18 15l-6-6-6 6" />
+              ) : (
+                <Path d="M6 9l6 6 6-6" />
+              )}
+            </Svg>
+          </TouchableOpacity>
+
+          {showVehicleDropdown && (
+            <View style={styles.dropdownList}>
+              {VEHICLE_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.dropdownOption,
+                    selectedVehicle === option && styles.dropdownOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedVehicle(option);
+                    setShowVehicleDropdown(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${option}`}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      selectedVehicle === option && styles.dropdownOptionTextSelected,
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <TouchableOpacity
+            onPress={onSubmit}
+            disabled={submitting}
+            style={[styles.button, submitting && styles.buttonDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Log in"
+          >
+            {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Log In</Text>}
+          </TouchableOpacity>
+        </>
       )}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {view === 'forgot' && (
+        <>
+          <Text style={styles.subTitle}>
+            Enter your phone number or email to receive a 6-digit verification code.
+          </Text>
 
-      <TouchableOpacity
-        onPress={onSubmit}
-        disabled={submitting}
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        accessibilityRole="button"
-        accessibilityLabel="Log in"
-      >
-        {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Log In</Text>}
-      </TouchableOpacity>
+          <Text style={styles.label}>Phone number or Email</Text>
+          <TextInput
+            value={resetIdentifier}
+            onChangeText={setResetIdentifier}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="default"
+            style={styles.input}
+            placeholder="e.g. +15551110001"
+            accessibilityLabel="Reset identifier"
+          />
+
+          {resetError ? <Text style={styles.error}>{resetError}</Text> : null}
+
+          <TouchableOpacity
+            onPress={handleRequestCode}
+            disabled={sendingCode}
+            style={[styles.button, sendingCode && styles.buttonDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Request reset code"
+          >
+            {sendingCode ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Request Verification Code</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setView('login');
+              setResetError(null);
+            }}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Back to login"
+          >
+            <Text style={styles.backBtnText}>Back to Login</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {view === 'reset' && (
+        <>
+          <Text style={styles.subTitle}>
+            We have sent a verification code to your email or phone number.
+          </Text>
+
+          <Text style={styles.label}>6-Digit Verification Code</Text>
+          <TextInput
+            value={resetCode}
+            onChangeText={setResetCode}
+            maxLength={6}
+            keyboardType="number-pad"
+            style={[styles.input, styles.codeInput]}
+            placeholder="e.g. 123456"
+            accessibilityLabel="Verification Code"
+          />
+
+          <Text style={styles.label}>New Password</Text>
+          <TextInput
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry={true}
+            style={styles.input}
+            placeholder="Min. 6 characters"
+            accessibilityLabel="New Password"
+          />
+
+          <Text style={styles.label}>Confirm New Password</Text>
+          <TextInput
+            value={confirmNewPassword}
+            onChangeText={setConfirmNewPassword}
+            secureTextEntry={true}
+            style={styles.input}
+            placeholder="Confirm password"
+            accessibilityLabel="Confirm Password"
+          />
+
+          {resetError ? <Text style={styles.error}>{resetError}</Text> : null}
+
+          <TouchableOpacity
+            onPress={handleResetPassword}
+            disabled={resettingPassword}
+            style={[styles.button, resettingPassword && styles.buttonDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Reset password"
+          >
+            {resettingPassword ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Set New Password</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setView('forgot');
+              setResetError(null);
+            }}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Back to request code"
+          >
+            <Text style={styles.backBtnText}>Back</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 }
@@ -275,4 +472,42 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: 'white', fontSize: 18, fontWeight: '600' },
+  forgotBtn: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  forgotBtnText: {
+    color: '#2E75B6',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  backBtn: {
+    marginTop: 16,
+    minHeight: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 6,
+    backgroundColor: '#F8FAFC',
+  },
+  backBtnText: {
+    color: '#333',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  subTitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 24,
+  },
+  codeInput: {
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 6,
+  },
 });

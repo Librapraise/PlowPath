@@ -43,7 +43,7 @@ CREATE TABLE driver_shift_heartbeats (
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   is_moving BOOLEAN NOT NULL DEFAULT FALSE,
   battery_level NUMERIC(3, 2),
-  gps_coordinates GEOGRAPHY(POINT, 4326) NOT NULL
+  gps_coordinates GEOGRAPHY NOT NULL
 );
 
 -- 5. Create subcontract_offers table

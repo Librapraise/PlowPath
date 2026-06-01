@@ -22,6 +22,7 @@ import signRoutes from './routes/signs.routes';
 import settingsRoutes from './routes/settings.routes';
 import shiftsRoutes from './routes/shifts.routes';
 import subcontractsRoutes from './routes/subcontracts.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 const app = express();
 
@@ -150,6 +151,7 @@ app.use('/api/v1/signs', signRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/shifts', shiftsRoutes);
 app.use('/api/v1/subcontracts', subcontractsRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Route not found' } });

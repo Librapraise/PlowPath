@@ -8,11 +8,13 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore, type DriverSettings } from '../store/settingsStore';
 import { flushAllQueues, getQueueDepths } from '../services/offline.service';
+import { api } from '../services/api';
 
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
@@ -21,6 +23,11 @@ export default function SettingsScreen() {
   const [gpsCount, setGpsCount] = useState(0);
   const [stopCount, setStopCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
 
   useEffect(() => {
     // Fetch settings on load
@@ -35,6 +42,38 @@ export default function SettingsScreen() {
       setStopCount(depths.stopCount);
     } catch (err) {
       console.warn('[SETTINGS] Failed to get queue depths', err);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Validation Error', 'All password fields are required.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      Alert.alert('Validation Error', 'New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Validation Error', 'Confirm password does not match new password.');
+      return;
+    }
+
+    setUpdatingPassword(true);
+    try {
+      await api.put('/users/me/password', {
+        currentPassword,
+        newPassword,
+      });
+      Alert.alert('Success', 'Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message ?? 'Failed to update password. Please check your current password and try again.';
+      Alert.alert('Error', msg);
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -241,6 +280,59 @@ export default function SettingsScreen() {
           <Text style={[styles.btnText, { color: '#E11D48' }]}>Clear Cached Routes</Text>
         </TouchableOpacity>
       </View>
+
+      {/* --- Account Security --- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account Security</Text>
+        <Text style={styles.sublabel}>Change your password to keep your account secure</Text>
+        
+        <Text style={styles.inputLabel}>Current Password</Text>
+        <TextInput
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          secureTextEntry={true}
+          style={styles.input}
+          placeholder="Enter current password"
+          placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+          accessibilityLabel="Current Password"
+        />
+
+        <Text style={styles.inputLabel}>New Password</Text>
+        <TextInput
+          value={newPassword}
+          onChangeText={setNewPassword}
+          secureTextEntry={true}
+          style={styles.input}
+          placeholder="Min. 6 characters"
+          placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+          accessibilityLabel="New Password"
+        />
+
+        <Text style={styles.inputLabel}>Confirm New Password</Text>
+        <TextInput
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={true}
+          style={styles.input}
+          placeholder="Confirm new password"
+          placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+          accessibilityLabel="Confirm New Password"
+        />
+
+        <TouchableOpacity
+          style={[styles.submitBtn, updatingPassword && styles.disabledBtn]}
+          onPress={handleChangePassword}
+          disabled={updatingPassword}
+          accessibilityRole="button"
+          accessibilityLabel="Change Password"
+        >
+          {updatingPassword ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.btnText}>Change Password</Text>
+          )}
+        </TouchableOpacity>
+      </View>
       
       {loading ? (
         <View style={styles.overlay}>
@@ -318,6 +410,31 @@ const baseStyles = {
     justifyContent: 'center',
     alignItems: 'center',
   },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  input: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  submitBtn: {
+    height: 56,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  disabledBtn: {
+    opacity: 0.6,
+  },
 };
 
 const lightStyles = StyleSheet.create({
@@ -336,6 +453,20 @@ const lightStyles = StyleSheet.create({
   segmentText: { ...baseStyles.segmentText, color: '#475569' },
   freqValueText: { ...baseStyles.freqValueText, color: '#0F172A' },
   queueStatusText: { ...baseStyles.queueStatusText, color: '#334155' },
+  inputLabel: { ...baseStyles.inputLabel, color: '#1E293B' },
+  input: {
+    ...baseStyles.input,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+  },
+  submitBtn: {
+    ...baseStyles.submitBtn,
+    backgroundColor: '#2E75B6',
+  },
+  disabledBtn: {
+    ...baseStyles.disabledBtn,
+  },
 } as any);
 
 const darkStyles = StyleSheet.create({
@@ -354,4 +485,18 @@ const darkStyles = StyleSheet.create({
   segmentText: { ...baseStyles.segmentText, color: '#94A3B8' },
   freqValueText: { ...baseStyles.freqValueText, color: '#F8FAFC' },
   queueStatusText: { ...baseStyles.queueStatusText, color: '#CBD5E1' },
+  inputLabel: { ...baseStyles.inputLabel, color: '#E2E8F0' },
+  input: {
+    ...baseStyles.input,
+    borderColor: '#475569',
+    backgroundColor: '#0F172A',
+    color: '#F8FAFC',
+  },
+  submitBtn: {
+    ...baseStyles.submitBtn,
+    backgroundColor: '#2E75B6',
+  },
+  disabledBtn: {
+    ...baseStyles.disabledBtn,
+  },
 } as any);

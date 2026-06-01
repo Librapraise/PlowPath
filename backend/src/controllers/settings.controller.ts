@@ -26,6 +26,13 @@ const organizationSettingsSchema = z.object({
       max_lat: z.number(),
       max_lon: z.number(),
     }).nullable().optional(),
+    pricing: z.object({
+      residential_rate: z.number().nonnegative(),
+      commercial_rate: z.number().nonnegative(),
+      fuel_price_per_gallon: z.number().nonnegative(),
+      vehicle_mpg: z.number().positive(),
+      overhead_percentage: z.number().nonnegative(),
+    }).optional(),
   }),
 });
 
