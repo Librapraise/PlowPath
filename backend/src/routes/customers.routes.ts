@@ -13,6 +13,7 @@ import {
   getCustomerHistory,
   exportCsv,
   importCsv,
+  sendPaymentReminder,
 } from '../controllers/customers.controller';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.get('/', asyncHandler(list));
 router.get('/export', requireRole('owner', 'manager'), asyncHandler(exportCsv));
 router.post('/import', requireRole('owner', 'manager'), asyncHandler(importCsv));
 router.get('/geocode/preview', requireRole('owner', 'manager'), asyncHandler(geocodePreview));
+router.post('/:id/reminder', requireRole('owner', 'manager'), asyncHandler(sendPaymentReminder));
 router.get('/:id', asyncHandler(getOne));
 router.post('/', requireRole('owner', 'manager'), asyncHandler(create));
 router.put('/:id', requireRole('owner', 'manager'), asyncHandler(update));

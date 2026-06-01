@@ -42,6 +42,7 @@ export default function FinancePage() {
   // Mail reminder state
   const [reminderCustomer, setReminderCustomer] = useState<any | null>(null);
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   // Fetch Page Data & Financial stats
   const fetchStats = async () => {
@@ -130,6 +131,22 @@ export default function FinancePage() {
   // Printable layout window trigger
   const handlePrintReminder = () => {
     window.print();
+  };
+
+  // Direct email reminder trigger
+  const handleSendEmailReminder = async () => {
+    if (!reminderCustomer) return;
+    setSendingReminder(true);
+    try {
+      await api.post(`/customers/${reminderCustomer.customer_id}/reminder`);
+      useToastStore.getState().addToast(`Payment reminder successfully emailed to ${reminderCustomer.email}!`, 'success');
+      setReminderModalOpen(false);
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message ?? 'Failed to send payment reminder email';
+      useToastStore.getState().addToast(msg, 'error');
+    } finally {
+      setSendingReminder(false);
+    }
   };
 
   const signProgressPercent = totalCustomers > 0 ? Math.round((installedCount / totalCustomers) * 100) : 0;
@@ -569,10 +586,27 @@ export default function FinancePage() {
               </button>
               <button
                 onClick={handlePrintReminder}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-semibold text-xs rounded-xl shadow-lg transition-all cursor-pointer ring-1 ring-white/10"
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/40 font-semibold text-xs rounded-xl transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 Print Letter
+              </button>
+              <button
+                onClick={handleSendEmailReminder}
+                disabled={sendingReminder || !reminderCustomer?.email}
+                className={`flex items-center gap-1.5 px-5 py-2.5 text-white font-semibold text-xs rounded-xl shadow-lg transition-all cursor-pointer ring-1 ring-white/10 ${
+                  sendingReminder || !reminderCustomer?.email
+                    ? 'bg-slate-750 text-slate-500 opacity-50 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-500'
+                }`}
+                title={!reminderCustomer?.email ? 'This customer has no registered email address' : 'Send overdue notice directly via email'}
+              >
+                {sendingReminder ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <Mail className="w-4 h-4" />
+                )}
+                {sendingReminder ? 'Sending...' : 'Send Email Reminder'}
               </button>
             </div>
           </div>
