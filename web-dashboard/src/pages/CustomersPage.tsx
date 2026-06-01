@@ -380,6 +380,23 @@ export default function CustomersPage() {
                     <td className="px-6 py-4">
                       <div className="font-bold text-slate-100">{c.name}</div>
                       <div className="text-xs text-slate-450 truncate max-w-xs sm:max-w-sm mt-0.5">{c.address}</div>
+                      <div className="mt-1.5">
+                        {c.email ? (
+                          <span
+                            title={c.email}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 text-[10px] font-bold cursor-default"
+                          >
+                            ✉ {c.email}
+                          </span>
+                        ) : (
+                          <span
+                            title="No email on file — click Edit to add one"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/15 text-rose-400/70 text-[10px] font-bold cursor-default"
+                          >
+                            ✉ No email
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
