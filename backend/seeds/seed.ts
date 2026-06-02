@@ -246,6 +246,16 @@ async function main(): Promise<void> {
       }
     }
 
+    // Ensure all seeded records are associated with the default organization
+    const orgRes = await client.query<{ settings_id: string }>('SELECT settings_id FROM organization_settings LIMIT 1');
+    const defaultOrgId = orgRes.rows[0]?.settings_id;
+    if (defaultOrgId) {
+      await client.query('UPDATE users SET org_id = $1 WHERE org_id IS NULL', [defaultOrgId]);
+      await client.query('UPDATE drivers SET org_id = $1 WHERE org_id IS NULL', [defaultOrgId]);
+      await client.query('UPDATE customers SET org_id = $1 WHERE org_id IS NULL', [defaultOrgId]);
+      await client.query('UPDATE routes SET org_id = $1 WHERE org_id IS NULL', [defaultOrgId]);
+    }
+
     await client.query('COMMIT');
 
     /* eslint-disable no-console */

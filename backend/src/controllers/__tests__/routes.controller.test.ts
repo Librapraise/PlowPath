@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { updateStop, broadcastSms } from '../routes.controller';
-import { query } from '../../config/db';
+import { updateStop, broadcastSms, updateRoute } from '../routes.controller';
+import { query, pool } from '../../config/db';
 import { enqueueSmsNotification } from '../../services/notification.service';
 
 jest.mock('../../config/db', () => ({
@@ -137,6 +137,65 @@ describe('Routes Controller - SMS Integration', () => {
 
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({ success: true, enqueued_count: 3 });
+    });
+  });
+
+  describe('updateRoute', () => {
+    it('should successfully update route stop sequence numbers using a two-phase transaction', async () => {
+      mockReq.params = { id: 'route-uuid-111' };
+      mockReq.body = {
+        stops: [
+          { stop_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', sequence_number: 2 },
+          { stop_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', sequence_number: 1 },
+        ],
+      };
+
+      const mockClient = {
+        query: jest.fn(),
+        release: jest.fn(),
+      };
+      (pool.connect as jest.Mock).mockResolvedValueOnce(mockClient);
+
+      await updateRoute(mockReq as Request, mockRes as Response);
+
+      expect(pool.connect).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenNthCalledWith(1, 'BEGIN');
+      
+      // Phase 1 calls (adds 1000000 offset)
+      expect(mockClient.query).toHaveBeenNthCalledWith(2, expect.stringContaining('sequence_number + 1000000'), ['a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'route-uuid-111']);
+      expect(mockClient.query).toHaveBeenNthCalledWith(3, expect.stringContaining('sequence_number + 1000000'), ['a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'route-uuid-111']);
+      
+      // Phase 2 calls
+      expect(mockClient.query).toHaveBeenNthCalledWith(4, expect.stringContaining('sequence_number = $1'), [2, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'route-uuid-111']);
+      expect(mockClient.query).toHaveBeenNthCalledWith(5, expect.stringContaining('sequence_number = $1'), [1, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'route-uuid-111']);
+      
+      expect(mockClient.query).toHaveBeenLastCalledWith('COMMIT');
+      expect(mockClient.release).toHaveBeenCalled();
+      expect(mockJson).toHaveBeenCalledWith({ route_id: 'route-uuid-111', message: expect.any(String) });
+    });
+
+    it('should rollback transaction and release client if query fails', async () => {
+      mockReq.params = { id: 'route-uuid-111' };
+      mockReq.body = {
+        stops: [
+          { stop_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', sequence_number: 2 },
+        ],
+      };
+
+      const mockClient = {
+        query: jest.fn().mockImplementation((queryText) => {
+          if (queryText.includes('UPDATE')) {
+            throw new Error('Database Error');
+          }
+        }),
+        release: jest.fn(),
+      };
+      (pool.connect as jest.Mock).mockResolvedValueOnce(mockClient);
+
+      await expect(updateRoute(mockReq as Request, mockRes as Response)).rejects.toThrow('Database Error');
+      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 });

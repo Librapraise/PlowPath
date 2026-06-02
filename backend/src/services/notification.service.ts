@@ -3,13 +3,13 @@ import admin from 'firebase-admin';
 import { env } from '../config/env';
 import { query } from '../config/db';
 import { logger } from '../utils/logger';
-import { redis } from '../config/redis';
+import { redis, getBullOptions } from '../config/redis';
 import { sendSms } from './twilio.service';
 import { fetchWeatherAlerts } from './weather.service';
 import { getIo } from '../sockets';
 
 // 1. Initialize the Bull Queue powered by the standard Redis URL.
-export const pushQueue = new Queue('push-notifications', env.REDIS_URL);
+export const pushQueue = new Queue('push-notifications', getBullOptions());
 pushQueue.on('error', (err) => logger.error('pushQueue error:', err));
 
 let firebaseInitialized = false;
@@ -141,7 +141,7 @@ export async function enqueuePushNotification(
 }
 
 // 4. Initialize the Bull Queue for SMS alerts
-export const smsQueue = new Queue('sms-notifications', env.REDIS_URL);
+export const smsQueue = new Queue('sms-notifications', getBullOptions());
 smsQueue.on('error', (err) => logger.error('smsQueue error:', err));
 
 // 5. Register the SMS Bull queue processor
@@ -306,7 +306,7 @@ export async function scheduleSeasonalReminders(): Promise<void> {
 }
 
 // 6. Initialize weather queue
-export const weatherQueue = new Queue('weather-updates', env.REDIS_URL);
+export const weatherQueue = new Queue('weather-updates', getBullOptions());
 weatherQueue.on('error', (err) => logger.error('weatherQueue error:', err));
 
 weatherQueue.process(async (job) => {

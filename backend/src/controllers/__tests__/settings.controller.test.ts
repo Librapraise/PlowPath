@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getSettings, updateSettings, getDriverSettings, updateDriverSettings } from '../settings.controller';
+import { getSettings, updateSettings, getDriverSettings, updateDriverSettings, getOtherOrganizations } from '../settings.controller';
 import { query } from '../../config/db';
 
 jest.mock('../../config/db', () => ({
@@ -44,6 +44,30 @@ describe('Settings Controller', () => {
     it('should throw error if settings are not found', async () => {
       (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
       await expect(getSettings(mockReq as Request, mockRes as Response)).rejects.toThrow();
+    });
+  });
+
+  describe('getOtherOrganizations', () => {
+    it('should return a list of other organizations successfully', async () => {
+      const mockResult = [
+        { settings_id: 'org-2', company_name: 'SnowBusters' },
+      ];
+
+      (mockReq as any).user = { sub: 'user-123', role: 'owner', orgId: 'org-1' };
+      (query as jest.Mock).mockResolvedValueOnce({ rows: mockResult });
+
+      await getOtherOrganizations(mockReq as Request, mockRes as Response);
+
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('organization_settings'),
+        ['org-1']
+      );
+      expect(mockJson).toHaveBeenCalledWith(mockResult);
+    });
+
+    it('should throw error if user has no orgId', async () => {
+      (mockReq as any).user = { sub: 'user-123', role: 'owner' }; // No orgId
+      await expect(getOtherOrganizations(mockReq as Request, mockRes as Response)).rejects.toThrow();
     });
   });
 

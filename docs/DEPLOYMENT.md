@@ -232,6 +232,7 @@ Repeat with `plowpath-api` (prod) when ready.
 4. Env vars (per environment):
    - **Preview** (every PR): `VITE_API_URL=https://plowpath-api-staging.fly.dev/api/v1`, `VITE_WS_URL=wss://plowpath-api-staging.fly.dev`
    - **Production**: `VITE_API_URL=https://api.plowpath.ca/api/v1`, `VITE_WS_URL=wss://api.plowpath.ca`
+   
 5. Custom domains:
    - `dashboard.plowpath.ca` → production
    - `staging.plowpath.ca` → staging / preview branch alias

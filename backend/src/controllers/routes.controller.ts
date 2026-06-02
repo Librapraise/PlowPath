@@ -271,6 +271,14 @@ export async function updateRoute(req: Request, res: Response): Promise<void> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      // Phase 1: Set temporary sequence numbers to avoid unique constraint violations
+      for (const stop of body.stops) {
+        await client.query(
+          `UPDATE route_stops SET sequence_number = sequence_number + 1000000, updated_at = NOW() WHERE stop_id = $1 AND route_id = $2`,
+          [stop.stop_id, req.params.id],
+        );
+      }
+      // Phase 2: Set final sequence numbers
       for (const stop of body.stops) {
         await client.query(
           `UPDATE route_stops SET sequence_number = $1, updated_at = NOW() WHERE stop_id = $2 AND route_id = $3`,

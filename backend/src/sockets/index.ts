@@ -26,7 +26,15 @@ export function initSockets(httpServer: HttpServer): SocketIOServer {
   });
 
   const pubClient = redis.duplicate();
+  pubClient.on('error', (err) => {
+    logger.error('Socket.io Redis adapter pubClient error:', err);
+  });
+
   const subClient = redis.duplicate();
+  subClient.on('error', (err) => {
+    logger.error('Socket.io Redis adapter subClient error:', err);
+  });
+
   io.adapter(createAdapter(pubClient, subClient));
 
   // JWT handshake — the same access token the REST API uses.

@@ -11,6 +11,8 @@ import request from 'supertest';
 import { app } from '../app';
 import { query } from '../config/db';
 import { redis } from '../config/redis';
+import { env } from '../config/env';
+import axios from 'axios';
 
 jest.mock('../config/db', () => ({
   query: jest.fn(),
@@ -20,12 +22,30 @@ jest.mock('../config/redis', () => ({
   redis: {
     ping: jest.fn().mockResolvedValue('PONG'),
   },
+  getBullOptions: jest.fn().mockReturnValue({}),
 }));
 
 jest.mock('../middleware/rateLimit.middleware', () => ({
   apiRateLimit: (req: any, res: any, next: any) => next(),
   authRateLimit: (req: any, res: any, next: any) => next(),
 }));
+
+jest.mock('axios', () => {
+  const mockInstance = {
+    get: jest.fn(),
+    post: jest.fn(),
+  };
+  const mockAxios = {
+    create: jest.fn(() => mockInstance),
+    get: jest.fn(),
+    post: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: mockAxios,
+    ...mockAxios,
+  };
+});
 
 describe('PlowPath API E2E', () => {
   beforeEach(() => {
@@ -96,6 +116,88 @@ describe('PlowPath API E2E', () => {
           endpoints: expect.any(Object),
         })
       );
+    });
+  });
+
+  describe('GET /health/twilio', () => {
+    it('should return 200 mocked if twilio is not configured', async () => {
+      const oldSid = env.TWILIO_ACCOUNT_SID;
+      const oldToken = env.TWILIO_AUTH_TOKEN;
+      const oldPhone = env.TWILIO_PHONE_NUMBER;
+      delete env.TWILIO_ACCOUNT_SID;
+      delete env.TWILIO_AUTH_TOKEN;
+      delete env.TWILIO_PHONE_NUMBER;
+
+      const res = await request(app).get('/health/twilio');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        status: 'mocked',
+        twilio: 'mock_mode_active',
+        details: expect.any(String),
+      });
+
+      env.TWILIO_ACCOUNT_SID = oldSid;
+      env.TWILIO_AUTH_TOKEN = oldToken;
+      env.TWILIO_PHONE_NUMBER = oldPhone;
+    });
+
+    it('should return 200 ok if twilio is configured and reachable', async () => {
+      const oldSid = env.TWILIO_ACCOUNT_SID;
+      const oldToken = env.TWILIO_AUTH_TOKEN;
+      const oldPhone = env.TWILIO_PHONE_NUMBER;
+      env.TWILIO_ACCOUNT_SID = 'AC123';
+      env.TWILIO_AUTH_TOKEN = 'auth_token';
+      env.TWILIO_PHONE_NUMBER = '+15551234567';
+
+      (axios.get as jest.Mock).mockResolvedValueOnce({ status: 200 });
+
+      const res = await request(app).get('/health/twilio');
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        status: 'ok',
+        twilio: 'connected',
+        apiStatus: 200,
+      });
+
+      env.TWILIO_ACCOUNT_SID = oldSid;
+      env.TWILIO_AUTH_TOKEN = oldToken;
+      env.TWILIO_PHONE_NUMBER = oldPhone;
+    });
+
+    it('should return 503 error if twilio is configured but unreachable', async () => {
+      const oldSid = env.TWILIO_ACCOUNT_SID;
+      const oldToken = env.TWILIO_AUTH_TOKEN;
+      const oldPhone = env.TWILIO_PHONE_NUMBER;
+      env.TWILIO_ACCOUNT_SID = 'AC123';
+      env.TWILIO_AUTH_TOKEN = 'auth_token';
+      env.TWILIO_PHONE_NUMBER = '+15551234567';
+
+      (axios.get as jest.Mock).mockRejectedValueOnce(new Error('Gateway Timeout'));
+
+      const res = await request(app).get('/health/twilio');
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({
+        status: 'error',
+        twilio: 'unreachable',
+        error: 'Gateway Timeout',
+      });
+
+      env.TWILIO_ACCOUNT_SID = oldSid;
+      env.TWILIO_AUTH_TOKEN = oldToken;
+      env.TWILIO_PHONE_NUMBER = oldPhone;
+    });
+  });
+
+  describe('GET unknown route', () => {
+    it('should return 404 error', async () => {
+      const res = await request(app).get('/api/v1/invalid-route-xyz');
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({
+        error: {
+          code: 'not_found',
+          message: 'Route not found',
+        },
+      });
     });
   });
 });

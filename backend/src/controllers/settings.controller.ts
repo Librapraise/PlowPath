@@ -87,6 +87,23 @@ export async function updateSettings(req: Request, res: Response): Promise<void>
   res.json(rows[0]);
 }
 
+// 🖥️ GET /api/v1/settings/organizations
+export async function getOtherOrganizations(req: Request, res: Response): Promise<void> {
+  const user = (req as any).user;
+  if (!user || !user.orgId) {
+    throw HttpError.badRequest('User does not belong to an organization');
+  }
+
+  const { rows } = await query(
+    `SELECT settings_id, company_name
+       FROM organization_settings
+      WHERE settings_id != $1`,
+    [user.orgId]
+  );
+
+  res.json(rows);
+}
+
 // 📱 GET /api/v1/drivers/me/settings
 export async function getDriverSettings(req: Request, res: Response): Promise<void> {
   const user = (req as any).user;

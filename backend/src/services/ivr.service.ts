@@ -2,13 +2,13 @@ import Queue from 'bull';
 import { query } from '../config/db';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
-import { redis } from '../config/redis';
+import { redis, getBullOptions } from '../config/redis';
 import { enqueuePushNotification } from './notification.service';
 import { sendSms } from './twilio.service';
 import { broadcastUrgentRequestUpdate, broadcastRouteUpdate } from '../sockets';
 
 // Initialize the Redis-backed Bull queue for emergency call escalations.
-export const urgentEscalationQueue = new Queue('urgent-escalations', env.REDIS_URL);
+export const urgentEscalationQueue = new Queue('urgent-escalations', getBullOptions());
 urgentEscalationQueue.on('error', (err) => logger.error('urgentEscalationQueue error:', err));
 
 type UrgentRequest = {

@@ -199,7 +199,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
               <h2 style="color: #3b82f6; font-size: 20px; font-weight: 800; margin-top: 0;">PlowPath Security Alert</h2>
               <p style="font-size: 14px; color: #334155; line-height: 1.5;">You requested to reset your password. Use the verification code below to establish a new password:</p>
               <div style="font-size: 32px; font-weight: 900; letter-spacing: 0.1em; color: #1e293b; text-align: center; margin: 24px 0; padding: 12px; background: #e2e8f0; border-radius: 8px;">
-                \${rawCode}
+                ${rawCode}
               </div>
               <p style="font-size: 12px; color: #64748b; margin-bottom: 0;">This code is valid for exactly 15 minutes. If you did not request this, you can safely ignore this email.</p>
             </div>
@@ -226,7 +226,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     const { rows } = await query<UserRow & { reset_token: string | null; reset_token_expires_at: string | null }>(
       `SELECT u.user_id, u.email, u.phone, u.reset_token, u.reset_token_expires_at
          FROM users u
-        WHERE u.\${column} = $1 AND u.deleted_at IS NULL
+        WHERE u.${column} = $1 AND u.deleted_at IS NULL
         LIMIT 1`,
       [identifier],
     );
