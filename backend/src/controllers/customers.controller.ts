@@ -454,13 +454,18 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
   const refCode = `AR-${customerId.substring(0, 8).toUpperCase()}`;
   const dateStr = new Date().toLocaleDateString();
 
-  // Premium styled HTML overload notice matching the dashboard's design system
-  const html = `
-<!DOCTYPE html>
+  // 1. Fetch template from database
+  let template = '';
+  const { rows: settingsRows } = await query<any>('SELECT settings FROM organization_settings LIMIT 1');
+  if (settingsRows.length > 0 && settingsRows[0].settings?.message_templates?.email_overdue) {
+    template = settingsRows[0].settings.message_templates.email_overdue;
+  } else {
+    // Premium fallback HTML template
+    template = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>\${subject}</title>
+  <title>OVERDUE ACCOUNT BALANCE INVOICE WARNING</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -533,10 +538,10 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
     }
     .subject-line {
       font-weight: 700;
-      border-left: 4px solid #0f172a;
+      border-left: 4px solid #ef4444;
       padding: 8px 12px;
-      background-color: #f8fafc;
-      color: #0f172a;
+      background-color: #fef2f2;
+      color: #991b1b;
       font-size: 14px;
       margin-bottom: 20px;
       clear: both;
@@ -568,9 +573,9 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
       text-align: right;
     }
     .balance-amount {
-      font-size: 20px;
+      font-size: 24px;
       font-weight: 900;
-      color: #0f172a;
+      color: #e11d48;
     }
     .status-badge {
       display: inline-block;
@@ -607,15 +612,15 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
     </div>
     <div class="content">
       <div class="doc-meta">
-        <div class="doc-meta-left">Date: \${dateStr}</div>
-        <div class="doc-meta-right">Ref: \${refCode}</div>
+        <div class="doc-meta-left">Date: {{date}}</div>
+        <div class="doc-meta-right">Ref: {{ref_code}}</div>
       </div>
 
       <div class="address-grid">
         <div class="address-col-left">
           <div class="address-title">To:</div>
-          <div>\${customer.name}</div>
-          <div>\${customer.address}</div>
+          <div>{{customer_name}}</div>
+          <div>{{customer_address}}</div>
         </div>
         <div class="address-col-right">
           <div class="address-title">From Operations Office:</div>
@@ -630,20 +635,20 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
       </div>
 
       <div class="body-text" style="clear: both; padding-top: 10px;">
-        Dear \${customer.name},
+        Dear {{customer_name}},
       </div>
 
       <div class="body-text">
-        We are contacting you today regarding an outstanding overdue balance on your snow removal operations profile. Our historical records indicate that you have serviced plowing tasks with outstanding invoice allocations.
+        We are contacting you today regarding an outstanding overdue balance on your snow removal operations profile. Our records indicate that you have serviced plowing tasks with outstanding invoice allocations.
       </div>
 
       <div class="summary-card">
         <div class="summary-card-left">
-          <div>Servicing Property: <strong>\${customer.address}</strong></div>
-          <div>Account Status: <span class="status-badge">\${customer.payment_status}</span></div>
+          <div>Servicing Property: <strong>{{customer_address}}</strong></div>
+          <div>Account Status: <span class="status-badge">{{payment_status}}</span></div>
         </div>
         <div class="summary-card-right">
-          <div class="balance-amount">$\${balance.toFixed(2)}</div>
+          <div class="balance-amount">{{outstanding_balance}}</div>
           <div style="font-size: 10px; color: #64748b;">Gross outstanding amount</div>
         </div>
       </div>
@@ -667,8 +672,17 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
     </div>
   </div>
 </body>
-</html>
-  `;
+</html>`;
+  }
+
+  // 2. Interpolate dynamic fields
+  const html = template
+    .replace(/{{customer_name}}/g, customer.name)
+    .replace(/{{customer_address}}/g, customer.address)
+    .replace(/{{date}}/g, dateStr)
+    .replace(/{{ref_code}}/g, refCode)
+    .replace(/{{payment_status}}/g, customer.payment_status)
+    .replace(/{{outstanding_balance}}/g, `$${balance.toFixed(2)}`);
 
   await sendEmail({
     to: customer.email,
@@ -676,6 +690,6 @@ export async function sendPaymentReminder(req: Request, res: Response): Promise<
     html,
   });
 
-  res.json({ success: true, message: `Overdue balance reminder successfully sent to \${customer.email}` });
+  res.json({ success: true, message: `Overdue balance reminder successfully sent to ${customer.email}` });
 }
 

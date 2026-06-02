@@ -14,6 +14,7 @@ interface OrgSettings {
       sms_pre_storm: string;
       sms_en_route: string;
       sms_completed: string;
+      email_overdue?: string;
     };
     quiet_hours: {
       enabled: boolean;
@@ -59,6 +60,8 @@ export default function SettingsPage() {
   const [preStormTemplate, setPreStormTemplate] = useState('');
   const [enRouteTemplate, setEnRouteTemplate] = useState('');
   const [completedTemplate, setCompletedTemplate] = useState('');
+  const [emailOverdueTemplate, setEmailOverdueTemplate] = useState('');
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
   const [quietHoursStart, setQuietHoursStart] = useState('22:00');
   const [quietHoursEnd, setQuietHoursEnd] = useState('06:00');
@@ -102,6 +105,7 @@ export default function SettingsPage() {
         setPreStormTemplate(org.settings.message_templates.sms_pre_storm);
         setEnRouteTemplate(org.settings.message_templates.sms_en_route);
         setCompletedTemplate(org.settings.message_templates.sms_completed);
+        setEmailOverdueTemplate(org.settings.message_templates.email_overdue || '');
         setQuietHoursEnabled(org.settings.quiet_hours.enabled);
         setQuietHoursStart(org.settings.quiet_hours.start);
         setQuietHoursEnd(org.settings.quiet_hours.end);
@@ -151,6 +155,7 @@ export default function SettingsPage() {
             sms_pre_storm: preStormTemplate,
             sms_en_route: enRouteTemplate,
             sms_completed: completedTemplate,
+            email_overdue: emailOverdueTemplate,
           },
           quiet_hours: {
             enabled: quietHoursEnabled,
@@ -234,6 +239,20 @@ export default function SettingsPage() {
     } else {
       setCompletedTemplate((prev) => prev + ` ${tag}`);
     }
+  };
+
+  const injectEmailTag = (tag: string) => {
+    setEmailOverdueTemplate((prev) => prev + tag);
+  };
+
+  const renderEmailPreviewHTML = () => {
+    return emailOverdueTemplate
+      .replace(/{{customer_name}}/g, 'John Doe')
+      .replace(/{{customer_address}}/g, '123 Blizzard Boulevard, Buffalo, NY 14201')
+      .replace(/{{date}}/g, new Date().toLocaleDateString())
+      .replace(/{{ref_code}}/g, 'AR-8A2D3C4E')
+      .replace(/{{payment_status}}/g, 'overdue')
+      .replace(/{{outstanding_balance}}/g, '$185.00');
   };
 
   const tabs = [
@@ -717,6 +736,60 @@ export default function SettingsPage() {
                     onChange={(e) => setCompletedTemplate(e.target.value)}
                     className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-medium leading-relaxed"
                   />
+                </div>
+
+                {/* OVERDUE EMAIL TEMPLATE */}
+                <div className="glass-card p-5 rounded-xl space-y-4 border border-slate-850">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-brand-400" />
+                      <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">4. Overdue Account Invoice Email Template</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Inject Tags:</span>
+                      <button type="button" onClick={() => injectEmailTag('{{customer_name}}')} className="tag-chip">customer_name</button>
+                      <button type="button" onClick={() => injectEmailTag('{{customer_address}}')} className="tag-chip">customer_address</button>
+                      <button type="button" onClick={() => injectEmailTag('{{date}}')} className="tag-chip">date</button>
+                      <button type="button" onClick={() => injectEmailTag('{{ref_code}}')} className="tag-chip">ref_code</button>
+                      <button type="button" onClick={() => injectEmailTag('{{payment_status}}')} className="tag-chip">payment_status</button>
+                      <button type="button" onClick={() => injectEmailTag('{{outstanding_balance}}')} className="tag-chip">outstanding_balance</button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-450 leading-relaxed font-medium">
+                    Design a premium, responsive HTML email notice to alert clients with overdue balances. Double-bracket tags will be dynamically replaced when reminding customers.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <textarea
+                      rows={12}
+                      required
+                      value={emailOverdueTemplate}
+                      onChange={(e) => setEmailOverdueTemplate(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-mono leading-relaxed"
+                      placeholder="<!-- Enter HTML Email Template -->"
+                    />
+                    
+                    {/* HTML Preview Trigger */}
+                    <div className="flex items-center justify-between bg-slate-900/40 px-4 py-2.5 rounded-xl border border-slate-800/60">
+                      <span className="text-[11px] font-bold text-slate-400">Live Render HTML Sandbox Preview</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailPreview(!showEmailPreview)}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-[10px] rounded-lg transition-all cursor-pointer"
+                      >
+                        {showEmailPreview ? 'Collapse Preview' : 'Expand Live Preview'}
+                      </button>
+                    </div>
+                    
+                    {showEmailPreview && (
+                      <div className="w-full h-[400px] border border-slate-800 bg-white rounded-xl overflow-hidden shadow-inner">
+                        <iframe
+                          srcDoc={renderEmailPreviewHTML()}
+                          title="Email Overdue Template Preview"
+                          className="w-full h-full border-none"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

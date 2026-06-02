@@ -369,7 +369,7 @@ export async function getPricingOptimizations(): Promise<PricingCohortAlert[]> {
        JOIN customers c ON rs.customer_id = c.customer_id
        JOIN routes r ON rs.route_id = r.route_id
        JOIN drivers d ON r.driver_id = d.driver_id
-      WHERE rs.status = 'completed' AND rs.deleted_at IS NULL AND r.deleted_at IS NULL`
+      WHERE rs.status = 'completed' AND r.deleted_at IS NULL`
   );
 
   if (stopsRes.rows.length === 0) {

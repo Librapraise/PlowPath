@@ -188,6 +188,25 @@ describe('Analytics Controller', () => {
     });
   });
 
+  describe('getPricingOptimizations', () => {
+    it('should calculate profit margins and return pricing recommendations for the bottom decile', async () => {
+      await getPricingOptimizations(mockReq as Request, mockRes as Response);
+
+      expect(mockJson).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({
+          customer_id: 'customer-1',
+          customer_name: 'Acme LLC',
+          property_type: 'residential',
+          address: '123 Main St',
+          revenue_per_stop: 50,
+          allocated_cost_per_stop: 53.75,
+          profit_margin_percent: -7.5,
+          recommendation: 'Suggest increasing residential stop rate by $15.00 to offset fuel & route labor constraints.',
+        })
+      ]));
+    });
+  });
+
   describe('exportFinancialsCsv', () => {
     it('should stream formatted CSV string with correct attachments headers', async () => {
       await exportFinancialsCsv(mockReq as Request, mockRes as Response);

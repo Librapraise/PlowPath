@@ -9,6 +9,7 @@ import { broadcastUrgentRequestUpdate, broadcastRouteUpdate } from '../sockets';
 
 // Initialize the Redis-backed Bull queue for emergency call escalations.
 export const urgentEscalationQueue = new Queue('urgent-escalations', env.REDIS_URL);
+urgentEscalationQueue.on('error', (err) => logger.error('urgentEscalationQueue error:', err));
 
 type UrgentRequest = {
   request_id: string;

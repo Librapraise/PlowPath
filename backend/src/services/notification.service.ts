@@ -10,6 +10,7 @@ import { getIo } from '../sockets';
 
 // 1. Initialize the Bull Queue powered by the standard Redis URL.
 export const pushQueue = new Queue('push-notifications', env.REDIS_URL);
+pushQueue.on('error', (err) => logger.error('pushQueue error:', err));
 
 let firebaseInitialized = false;
 
@@ -141,6 +142,7 @@ export async function enqueuePushNotification(
 
 // 4. Initialize the Bull Queue for SMS alerts
 export const smsQueue = new Queue('sms-notifications', env.REDIS_URL);
+smsQueue.on('error', (err) => logger.error('smsQueue error:', err));
 
 // 5. Register the SMS Bull queue processor
 smsQueue.process(async (job) => {
@@ -305,6 +307,7 @@ export async function scheduleSeasonalReminders(): Promise<void> {
 
 // 6. Initialize weather queue
 export const weatherQueue = new Queue('weather-updates', env.REDIS_URL);
+weatherQueue.on('error', (err) => logger.error('weatherQueue error:', err));
 
 weatherQueue.process(async (job) => {
   logger.info(`[BULL CRON] Processing 15-minute weather sync worker...`);

@@ -14,6 +14,7 @@ const organizationSettingsSchema = z.object({
       sms_pre_storm: z.string().min(1, 'Pre-storm template is required'),
       sms_en_route: z.string().min(1, 'En-route template is required'),
       sms_completed: z.string().min(1, 'Completed template is required'),
+      email_overdue: z.string().min(1, 'Overdue email template is required').optional(),
     }),
     quiet_hours: z.object({
       enabled: z.boolean(),
