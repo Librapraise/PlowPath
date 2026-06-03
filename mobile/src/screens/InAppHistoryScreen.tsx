@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigate } from '../services/navigation';
+import { useSettingsStore } from '../store/settingsStore';
 
 export interface NotificationItem {
   id: string;
@@ -13,6 +14,9 @@ export interface NotificationItem {
 }
 
 export default function InAppHistoryScreen() {
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const isDark = theme === 'dark';
+
   const [history, setHistory] = useState<NotificationItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -46,6 +50,8 @@ export default function InAppHistoryScreen() {
     }
   };
 
+  const styles = isDark ? darkStyles : lightStyles;
+
   const renderItem = ({ item }: { item: NotificationItem }) => {
     let categoryColor = '#64748B'; // default Slate
     if (item.category === 'urgent') categoryColor = '#EF4444'; // Red
@@ -68,11 +74,13 @@ export default function InAppHistoryScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.header}>Notifications</Text>
       <FlatList
         data={history}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#38BDF8', '#2E75B6']} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No notifications logged yet.</Text>
@@ -83,25 +91,35 @@ export default function InAppHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = {
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Slate 900
-    padding: 12,
+  },
+  header: {
+    fontSize: 26,
+    fontWeight: '900',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
   card: {
-    backgroundColor: '#1E293B', // Slate 800
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   badge: {
     paddingHorizontal: 8,
@@ -111,29 +129,63 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFF',
     fontSize: 9,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   timestamp: {
-    color: '#94A3B8',
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '600',
   },
   title: {
-    color: '#F8FAFC',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 6,
   },
   body: {
-    color: '#CBD5E1',
     fontSize: 14,
     lineHeight: 20,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
     marginTop: 64,
   },
   emptyText: {
-    color: '#94A3B8',
     fontSize: 15,
+    fontWeight: '600',
   },
-});
+};
+
+const lightStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
+  header: { ...baseStyles.header, color: '#0F172A' },
+  card: {
+    ...baseStyles.card,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+  },
+  timestamp: { ...baseStyles.timestamp, color: '#64748B' },
+  title: { ...baseStyles.title, color: '#0F172A' },
+  body: { ...baseStyles.body, color: '#475569' },
+  emptyText: { ...baseStyles.emptyText, color: '#64748B' },
+} as any);
+
+const darkStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  header: { ...baseStyles.header, color: '#FFFFFF' },
+  card: {
+    ...baseStyles.card,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+  },
+  timestamp: { ...baseStyles.timestamp, color: '#94A3B8' },
+  title: { ...baseStyles.title, color: '#FFFFFF' },
+  body: { ...baseStyles.body, color: '#CBD5E1' },
+  emptyText: { ...baseStyles.emptyText, color: '#94A3B8' },
+} as any);

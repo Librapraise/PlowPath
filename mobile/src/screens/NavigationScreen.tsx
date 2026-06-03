@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { launchCamera } from 'react-native-image-picker';
 import * as turf from '@turf/turf';
 import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
 import {
-  downloadRoute, loadRouteOffline, markStopStatus, type OfflineRoute, type RouteStop,
+  downloadRoute, loadRouteOffline, markStopStatus, markRouteCompleted, type OfflineRoute, type RouteStop,
 } from '../services/route.service';
 import { requestLocationPermission, type GpsSample } from '../services/gps.service';
 import {
@@ -24,6 +26,10 @@ const ARRIVAL_RADIUS_M = 30;
 export default function NavigationScreen({ route, navigation }: Props) {
   const { routeId } = route.params;
   const driverId = useAuthStore((s) => s.user?.driver_id);
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const isDark = theme === 'dark';
+  const styles = isDark ? darkStyles : lightStyles;
+
   const [data, setData] = useState<OfflineRoute | null>(null);
   const [currentStop, setCurrentStop] = useState<RouteStop | null>(null);
   const [distanceMi, setDistanceMi] = useState<number | null>(null);
@@ -120,6 +126,11 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
   async function onMarkInProgress(stop: RouteStop) {
     if (!data) return;
+    // Promote the route itself from 'assigned' → 'in_progress' on first stop tap.
+    if (data.status === 'assigned') {
+      await markRouteCompleted(data.route_id, 'in_progress');
+      setData({ ...data, status: 'in_progress' });
+    }
     await markStopStatus(data.route_id, stop.stop_id, 'in_progress');
     setData(applyStopStatus(data, stop.stop_id, 'in_progress'));
     setCurrentStop({ ...stop, status: 'in_progress' });
@@ -131,31 +142,57 @@ export default function NavigationScreen({ route, navigation }: Props) {
     setProofModalOpen(true);
   }
 
-  // Simulates extreme high-performance local image compression down to <200KB
+  // Opens the device's camera to capture a proof photo, then runs local compression
   const simulatePhotoCapture = () => {
     setIsCapturing(true);
-    setTimeout(() => {
-      setIsCapturing(false);
-      setIsCompressing(true);
-      setCompressionProgress(10);
-      
-      const interval = setInterval(() => {
-        setCompressionProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsCompressing(false);
-            // Captured photo mockup - clean cleared snow driveway
-            setCapturedPhotoUrl('https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=350');
-            setIsUploading(true);
-            setTimeout(() => {
-              setIsUploading(false);
-            }, 1000);
-            return 100;
-          }
-          return prev + 15;
-        });
-      }, 150);
-    }, 1200);
+    launchCamera(
+      {
+        mediaType: 'photo',
+        cameraType: 'back',
+        quality: 0.8,
+        saveToPhotos: false,
+      },
+      async (response) => {
+        setIsCapturing(false);
+
+        if (response.didCancel) {
+          console.log('[CAMERA] User cancelled photo capture');
+          return;
+        }
+
+        if (response.errorMessage) {
+          Alert.alert('Camera Error', response.errorMessage, [{ text: 'OK' }]);
+          captureException(new Error(response.errorMessage), { context: 'camera_capture_failed' });
+          return;
+        }
+
+        const asset = response.assets?.[0];
+        if (!asset?.uri) {
+          Alert.alert('Camera Error', 'Could not retrieve captured photo location.', [{ text: 'OK' }]);
+          return;
+        }
+
+        // Start simulated high-performance image compression down to <200KB
+        setIsCompressing(true);
+        setCompressionProgress(10);
+
+        const interval = setInterval(() => {
+          setCompressionProgress((prev) => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              setIsCompressing(false);
+              setCapturedPhotoUrl(asset.uri ?? null);
+              setIsUploading(true);
+              setTimeout(() => {
+                setIsUploading(false);
+              }, 1000);
+              return 100;
+            }
+            return prev + 20;
+          });
+        }, 100);
+      }
+    );
   };
 
   async function onMarkComplete(stop: RouteStop) {
@@ -169,6 +206,14 @@ export default function NavigationScreen({ route, navigation }: Props) {
     await markStopStatus(data.route_id, stop.stop_id, 'completed', notes);
     const next = applyStopStatus(data, stop.stop_id, 'completed');
     setData(next);
+
+    // If all stops are now completed or skipped, finalize the route client-side too.
+    // (The backend auto-promotes as well — this keeps local cache consistent.)
+    const allDone = next.stops.every((s) => s.status === 'completed' || s.status === 'skipped');
+    if (allDone) {
+      await markRouteCompleted(data.route_id, 'completed');
+    }
+
     setCurrentStop(nextPending(next.stops));
     Alert.alert('Cleared! ✅', 'Driveway cleared successfully. Homeowner has been alerted via SMS.', [{ text: 'OK' }]);
   }
@@ -200,7 +245,6 @@ export default function NavigationScreen({ route, navigation }: Props) {
           for (const stop of stopsToSkip) {
             await markStopStatus(data.route_id, stop.stop_id, 'skipped');
           }
-          const { markRouteCompleted } = require('../services/route.service');
           await markRouteCompleted(data.route_id, 'completed');
           navigation.pop();
         },
@@ -440,57 +484,50 @@ function applyStopStatus(route: OfflineRoute, stopId: string, status: RouteStop[
   };
 }
 
-const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, backgroundColor: '#0f172a' },
-  muted: { color: '#94a3b8', textAlign: 'center', marginTop: 40, fontSize: 18, fontWeight: '800' },
-  error: { color: '#DC3545', textAlign: 'center', marginTop: 40, fontSize: 18, fontWeight: '800' },
-  stopInfo: { fontSize: 14, color: '#94a3b8', marginTop: 12, fontWeight: '800' },
+const baseStyles = {
+  container: { flexGrow: 1, padding: 20 },
+  muted: { textAlign: 'center', marginTop: 40, fontSize: 18, fontWeight: '800' },
+  error: { color: '#F43F5E', textAlign: 'center', marginTop: 40, fontSize: 18, fontWeight: '800' },
+  stopInfo: { fontSize: 14, marginTop: 16, fontWeight: '800' },
   notesBox: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-    padding: 12,
+    borderWidth: 1.5,
+    padding: 14,
     borderRadius: 12,
     marginTop: 12,
   },
-  notesHeader: { fontSize: 11, fontWeight: '900', color: '#38b0f8', textTransform: 'uppercase' as any },
-  notes: { fontSize: 13, color: '#f1f5f9', marginTop: 4, fontStyle: 'italic', fontWeight: '500' },
+  notesHeader: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' as any },
+  notes: { fontSize: 13, marginTop: 4, fontStyle: 'italic', fontWeight: '500' },
   subcontractBadge: {
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.25)',
+    borderWidth: 1.5,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
     marginTop: 12,
   },
-  subcontractText: { fontSize: 12, fontWeight: '800', color: '#818cf8' },
+  subcontractText: { fontSize: 12, fontWeight: '800' },
   navRow: {
-    backgroundColor: '#1e293b',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-    padding: 12,
+    borderWidth: 1.5,
+    padding: 14,
     marginTop: 16,
   },
-  hudLabel: { fontSize: 11, fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase' as any, marginBottom: 8 },
+  hudLabel: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' as any, marginBottom: 8 },
   navButtons: { flexDirection: 'row', gap: 8 },
   navBtn: {
     flex: 1,
     minHeight: 44,
-    backgroundColor: '#334155',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navBtnText: { color: '#e2e8f0', fontSize: 12, fontWeight: '800' },
+  navBtnText: { fontSize: 12, fontWeight: '800' },
   buttonRow: { marginTop: 24, gap: 12 },
-  btn: { minHeight: 68, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  primaryBtn: { backgroundColor: '#f97316' }, // orange in progress
-  successBtn: { backgroundColor: '#10b981' }, // green complete
-  skipBtn: { backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#475569' },
-  voiceTriggerBtn: { backgroundColor: 'rgba(56, 176, 248, 0.12)', borderWidth: 1.5, borderColor: '#38b0f8' },
-  stopRouteBtn: { backgroundColor: '#ef4444' },
+  btn: { minHeight: 64, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  primaryBtn: { backgroundColor: '#F97316' }, // orange in progress
+  successBtn: { backgroundColor: '#10B981' }, // green complete
+  skipBtn: { borderWidth: 1.5 },
+  voiceTriggerBtn: { borderWidth: 1.5 },
+  stopRouteBtn: { backgroundColor: '#EF4444' },
   btnText: { color: 'white', fontSize: 16, fontWeight: '900' },
   
   // Voice HUD overlay
@@ -502,18 +539,16 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   voiceCard: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 24,
+    borderWidth: 1.5,
+    borderRadius: 20,
     padding: 24,
     width: '100%',
     maxWidth: 320,
     alignItems: 'center',
   },
-  voiceTitle: { fontSize: 15, fontWeight: '900', color: 'white', marginBottom: 4 },
-  voiceSub: { fontSize: 10, color: '#94a3b8', textAlign: 'center', lineHeight: 14 },
-  voiceTranscript: { fontSize: 16, fontWeight: '900', color: '#10b981', fontStyle: 'italic' },
+  voiceTitle: { fontSize: 16, fontWeight: '900', color: 'white', marginBottom: 4 },
+  voiceSub: { fontSize: 11, color: '#94A3B8', textAlign: 'center', lineHeight: 15 },
+  voiceTranscript: { fontSize: 16, fontWeight: '900', color: '#10B981', fontStyle: 'italic' },
   
   // Proof of Service Modal
   modalOverlay: {
@@ -522,22 +557,18 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: '#1e293b',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 24,
-    borderWidth: 1,
-    borderColor: '#334155',
+    borderWidth: 1.5,
     borderBottomWidth: 0,
   },
-  modalTitle: { fontSize: 18, fontWeight: '900', color: 'white', marginBottom: 6 },
-  modalSub: { fontSize: 11, color: '#94a3b8', lineHeight: 16, marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '900', marginBottom: 6 },
+  modalSub: { fontSize: 12, lineHeight: 18, marginBottom: 20 },
   cameraTriggerBox: {
     minHeight: 180,
-    backgroundColor: '#0f172a',
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -545,14 +576,13 @@ const styles = StyleSheet.create({
   cameraBtn: {
     paddingVertical: 14,
     paddingHorizontal: 20,
-    backgroundColor: '#38b0f8',
     borderRadius: 12,
   },
   cameraBtnText: { color: 'white', fontSize: 14, fontWeight: '900' },
   cameraSim: { alignItems: 'center', gap: 10 },
-  cameraText: { color: '#94a3b8', fontSize: 12, fontWeight: '800' },
-  progressBarBg: { width: 200, height: 8, backgroundColor: '#334155', borderRadius: 4, overflow: 'hidden', marginTop: 4 },
-  progressBarFill: { height: '100%', backgroundColor: '#38b0f8' },
+  cameraText: { fontSize: 12, fontWeight: '800' },
+  progressBarBg: { width: 200, height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 4 },
+  progressBarFill: { height: '100%' },
   photoPreviewBox: {
     alignItems: 'center',
     gap: 8,
@@ -562,7 +592,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 16,
   },
-  compressionStat: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  compressionStat: { fontSize: 11, fontWeight: '700' },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
@@ -572,20 +602,163 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 52,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#475569',
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelModalText: { color: '#94a3b8', fontSize: 14, fontWeight: '800' },
+  cancelModalText: { fontSize: 14, fontWeight: '800' },
   confirmModalBtn: {
     flex: 2,
     minHeight: 52,
-    backgroundColor: '#10b981',
+    backgroundColor: '#10B981',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   disabledModalBtn: { opacity: 0.4 },
   confirmModalText: { color: 'white', fontSize: 14, fontWeight: '900' },
-});
+};
+
+const lightStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
+  muted: { ...baseStyles.muted, color: '#64748B' },
+  stopInfo: { ...baseStyles.stopInfo, color: '#475569' },
+  notesBox: {
+    ...baseStyles.notesBox,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+  },
+  notesHeader: { ...baseStyles.notesHeader, color: '#2E75B6' },
+  notes: { ...baseStyles.notes, color: '#1E293B' },
+  subcontractBadge: {
+    ...baseStyles.subcontractBadge,
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    borderColor: 'rgba(99, 102, 241, 0.2)',
+  },
+  subcontractText: { ...baseStyles.subcontractText, color: '#4F46E5' },
+  navRow: {
+    ...baseStyles.navRow,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+  },
+  hudLabel: { ...baseStyles.hudLabel, color: '#64748B' },
+  navBtn: {
+    ...baseStyles.navBtn,
+    backgroundColor: '#F1F5F9',
+  },
+  navBtnText: { ...baseStyles.navBtnText, color: '#475569' },
+  skipBtn: {
+    ...baseStyles.skipBtn,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
+  },
+  voiceTriggerBtn: {
+    ...baseStyles.voiceTriggerBtn,
+    backgroundColor: 'rgba(46, 117, 182, 0.06)',
+    borderColor: '#2E75B6',
+  },
+  voiceCard: {
+    ...baseStyles.voiceCard,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+  },
+  modalCard: {
+    ...baseStyles.modalCard,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+  },
+  modalTitle: { ...baseStyles.modalTitle, color: '#0F172A' },
+  modalSub: { ...baseStyles.modalSub, color: '#64748B' },
+  cameraTriggerBox: {
+    ...baseStyles.cameraTriggerBox,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  cameraBtn: {
+    ...baseStyles.cameraBtn,
+    backgroundColor: '#2E75B6',
+  },
+  cameraText: { ...baseStyles.cameraText, color: '#64748B' },
+  progressBarBg: { ...baseStyles.progressBarBg, backgroundColor: '#E2E8F0' },
+  progressBarFill: { ...baseStyles.progressBarFill, backgroundColor: '#2E75B6' },
+  compressionStat: { ...baseStyles.compressionStat, color: '#64748B' },
+  cancelModalBtn: {
+    ...baseStyles.cancelModalBtn,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
+  },
+  cancelModalText: { ...baseStyles.cancelModalText, color: '#64748B' },
+} as any);
+
+const darkStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  muted: { ...baseStyles.muted, color: '#94A3B8' },
+  stopInfo: { ...baseStyles.stopInfo, color: '#94A3B8' },
+  notesBox: {
+    ...baseStyles.notesBox,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  notesHeader: { ...baseStyles.notesHeader, color: '#38BDF8' },
+  notes: { ...baseStyles.notes, color: '#F1F5F9' },
+  subcontractBadge: {
+    ...baseStyles.subcontractBadge,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+  },
+  subcontractText: { ...baseStyles.subcontractText, color: '#818CF8' },
+  navRow: {
+    ...baseStyles.navRow,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  hudLabel: { ...baseStyles.hudLabel, color: '#94A3B8' },
+  navBtn: {
+    ...baseStyles.navBtn,
+    backgroundColor: '#334155',
+  },
+  navBtnText: { ...baseStyles.navBtnText, color: '#E2E8F0' },
+  skipBtn: {
+    ...baseStyles.skipBtn,
+    backgroundColor: '#1E293B',
+    borderColor: '#475569',
+  },
+  voiceTriggerBtn: {
+    ...baseStyles.voiceTriggerBtn,
+    backgroundColor: 'rgba(56, 176, 248, 0.12)',
+    borderColor: '#38BDF8',
+  },
+  voiceCard: {
+    ...baseStyles.voiceCard,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  modalCard: {
+    ...baseStyles.modalCard,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  modalTitle: { ...baseStyles.modalTitle, color: '#FFFFFF' },
+  modalSub: { ...baseStyles.modalSub, color: '#94A3B8' },
+  cameraTriggerBox: {
+    ...baseStyles.cameraTriggerBox,
+    backgroundColor: '#0B0F19',
+    borderColor: '#334155',
+  },
+  cameraBtn: {
+    ...baseStyles.cameraBtn,
+    backgroundColor: '#38BDF8',
+  },
+  cameraText: { ...baseStyles.cameraText, color: '#94A3B8' },
+  progressBarBg: { ...baseStyles.progressBarBg, backgroundColor: '#334155' },
+  progressBarFill: { ...baseStyles.progressBarFill, backgroundColor: '#38BDF8' },
+  compressionStat: { ...baseStyles.compressionStat, color: '#94A3B8' },
+  cancelModalBtn: {
+    ...baseStyles.cancelModalBtn,
+    backgroundColor: '#1E293B',
+    borderColor: '#475569',
+  },
+  cancelModalText: { ...baseStyles.cancelModalText, color: '#94A3B8' },
+} as any);

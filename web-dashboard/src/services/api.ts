@@ -1,6 +1,10 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+// Configure Axios to automatically read the CSRF token cookie and send it in requests
+axios.defaults.xsrfCookieName = 'csrf-token';
+axios.defaults.xsrfHeaderName = 'x-csrf-token';
+
 const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
 export const api = axios.create({ baseURL, timeout: 15_000 });

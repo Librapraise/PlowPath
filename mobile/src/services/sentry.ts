@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react-native';
+import type { ComponentType } from 'react';
 
 let isSentryEnabled = false;
 
@@ -81,3 +82,17 @@ export function captureMessage(
     }
   }
 }
+
+/**
+ * Wraps the root App component with Sentry instrumentation if Sentry is active.
+ * Prevents "App Start Span could not be finished" warnings when DSN is missing.
+ */
+export function wrapApp<T extends ComponentType<any>>(
+  Component: T,
+): T {
+  if (isSentryEnabled) {
+    return Sentry.wrap(Component) as unknown as T;
+  }
+  return Component;
+}
+

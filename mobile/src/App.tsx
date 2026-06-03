@@ -1,20 +1,28 @@
-import React from 'react';
+import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './navigation/RootNavigator';
-import { initSentry } from './services/sentry';
+import { initSentry, wrapApp } from './services/sentry';
 import { navigationRef } from './services/navigation';
-import * as Sentry from '@sentry/react-native';
+import SplashScreen from './screens/SplashScreen';
 
 // Initialize Sentry crash reporting
 initSentry();
 
-export default Sentry.wrap(function App() {
+const App = function App() {
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
+
   return (
     <SafeAreaProvider>
       <NavigationContainer ref={navigationRef}>
         <RootNavigator />
       </NavigationContainer>
+      {isSplashVisible && (
+        <SplashScreen onAnimationComplete={() => setIsSplashVisible(false)} />
+      )}
     </SafeAreaProvider>
   );
-});
+};
+
+export default wrapApp(App);
+

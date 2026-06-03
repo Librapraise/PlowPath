@@ -25,3 +25,5 @@ const shutdown = (signal: string) => () => {
 };
 process.on('SIGINT', shutdown('SIGINT'));
 process.on('SIGTERM', shutdown('SIGTERM'));
+// Trigger reload after updating Redis config in .env
+

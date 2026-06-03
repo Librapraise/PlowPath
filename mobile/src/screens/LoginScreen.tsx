@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { api } from '../services/api';
 import { useAuthStore, type AuthUser } from '../store/authStore';
 import { pushService } from '../services/push.service';
@@ -90,8 +90,12 @@ export default function LoginScreen() {
       pushService.requestUserPermission().catch((pushErr) => {
         console.warn('[PUSH] Failed to trigger push permissions on login:', pushErr);
       });
-    } catch {
-      setError('Incorrect phone or password. Try again.');
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setError('Incorrect phone or password. Try again.');
+      } else {
+        setError('Network error. Cannot reach the server. Please check your connection.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +156,18 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <View style={styles.logoContainer}>
+        <View style={styles.logoShadowWrapper}>
+          <Image 
+            source={require('../assets/app_icon.png')} 
+            style={{ width: 100, height: 100, borderRadius: 20 }} 
+          />
+        </View>
+        <Text style={styles.brandTitle}>PLOWPATH</Text>
+        <Text style={styles.brandSubtitle}>Smart Winter Operations</Text>
+      </View>
+
       <Text style={styles.title}>
         {view === 'login' ? 'Start Shift' : view === 'forgot' ? 'Forgot Password' : 'Reset Password'}
       </Text>
@@ -167,6 +182,8 @@ export default function LoginScreen() {
             autoCorrect={false}
             keyboardType="default"
             style={styles.input}
+            placeholder="+15551110001"
+            placeholderTextColor="#64748B"
             accessibilityLabel="Phone number or email"
           />
 
@@ -177,6 +194,8 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               style={styles.textInputStyle}
+              placeholder="••••••••"
+              placeholderTextColor="#64748B"
               accessibilityLabel="Password"
             />
             <TouchableOpacity
@@ -185,7 +204,7 @@ export default function LoginScreen() {
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? <EyeOffIcon color="#666" /> : <EyeIcon color="#666" />}
+              {showPassword ? <EyeOffIcon color="#94A3B8" /> : <EyeIcon color="#94A3B8" />}
             </TouchableOpacity>
           </View>
 
@@ -209,7 +228,7 @@ export default function LoginScreen() {
             accessibilityLabel={`Selected vehicle: ${selectedVehicle}. Double tap to change.`}
           >
             <Text style={styles.dropdownHeaderText}>{selectedVehicle}</Text>
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth={2.5}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2.5}>
               {showVehicleDropdown ? (
                 <Path d="M18 15l-6-6-6 6" />
               ) : (
@@ -276,6 +295,7 @@ export default function LoginScreen() {
             keyboardType="default"
             style={styles.input}
             placeholder="e.g. +15551110001"
+            placeholderTextColor="#64748B"
             accessibilityLabel="Reset identifier"
           />
 
@@ -323,6 +343,7 @@ export default function LoginScreen() {
             keyboardType="number-pad"
             style={[styles.input, styles.codeInput]}
             placeholder="e.g. 123456"
+            placeholderTextColor="#64748B"
             accessibilityLabel="Verification Code"
           />
 
@@ -333,6 +354,7 @@ export default function LoginScreen() {
             secureTextEntry={true}
             style={styles.input}
             placeholder="Min. 6 characters"
+            placeholderTextColor="#64748B"
             accessibilityLabel="New Password"
           />
 
@@ -343,6 +365,7 @@ export default function LoginScreen() {
             secureTextEntry={true}
             style={styles.input}
             placeholder="Confirm password"
+            placeholderTextColor="#64748B"
             accessibilityLabel="Confirm Password"
           />
 
@@ -375,40 +398,68 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: 'white', justifyContent: 'center' },
-  title: { fontSize: 28, fontWeight: '700', color: '#000', marginBottom: 32 },
-  label: { fontSize: 16, color: '#333', marginBottom: 6, marginTop: 12 },
+  container: { flex: 1, backgroundColor: '#0B192C' },
+  scrollContainer: { padding: 24, paddingBottom: 48, flexGrow: 1, justifyContent: 'center' },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoShadowWrapper: {
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    borderRadius: 50,
+  },
+  brandTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 4,
+    marginTop: 16,
+  },
+  brandSubtitle: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 3,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  title: { fontSize: 28, fontWeight: '900', color: '#FFFFFF', marginBottom: 24, textAlign: 'center' },
+  label: { fontSize: 13, color: '#94A3B8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, marginTop: 16 },
   input: {
-    minHeight: 60,
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 6,
+    minHeight: 58,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    fontSize: 18,
-    color: '#000',
-    backgroundColor: 'white',
+    fontSize: 17,
+    color: '#FFFFFF',
+    backgroundColor: '#1E293B',
   },
   inputContainer: {
-    minHeight: 60,
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 6,
+    minHeight: 58,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    borderRadius: 12,
     paddingLeft: 16,
     paddingRight: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#1E293B',
   },
   textInputStyle: {
     flex: 1,
     height: '100%',
-    fontSize: 18,
-    color: '#000',
+    fontSize: 17,
+    color: '#FFFFFF',
   },
   eyeButton: {
     padding: 10,
@@ -416,98 +467,101 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdownHeader: {
-    minHeight: 60,
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 6,
+    minHeight: 58,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    borderRadius: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#1E293B',
   },
   dropdownHeaderText: {
-    fontSize: 18,
-    color: '#000',
-    fontWeight: '500',
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   dropdownList: {
-    borderWidth: 1,
-    borderColor: '#CCC',
-    borderRadius: 6,
-    marginTop: 4,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    borderRadius: 12,
+    marginTop: 6,
+    backgroundColor: '#1E293B',
+    overflow: 'hidden',
   },
   dropdownOption: {
     minHeight: 50,
     paddingHorizontal: 16,
     justifyContent: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#334155',
   },
   dropdownOptionSelected: {
-    backgroundColor: '#E6F0FA',
+    backgroundColor: '#0B192C',
   },
   dropdownOptionText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#94A3B8',
   },
   dropdownOptionTextSelected: {
-    color: '#2E75B6',
-    fontWeight: '700',
+    color: '#38BDF8',
+    fontWeight: '800',
   },
-  error: { color: '#DC3545', marginTop: 16, fontSize: 16 },
+  error: { color: '#F43F5E', marginTop: 16, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   button: {
     marginTop: 32,
-    minHeight: 60,
-    backgroundColor: '#2E75B6',
-    borderRadius: 6,
+    minHeight: 58,
+    backgroundColor: '#38BDF8',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: 'white', fontSize: 18, fontWeight: '600' },
+  buttonText: { color: '#0B192C', fontSize: 17, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   forgotBtn: {
     alignSelf: 'flex-end',
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 10,
+    marginBottom: 10,
     paddingVertical: 4,
   },
   forgotBtnText: {
-    color: '#2E75B6',
+    color: '#38BDF8',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   backBtn: {
     marginTop: 16,
-    minHeight: 60,
+    minHeight: 58,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 6,
-    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    borderRadius: 12,
+    backgroundColor: '#1E293B',
   },
   backBtnText: {
-    color: '#333',
-    fontSize: 18,
-    fontWeight: '600',
+    color: '#94A3B8',
+    fontSize: 17,
+    fontWeight: '700',
   },
   subTitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    color: '#94A3B8',
+    marginBottom: 20,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   codeInput: {
     textAlign: 'center',
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: 6,
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 8,
+    color: '#38BDF8',
   },
 });

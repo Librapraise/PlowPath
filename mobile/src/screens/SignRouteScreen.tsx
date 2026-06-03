@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { api } from '../services/api';
+import { useSettingsStore } from '../store/settingsStore';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 
 interface SignStop {
@@ -21,6 +22,9 @@ interface SignRouteResponse {
 }
 
 export default function SignRouteScreen() {
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const isDark = theme === 'dark';
+
   const [action, setAction] = useState<'install' | 'remove'>('install');
   const [routeData, setRouteData] = useState<SignRouteResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +56,6 @@ export default function SignRouteScreen() {
       await api.put(`/signs/customers/${customerId}/sign`, {
         sign_status: targetStatus,
       });
-      // Refresh local list
       await fetchSignRoute();
     } catch (err) {
       setError('Failed to update sign status. Try again.');
@@ -61,9 +64,13 @@ export default function SignRouteScreen() {
     }
   };
 
+  const styles = isDark ? darkStyles : lightStyles;
+
   return (
     <View style={styles.container}>
       <OfflineStatusBar />
+
+      <Text style={styles.header}>Sign Crew</Text>
 
       {/* Header Controls */}
       <View style={styles.tabContainer}>
@@ -89,17 +96,17 @@ export default function SignRouteScreen() {
       {routeData && (
         <View style={styles.statsCard}>
           <View style={styles.statRow}>
-            <View>
+            <View style={styles.statItem}>
               <Text style={styles.statLabel}>STOPS TO GO</Text>
               <Text style={styles.statVal}>{routeData.stops.length}</Text>
             </View>
             <View style={styles.divider} />
-            <View>
-              <Text style={styles.statLabel}>TOTAL DISTANCE</Text>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>DISTANCE</Text>
               <Text style={styles.statVal}>{routeData.total_miles} mi</Text>
             </View>
             <View style={styles.divider} />
-            <View>
+            <View style={styles.statItem}>
               <Text style={styles.statLabel}>PROGRESS</Text>
               <Text style={styles.statVal}>{routeData.progress}%</Text>
             </View>
@@ -111,14 +118,14 @@ export default function SignRouteScreen() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#2E75B6'} />
           <Text style={styles.loadingText}>Calculating optimized TSP route...</Text>
         </View>
       ) : (
         <FlatList
           data={routeData?.stops ?? []}
           keyExtractor={(s) => s.customer_id}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
               All properties are completed for this off-season sign operation!
@@ -138,7 +145,7 @@ export default function SignRouteScreen() {
 
               <View style={styles.actionRow}>
                 <Text style={styles.statusLabel}>
-                  Current Status: <Text style={styles.statusVal}>{item.sign_status}</Text>
+                  Status: <Text style={styles.statusVal}>{item.sign_status.toUpperCase()}</Text>
                 </Text>
 
                 {action === 'install' ? (
@@ -175,57 +182,196 @@ export default function SignRouteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f4f6f8' },
+const baseStyles = {
+  container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  loadingText: { color: '#555', marginTop: 12, fontSize: 14, fontWeight: '600' },
+  header: {
+    fontSize: 26,
+    fontWeight: '900',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  listContent: { paddingHorizontal: 20, paddingBottom: 24 },
+  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '600' },
   tabContainer: {
-    flexDirection: 'row', backgroundColor: '#e2e8f0', borderRadius: 8,
-    padding: 4, marginBottom: 16,
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderWidth: 1.5,
   },
   tabButton: {
-    flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 6,
-    height: 44, justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 44,
+    justifyContent: 'center',
   },
-  activeTab: { backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
-  tabText: { fontSize: 13, fontWeight: '700', color: '#64748b' },
-  activeTabText: { color: '#4f46e5' },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  tabText: { fontSize: 13, fontWeight: '800' },
+  activeTabText: { color: 'white' },
   statsCard: {
-    backgroundColor: 'white', padding: 16, borderRadius: 8, marginBottom: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    padding: 16,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 3,
   },
   statRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  statLabel: { fontSize: 9, fontWeight: '800', color: '#94a3b8', letterSpacing: 1 },
-  statVal: { fontSize: 16, fontWeight: '900', color: '#1e293b', marginTop: 2, textAlign: 'center' },
-  divider: { width: 1, height: 32, backgroundColor: '#e2e8f0' },
-  errorText: { color: '#ef4444', marginBottom: 12, textAlign: 'center', fontWeight: '600' },
-  emptyText: { color: '#64748b', marginTop: 32, textAlign: 'center', fontSize: 14, fontWeight: '500' },
+  statItem: { alignItems: 'center' },
+  statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  statVal: { fontSize: 16, fontWeight: '900', marginTop: 4, textAlign: 'center' },
+  divider: { width: 1.5, height: 32 },
+  errorText: { color: '#ef4444', marginBottom: 12, textAlign: 'center', fontWeight: '700' },
+  emptyText: { marginTop: 32, textAlign: 'center', fontSize: 14, fontWeight: '600' },
   stopCard: {
-    backgroundColor: 'white', padding: 16, borderRadius: 8, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
-  stopHeader: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  stopHeader: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   seqBadge: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#e0e7ff',
-    alignItems: 'center', justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
   },
-  seqText: { color: '#4f46e5', fontWeight: '900', fontSize: 12 },
+  seqText: { fontWeight: '900', fontSize: 13 },
   metaCol: { flex: 1 },
-  stopName: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
-  stopAddr: { fontSize: 12, color: '#64748b', marginTop: 2 },
+  stopName: { fontSize: 16, fontWeight: '800' },
+  stopAddr: { fontSize: 13, marginTop: 2 },
   actionRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: '#f1f5f9', marginTop: 12, paddingTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 12,
   },
-  statusLabel: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-  statusVal: { color: '#1e293b', fontWeight: '800' },
+  statusLabel: { fontSize: 12, fontWeight: '700' },
+  statusVal: { fontWeight: '900' },
   btn: {
-    paddingHorizontal: 16, height: 36, borderRadius: 6,
-    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 16,
+    height: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  installBtn: { backgroundColor: '#10b981' },
-  removeBtn: { backgroundColor: '#64748b' },
-  btnText: { color: 'white', fontSize: 12, fontWeight: '800' },
-});
+  installBtn: { backgroundColor: '#10B981' },
+  removeBtn: { backgroundColor: '#3B82F6' },
+  btnText: { color: 'white', fontSize: 12, fontWeight: '900' },
+};
+
+const lightStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
+  header: { ...baseStyles.header, color: '#0F172A' },
+  loadingText: { ...baseStyles.loadingText, color: '#475569' },
+  tabContainer: {
+    ...baseStyles.tabContainer,
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  activeTab: {
+    ...baseStyles.activeTab,
+    backgroundColor: '#FFFFFF',
+  },
+  tabText: { ...baseStyles.tabText, color: '#475569' },
+  activeTabText: { color: '#2E75B6' },
+  statsCard: {
+    ...baseStyles.statsCard,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+  },
+  statLabel: { ...baseStyles.statLabel, color: '#64748B' },
+  statVal: { ...baseStyles.statVal, color: '#0F172A' },
+  divider: { ...baseStyles.divider, backgroundColor: '#E2E8F0' },
+  emptyText: { ...baseStyles.emptyText, color: '#64748B' },
+  stopCard: {
+    ...baseStyles.stopCard,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+  },
+  seqBadge: {
+    ...baseStyles.seqBadge,
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  seqText: { ...baseStyles.seqText, color: '#475569' },
+  stopName: { ...baseStyles.stopName, color: '#0F172A' },
+  stopAddr: { ...baseStyles.stopAddr, color: '#64748B' },
+  actionRow: { ...baseStyles.actionRow, borderTopColor: '#F1F5F9' },
+  statusLabel: { ...baseStyles.statusLabel, color: '#64748B' },
+  statusVal: { ...baseStyles.statusVal, color: '#0F172A' },
+  removeBtn: { backgroundColor: '#475569' },
+} as any);
+
+const darkStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  header: { ...baseStyles.header, color: '#FFFFFF' },
+  loadingText: { ...baseStyles.loadingText, color: '#94A3B8' },
+  tabContainer: {
+    ...baseStyles.tabContainer,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+  },
+  activeTab: {
+    ...baseStyles.activeTab,
+    backgroundColor: '#0B0F19',
+  },
+  tabText: { ...baseStyles.tabText, color: '#94A3B8' },
+  activeTabText: { color: '#38BDF8' },
+  statsCard: {
+    ...baseStyles.statsCard,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+  },
+  statLabel: { ...baseStyles.statLabel, color: '#94A3B8' },
+  statVal: { ...baseStyles.statVal, color: '#FFFFFF' },
+  divider: { ...baseStyles.divider, backgroundColor: '#334155' },
+  emptyText: { ...baseStyles.emptyText, color: '#94A3B8' },
+  stopCard: {
+    ...baseStyles.stopCard,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+  },
+  seqBadge: {
+    ...baseStyles.seqBadge,
+    backgroundColor: '#0B0F19',
+    borderColor: '#334155',
+  },
+  seqText: { ...baseStyles.seqText, color: '#38BDF8' },
+  stopName: { ...baseStyles.stopName, color: '#FFFFFF' },
+  stopAddr: { ...baseStyles.stopAddr, color: '#94A3B8' },
+  actionRow: { ...baseStyles.actionRow, borderTopColor: '#334155' },
+  statusLabel: { ...baseStyles.statusLabel, color: '#94A3B8' },
+  statusVal: { ...baseStyles.statusVal, color: '#FFFFFF' },
+  removeBtn: { backgroundColor: '#475569' },
+} as any);

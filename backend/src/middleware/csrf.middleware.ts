@@ -12,6 +12,11 @@ function parseCookies(cookieHeader: string | undefined): Record<string, string> 
 }
 
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+  const isMobile = req.headers['x-client-type'] === 'mobile-app';
+  if (isMobile) {
+    return next();
+  }
+
   const cookies = parseCookies(req.headers.cookie);
   let csrfToken = cookies['csrf-token'];
 

@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../services/api';
+import { useSettingsStore } from '../store/settingsStore';
 import type { RootStackParamList } from '../services/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ShiftSwap'>;
 
 export default function ShiftSwapScreen({ navigation }: Props) {
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const isDark = theme === 'dark';
+
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [scanInput, setScanInput] = useState('');
@@ -62,6 +66,8 @@ export default function ShiftSwapScreen({ navigation }: Props) {
     }
   };
 
+  const styles = isDark ? darkStyles : lightStyles;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Part-Time Shift Handover Console</Text>
@@ -95,7 +101,11 @@ export default function ShiftSwapScreen({ navigation }: Props) {
             onPress={generateHandoverToken}
             disabled={isLoading}
           >
-            <Text style={styles.btnText}>{isLoading ? 'Generating...' : 'Generate Handover Token'}</Text>
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.btnText}>Generate Handover Token</Text>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -108,7 +118,7 @@ export default function ShiftSwapScreen({ navigation }: Props) {
         </Text>
         <TextInput
           placeholder="Paste outgoing driver's secure key here..."
-          placeholderTextColor="#778899"
+          placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
           value={scanInput}
           onChangeText={setScanInput}
           style={styles.textInput}
@@ -119,7 +129,11 @@ export default function ShiftSwapScreen({ navigation }: Props) {
           onPress={processHandover}
           disabled={isLoading}
         >
-          <Text style={styles.btnText}>{isLoading ? 'Processing Swap...' : 'Accept Shift & Routes'}</Text>
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.btnText}>Accept Shift & Routes</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -130,56 +144,48 @@ export default function ShiftSwapScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20, backgroundColor: '#0f172a' },
-  title: { fontSize: 24, fontWeight: '900', color: 'white', textAlign: 'center', marginBottom: 6 },
-  subtitle: { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 24, lineHeight: 18 },
+const baseStyles = {
+  container: { flexGrow: 1, padding: 20 },
+  title: { fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 6 },
+  subtitle: { fontSize: 13, textAlign: 'center', marginBottom: 24, lineHeight: 18 },
   card: {
-    backgroundColor: '#1e293b',
     padding: 20,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
+    borderWidth: 1.5,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
     elevation: 3,
   },
-  cardHeader: { fontSize: 16, fontWeight: '800', color: 'white', marginBottom: 4 },
-  cardMuted: { fontSize: 11, color: '#94a3b8', marginBottom: 16, lineHeight: 16 },
+  cardHeader: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  cardMuted: { fontSize: 12, marginBottom: 16, lineHeight: 18 },
   btn: {
-    minHeight: 56,
+    minHeight: 52,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
+    elevation: 1,
   },
-  primaryBtn: { backgroundColor: '#38b0f8' },
-  successBtn: { backgroundColor: '#10b981' },
+  primaryBtn: { backgroundColor: '#38BDF8' },
+  successBtn: { backgroundColor: '#10B981' },
   disabledBtn: { opacity: 0.5 },
-  btnText: { color: 'white', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
+  btnText: { fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
   qrContainer: {
-    backgroundColor: '#0f172a',
     padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#475569',
+    borderRadius: 12,
+    borderWidth: 1.5,
     marginTop: 4,
   },
-  qrLabel: { fontSize: 10, fontWeight: '800', color: '#38b0f8', marginBottom: 4 },
-  qrText: { color: '#e2e8f0', fontSize: 11, fontFamily: 'monospace', minHeight: 60, textAlignVertical: 'top' },
-  qrInstruction: { fontSize: 9, color: '#64748b', fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
+  qrLabel: { fontSize: 10, fontWeight: '900', marginBottom: 6 },
+  qrText: { fontSize: 12, fontFamily: 'monospace', minHeight: 60, textAlignVertical: 'top' },
+  qrInstruction: { fontSize: 9, fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
   textInput: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#475569',
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderRadius: 12,
     padding: 12,
-    color: 'white',
     fontSize: 12,
     fontFamily: 'monospace',
     minHeight: 70,
@@ -192,5 +198,70 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 4,
   },
-  backBtnText: { color: '#94a3b8', fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },
-});
+  backBtnText: { fontSize: 14, fontWeight: '800', textDecorationLine: 'underline' },
+};
+
+const lightStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
+  title: { ...baseStyles.title, color: '#0F172A' },
+  subtitle: { ...baseStyles.subtitle, color: '#64748B' },
+  card: {
+    ...baseStyles.card,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+  },
+  cardHeader: { ...baseStyles.cardHeader, color: '#0F172A' },
+  cardMuted: { ...baseStyles.cardMuted, color: '#64748B' },
+  primaryBtn: { ...baseStyles.primaryBtn, backgroundColor: '#2E75B6' },
+  btnText: { ...baseStyles.btnText, color: 'white' },
+  qrContainer: {
+    ...baseStyles.qrContainer,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  qrLabel: { ...baseStyles.qrLabel, color: '#2E75B6' },
+  qrText: { ...baseStyles.qrText, color: '#0F172A' },
+  qrInstruction: { ...baseStyles.qrInstruction, color: '#64748B' },
+  textInput: {
+    ...baseStyles.textInput,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
+    color: '#0F172A',
+  },
+  backBtnText: { ...baseStyles.backBtnText, color: '#64748B' },
+} as any);
+
+const darkStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  title: { ...baseStyles.title, color: '#FFFFFF' },
+  subtitle: { ...baseStyles.subtitle, color: '#94A3B8' },
+  card: {
+    ...baseStyles.card,
+    backgroundColor: '#1E293B',
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+  },
+  cardHeader: { ...baseStyles.cardHeader, color: '#FFFFFF' },
+  cardMuted: { ...baseStyles.cardMuted, color: '#94A3B8' },
+  btnText: { ...baseStyles.btnText, color: '#0B0F19' },
+  qrContainer: {
+    ...baseStyles.qrContainer,
+    backgroundColor: '#0B0F19',
+    borderColor: '#475569',
+  },
+  qrLabel: { ...baseStyles.qrLabel, color: '#38BDF8' },
+  qrText: { ...baseStyles.qrText, color: '#E2E8F0' },
+  qrInstruction: { ...baseStyles.qrInstruction, color: '#64748B' },
+  textInput: {
+    ...baseStyles.textInput,
+    backgroundColor: '#0B0F19',
+    borderColor: '#475569',
+    color: '#E2E8F0',
+  },
+  backBtnText: { ...baseStyles.backBtnText, color: '#94A3B8' },
+} as any);

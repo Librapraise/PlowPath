@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { Activity, Users, Truck, CloudSnow, Navigation, LogOut, Menu, X, Zap, Coins, Settings, BarChart3 } from 'lucide-react';
 import ToastContainer from './ToastContainer';
 import { io } from 'socket.io-client';
+import logo from '../assets/logo.png';
 
 interface Props {
   children: ReactNode;
@@ -67,9 +68,7 @@ export default function DashboardLayout({ children }: Props) {
 
         {/* Brand */}
         <div className="relative flex items-center gap-3 px-6 py-5 border-b border-slate-800/50">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/25 ring-1 ring-white/10">
-            <Navigation className="w-5 h-5 text-white" />
-          </div>
+          <img src={logo} alt="PlowPath Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/25 ring-1 ring-white/10 object-cover" />
           <div>
             <h1 className="text-lg font-extrabold tracking-tight text-gradient">
               PlowPath
@@ -142,9 +141,7 @@ export default function DashboardLayout({ children }: Props) {
 
             {/* Brand */}
             <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-800/50">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/25">
-                <Navigation className="w-5 h-5 text-white" />
-              </div>
+              <img src={logo} alt="PlowPath Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/25 object-cover" />
               <div>
                 <h1 className="text-lg font-extrabold tracking-tight text-gradient">PlowPath</h1>
                 <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Operations Console</p>

@@ -251,6 +251,33 @@ export async function updateStop(req: Request, res: Response): Promise<void> {
     });
   }
 
+  // Auto-promote the route to 'completed' when all stops are finished (completed or skipped).
+  // This ensures the route-level status always reflects reality — even when the driver
+  // completes all stops individually without tapping "Emergency Finalize Route".
+  if (body.status === 'completed' || body.status === 'skipped') {
+    query<{ pending_count: string }>(
+      `SELECT COUNT(*) AS pending_count
+         FROM route_stops
+        WHERE route_id = $1
+          AND status NOT IN ('completed', 'skipped')`,
+      [currentStop.route_id],
+    ).then(({ rows: countRows }) => {
+      const remaining = parseInt(countRows[0]?.pending_count ?? '1', 10);
+      if (remaining === 0) {
+        // All stops done — mark the route itself as completed.
+        void query(
+          `UPDATE routes
+              SET status = 'completed', end_time = COALESCE(end_time, NOW()), updated_at = NOW()
+            WHERE route_id = $1 AND status != 'completed' AND deleted_at IS NULL`,
+          [currentStop.route_id],
+        );
+      }
+    }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to auto-promote route to completed:', err);
+    });
+  }
+
   res.json(currentStop);
 }
 

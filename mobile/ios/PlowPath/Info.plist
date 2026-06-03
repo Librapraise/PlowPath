@@ -33,6 +33,8 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PlowPath needs access to your location to track your snow plowing progress and guide you through your optimized snow clearing routes.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PlowPath needs access to your camera to snap proof photos of completed driveways and properties for liability protection.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>PlowPath needs continuous background location access to accurately calculate plowed coverage and verify route completion even when your phone screen is locked or in your pocket.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
