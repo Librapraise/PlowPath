@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image, Platform, PermissionsAndroid } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { launchCamera } from 'react-native-image-picker';
 import * as turf from '@turf/turf';
@@ -108,7 +108,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
       unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverId, currentStop?.stop_id]);
+  }, [driverId, routeId]);
 
   function onGpsSample(sample: GpsSample) {
     if (!currentStop) return;
@@ -143,7 +143,26 @@ export default function NavigationScreen({ route, navigation }: Props) {
   }
 
   // Opens the device's camera to capture a proof photo, then runs local compression
-  const simulatePhotoCapture = () => {
+  const simulatePhotoCapture = async () => {
+    if (Platform.OS === 'android') {
+      const hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA);
+      if (!hasPermission) {
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: 'Camera Permission Required',
+            message: 'PlowPath needs camera access to capture proof of service photos.',
+            buttonPositive: 'Allow',
+            buttonNegative: 'Deny',
+          }
+        );
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission Denied', 'Camera permission is required to capture proof of service.');
+          return;
+        }
+      }
+    }
+
     setIsCapturing(true);
     launchCamera(
       {
@@ -278,7 +297,28 @@ export default function NavigationScreen({ route, navigation }: Props) {
   };
 
   // Simulated Speech-to-Text Glove Trigger Commands
-  const simulateVoiceCommand = (command: 'complete' | 'skip') => {
+  const simulateVoiceCommand = () => {
+    Alert.alert(
+      'Simulate Voice Command',
+      'Select a command to simulate speaking:',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'PlowPath, Mark Complete',
+          onPress: () => runVoiceSimulation('complete'),
+        },
+        {
+          text: 'PlowPath, Skip Property',
+          onPress: () => runVoiceSimulation('skip'),
+        },
+      ]
+    );
+  };
+
+  const runVoiceSimulation = (command: 'complete' | 'skip') => {
     setIsVoiceActive(true);
     setVoiceTranscript('Listening...');
     
@@ -384,12 +424,12 @@ export default function NavigationScreen({ route, navigation }: Props) {
         )}
 
         <TouchableOpacity style={[styles.btn, styles.skipBtn]} onPress={() => onSkipPropertyConfirm(currentStop)}>
-          <Text style={[styles.btnText, { color: '#ffffff' }]}>❌ Skip Property</Text>
+          <Text style={[styles.btnText, { color: isDark ? '#ffffff' : '#1E293B' }]}>❌ Skip Property</Text>
         </TouchableOpacity>
 
         {/* Hands-Free Voice Glove simulator Trigger panel */}
-        <TouchableOpacity style={[styles.btn, styles.voiceTriggerBtn]} onPress={() => simulateVoiceCommand('complete')}>
-          <Text style={styles.btnText}>🎙️ Glove Voice Simulation Control</Text>
+        <TouchableOpacity style={[styles.btn, styles.voiceTriggerBtn]} onPress={simulateVoiceCommand}>
+          <Text style={[styles.btnText, { color: isDark ? '#38BDF8' : '#2E75B6' }]}>🎙️ Glove Voice Simulation Control</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.btn, styles.stopRouteBtn]} onPress={onStopRouteConfirm}>

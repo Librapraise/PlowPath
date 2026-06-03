@@ -92,7 +92,9 @@ export function configureBackgroundGps(cfg: BackgroundGpsConfig): void {
     // We're not relying on this lib's HTTP layer — offline.service.ts owns queueing.
     url: '',
     syncUrl: '',
-    debug: __DEV__,
+    // debug: true renders a native on-screen overlay ("mv:true,acy:200.0,v:0.0,df:10")
+    // which obscures the UI. Keep it false — GPS errors are logged via the 'error' listener above.
+    debug: false,
   });
 
   configured = true;

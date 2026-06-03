@@ -124,8 +124,16 @@ export async function flushStopQueue(): Promise<{ flushed: number } | { skipped:
 }
 
 export function subscribeToConnectivity(onReconnect: () => void): () => void {
+  // Track previous state so we only fire on the offline→online transition,
+  // not on every NetInfo poll that happens to be in a connected state.
+  let wasConnected: boolean | null = null;
+
   return NetInfo.addEventListener((state) => {
-    if (state.isConnected) onReconnect();
+    const isNowConnected = state.isConnected ?? false;
+    if (wasConnected === false && isNowConnected) {
+      onReconnect();
+    }
+    wasConnected = isNowConnected;
   });
 }
 

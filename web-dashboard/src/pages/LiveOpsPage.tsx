@@ -698,7 +698,7 @@ export default function LiveOpsPage() {
                         <span className="text-[9px] text-slate-500 font-bold uppercase">Current Speed</span>
                         <span className="text-slate-200 mt-0.5">
                           {isPlaybackMode && historicalData[playbackIndex]
-                            ? `${(historicalData[playbackIndex].speed_mps || 0 * 2.23694).toFixed(1)} mph`
+                            ? `${(Number(historicalData[playbackIndex].speed_mps ?? 0) * 2.23694).toFixed(1)} mph`
                             : currentSelectedDriver.tracking.speed_mps != null 
                             ? `${(currentSelectedDriver.tracking.speed_mps * 2.23694).toFixed(1)} mph` 
                             : '0.0 mph (Stationary)'}

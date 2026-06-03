@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Line, Circle } from 'react-native-svg';
+import { useSettingsStore } from '../store/settingsStore';
 
 interface Props {
   total: number;
@@ -14,17 +15,31 @@ interface Props {
  * the mobile app is text-first per the v3 PRD.
  */
 export default function RouteProgress({ total, currentIndex, width = 320, height = 40 }: Props) {
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const isDark = theme === 'dark';
+
   if (total <= 0) return null;
 
   const padding = 12;
   const usable = width - padding * 2;
   const step = total === 1 ? 0 : usable / (total - 1);
 
+  // Theme-aware colours
+  const trackColor = isDark ? '#334155' : '#CBD5E1';
+  const doneColor = '#10B981';
+  const activeColor = '#2E75B6';
+  const pendingFill = isDark ? '#1E293B' : '#FFFFFF';
+  const pendingStroke = isDark ? '#475569' : '#94A3B8';
+
   return (
     <View accessibilityLabel={`Progress: stop ${currentIndex + 1} of ${total}`}>
       <Svg width={width} height={height}>
-        <Line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2}
-              stroke="#ccc" strokeWidth={4} />
+        <Line
+          x1={padding} y1={height / 2}
+          x2={width - padding} y2={height / 2}
+          stroke={trackColor}
+          strokeWidth={4}
+        />
         {Array.from({ length: total }, (_, i) => {
           const x = padding + step * i;
           const done = i < currentIndex;
@@ -35,8 +50,8 @@ export default function RouteProgress({ total, currentIndex, width = 320, height
               cx={x}
               cy={height / 2}
               r={active ? 10 : 7}
-              fill={done ? '#28A745' : active ? '#2E75B6' : '#fff'}
-              stroke={done ? '#28A745' : active ? '#2E75B6' : '#999'}
+              fill={done ? doneColor : active ? activeColor : pendingFill}
+              stroke={done ? doneColor : active ? activeColor : pendingStroke}
               strokeWidth={2}
             />
           );
