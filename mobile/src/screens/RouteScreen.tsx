@@ -53,10 +53,32 @@ export default function RouteScreen({ navigation }: Props) {
     }, [user?.driver_id])
   );
 
+  const handleEndShift = async () => {
+    try {
+      await api.post('/shifts/end');
+    } catch (err) {
+      console.warn('[ROUTE SCREEN] Failed to end shift:', err);
+    } finally {
+      logout();
+    }
+  };
+
   useEffect(() => {
     if (!user?.driver_id) return;
 
     void flushAllQueues(user.driver_id);
+
+    // Auto-ensure active shift exists on the backend
+    api.get('/shifts/active')
+      .then(({ data }) => {
+        if (!data) {
+          console.log('[ROUTE SCREEN] No active shift found, starting a new shift...');
+          return api.post('/shifts/start');
+        }
+      })
+      .catch((err) => {
+        console.warn('[ROUTE SCREEN] Failed to check/start shift:', err);
+      });
 
     const unsubscribe = subscribeToConnectivity(() => {
       if (user?.driver_id) {
@@ -75,7 +97,7 @@ export default function RouteScreen({ navigation }: Props) {
     return (
       <View style={[styles.center, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
         <Text style={[styles.heading, { color: isDark ? '#FFF' : '#0F172A' }]}>You are not assigned as a driver.</Text>
-        <TouchableOpacity onPress={logout} style={styles.secondaryBtn}>
+        <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn}>
           <Text style={styles.secondaryText}>Sign out</Text>
         </TouchableOpacity>
       </View>
@@ -189,7 +211,7 @@ export default function RouteScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={logout} style={styles.secondaryBtn} accessibilityRole="button">
+      <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn} accessibilityRole="button">
         <Text style={styles.secondaryText}>End Shift</Text>
       </TouchableOpacity>
     </View>

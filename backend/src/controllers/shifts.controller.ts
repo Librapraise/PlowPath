@@ -190,7 +190,7 @@ export async function handleShiftHandover(req: Request, res: Response): Promise<
 
     // 3. Reassign route driver
     await client.query(
-      `UPDATE routes SET driver_id = $1 WHERE id = $2`,
+      `UPDATE routes SET driver_id = $1 WHERE route_id = $2`,
       [replacementDriverId, decoded.routeId],
     );
 
