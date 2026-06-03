@@ -8,8 +8,8 @@ import { scheduleSeasonalReminders, scheduleWeatherUpdates } from './services/no
 const server = http.createServer(app);
 initSockets(server);
 
-server.listen(env.PORT, () => {
-  logger.info(`PlowPath API listening on :${env.PORT} (${env.NODE_ENV})`);
+server.listen(env.PORT, '0.0.0.0', () => {
+  logger.info(`PlowPath API listening on 0.0.0.0:${env.PORT} (${env.NODE_ENV})`);
   scheduleSeasonalReminders().catch((err) => {
     logger.error('Failed to initialize seasonal reminders on server boot:', err);
   });
