@@ -91,7 +91,15 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
         }
       }
       
-      set({ currentRoute: parsedRoute, isLoading: false });
+      // Merge the detailed route (with stops) back into the flat routes list
+      // so sidebar stop-ratio calculations have access to individual stop statuses.
+      set((state) => ({
+        currentRoute: parsedRoute,
+        isLoading: false,
+        routes: state.routes.map((r) =>
+          r.route_id === id ? { ...r, ...parsedRoute } : r
+        ),
+      }));
       return parsedRoute;
     } catch (err: any) {
       const msg = err.response?.data?.error?.message ?? 'Failed to load route details';

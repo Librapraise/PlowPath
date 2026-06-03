@@ -81,6 +81,19 @@ export default function LiveOpsPage() {
     }
   }, []);
 
+  // Bulk-fetch detailed stop data for all routes once the route list is loaded.
+  // This populates individual stop statuses so the sidebar progress bar is accurate
+  // for every driver — not just the one currently selected.
+  useEffect(() => {
+    if (routes.length === 0) return;
+    const routesNeedingDetails = routes.filter((r) => !r.stops);
+    routesNeedingDetails.forEach((r) => {
+      fetchRouteDetails(r.route_id).catch(() => {
+        // Silently ignore fetch failures for individual routes
+      });
+    });
+  }, [routes.length]);
+
   const fetchActiveShifts = async () => {
     try {
       const { data } = await api.get('/shifts/all-active');
@@ -460,10 +473,11 @@ export default function LiveOpsPage() {
                   let progressPercent = 0;
                   if (d.route) {
                     const matchedDetailed = routes.find((r) => r.route_id === d.route?.route_id);
-                    const completed = matchedDetailed?.stops?.filter((s) => s.status === 'completed').length ?? 0;
-                    const total = matchedDetailed?.stop_count ?? d.route.stop_count ?? 0;
-                    stopRatioString = total > 0 ? `${completed}/${total} stops complete` : 'Stops progress…';
-                    progressPercent = total > 0 ? (completed / total) * 100 : 0;
+                    const completedCount = matchedDetailed?.stops?.filter((s) => s.status === 'completed').length ?? 0;
+                    // stop_count from SQL COUNT() returns a string — coerce to int
+                    const total = parseInt(String(matchedDetailed?.stop_count ?? d.route.stop_count ?? 0), 10);
+                    stopRatioString = total > 0 ? `${completedCount}/${total} stops complete` : 'Stops progress…';
+                    progressPercent = total > 0 ? (completedCount / total) * 100 : 0;
                   }
 
                   // Shift Fatigue Tracker
