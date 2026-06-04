@@ -149,6 +149,7 @@ import { flushAllQueues, subscribeToConnectivity } from '../services/offline.ser
 import RouteProgress from '../components/RouteProgress';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import TurnInstruction from '../components/TurnInstruction';
+import { fetchRouteSteps, OsrmStep } from '../services/osrm.service';
 import { captureException } from '../services/sentry';
 import type { RootStackParamList } from '../services/navigation';
 
@@ -167,6 +168,21 @@ export default function NavigationScreen({ route, navigation }: Props) {
   const [currentStop, setCurrentStop] = useState<RouteStop | null>(null);
   const [distanceMi, setDistanceMi] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const routeStepsRef = useRef<OsrmStep[]>([]);
+  const currentStepIndexRef = useRef(0);
+  const [activeStep, setActiveStep] = useState<OsrmStep | null>(null);
+  const fetchingRoute = useRef(false);
+  const [currentLocation, setCurrentLocation] = useState<GpsSample | null>(null);
+  const currentStopRef = useRef(currentStop);
+
+  useEffect(() => {
+    currentStopRef.current = currentStop;
+    routeStepsRef.current = [];
+    currentStepIndexRef.current = 0;
+    setActiveStep(null);
+    fetchingRoute.current = false;
+  }, [currentStop]);
 
   // Phase 6 Mobile Overlays state
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -294,16 +310,42 @@ export default function NavigationScreen({ route, navigation }: Props) {
   }, [driverId, routeId]);
 
   function onGpsSample(sample: GpsSample) {
-    if (!currentStop) return;
+    const stop = currentStopRef.current;
+    if (!stop) return;
+    setCurrentLocation(sample);
+
+    if (routeStepsRef.current.length === 0 && !fetchingRoute.current) {
+       fetchingRoute.current = true;
+       fetchRouteSteps(sample.lon, sample.lat, stop.lon, stop.lat).then(steps => {
+         if (steps.length > 0) {
+           routeStepsRef.current = steps;
+           currentStepIndexRef.current = 0;
+           setActiveStep(steps[0]);
+         }
+       }).finally(() => {
+         fetchingRoute.current = false;
+       });
+    } else if (routeStepsRef.current.length > 0 && currentStepIndexRef.current < routeStepsRef.current.length) {
+       const step = routeStepsRef.current[currentStepIndexRef.current];
+       const stepDist = turf.distance(
+         turf.point([sample.lon, sample.lat]),
+         turf.point(step.maneuver.location),
+         { units: 'meters' }
+       );
+       if (stepDist < 25 && currentStepIndexRef.current < routeStepsRef.current.length - 1) {
+          currentStepIndexRef.current += 1;
+          setActiveStep(routeStepsRef.current[currentStepIndexRef.current]);
+       }
+    }
+
     const meters = turf.distance(
       turf.point([sample.lon, sample.lat]),
-      turf.point([currentStop.lon, currentStop.lat]),
+      turf.point([stop.lon, stop.lat]),
       { units: 'meters' },
     );
     setDistanceMi(meters / 1609.34);
-    if (meters <= ARRIVAL_RADIUS_M && currentStop.status === 'pending') {
-      // Auto-mark in progress on arrival. Driver explicitly taps Mark Complete.
-      void onMarkInProgress(currentStop);
+    if (meters <= ARRIVAL_RADIUS_M && stop.status === 'pending') {
+      void onMarkInProgress(stop);
     }
   }
 
@@ -549,9 +591,10 @@ export default function NavigationScreen({ route, navigation }: Props) {
       <OfflineStatusBar />
       
       <TurnInstruction
-        instruction={`Drive to ${currentStop.name}`}
-        secondary={currentStop.address}
-        distanceMi={distanceMi}
+        instruction={activeStep?.maneuver.type === 'arrive' ? 'Arriving at' : (activeStep?.maneuver.modifier ? `Turn ${activeStep.maneuver.modifier}` : activeStep?.maneuver.type || 'Drive to')}
+        secondary={activeStep?.name || currentStop.address || currentStop.name}
+        distanceMi={activeStep && currentLocation ? turf.distance(turf.point([currentLocation.lon, currentLocation.lat]), turf.point(activeStep.maneuver.location), { units: 'miles' }) : distanceMi}
+        maneuverModifier={activeStep?.maneuver.modifier}
       />
 
       <RouteProgress total={data.stops.length} currentIndex={stepIndex} />

@@ -69,9 +69,8 @@ export default function TabNavigator() {
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
         tabBarLabelStyle: {
-          fontSize: 12, // match typography scale
+          fontSize: 10, // reduced to fit longer labels like 'Sign Operations'
           fontWeight: '800',
-          letterSpacing: 0.5,
         },
       }}
     >

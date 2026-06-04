@@ -1,11 +1,51 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { useSettingsStore } from '../store/settingsStore';
+import Svg, { Path } from 'react-native-svg';
 
 interface Props {
   instruction: string;
   secondary?: string | null;
   distanceMi: number | null;
+  maneuverModifier?: string;
+}
+
+function getManeuverIcon(modifier?: string) {
+  if (!modifier) return (
+     <>
+       <Path d="M9 20V11a3 3 0 0 1 3-3h7" />
+       <Path d="M15 4l4 4-4 4" />
+     </>
+  );
+  if (modifier.includes('left')) {
+     return (
+       <>
+         <Path d="M15 20V11a3 3 0 0 0-3-3H5" />
+         <Path d="M9 4L5 8l4 4" />
+       </>
+     );
+  }
+  if (modifier.includes('straight')) {
+     return (
+       <>
+         <Path d="M12 20V4" />
+         <Path d="M8 8l4-4 4 4" />
+       </>
+     );
+  }
+  if (modifier.includes('uturn')) {
+     return (
+       <>
+         <Path d="M9 20V9a3 3 0 0 1 6 0v2" />
+         <Path d="M11 13l4 4 4-4" />
+       </>
+     );
+  }
+  return (
+     <>
+       <Path d="M9 20V11a3 3 0 0 1 3-3h7" />
+       <Path d="M15 4l4 4-4 4" />
+     </>
+  );
 }
 
 function formatDistance(mi: number | null): string {
@@ -14,164 +54,93 @@ function formatDistance(mi: number | null): string {
   return `${mi.toFixed(1)} mi`;
 }
 
-export default function TurnInstruction({ instruction, secondary, distanceMi }: Props) {
-  const theme = useSettingsStore((s) => s.settings.theme);
-  const isDark = theme === 'dark';
-
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+export default function TurnInstruction({ instruction, secondary, distanceMi, maneuverModifier }: Props) {
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (distanceMi !== null) {
-      // Trigger a subtle scale bounce and opacity flash whenever the distance changes
-      scaleAnim.setValue(0.92);
-      opacityAnim.setValue(0.7);
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 4,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      opacityAnim.setValue(0.5);
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
-  }, [distanceMi, scaleAnim, opacityAnim]);
-
-  // Style helper mapping to the design system tokens
-  const containerStyle = [
-    styles.container,
-    isDark ? styles.containerDark : styles.containerLight,
-  ];
-
-  const mainTextColor = isDark ? '#FFFFFF' : '#0B0F19';
-  const secondaryTextColor = isDark ? '#E2E8F0' : '#475569';
-  const labelTextColor = isDark ? '#94A3B8' : '#64748B';
-  const unitColor = isDark ? '#38BDF8' : '#2E75B6';
-
-  let distVal = '';
-  let distUnit = '';
-  if (distanceMi != null) {
-    const formatted = formatDistance(distanceMi);
-    const parts = formatted.split(' ');
-    distVal = parts[0] || '';
-    distUnit = parts[1] || '';
-  }
+  }, [distanceMi, opacityAnim]);
 
   return (
-    <View style={containerStyle}>
-      {/* Top accent highlight line representing '--accent-ice' */}
-      <View style={styles.topAccentBar} />
-
-      <Text
-        style={[styles.main, { color: mainTextColor }]}
-        accessibilityRole="header"
-      >
-        {instruction}
-      </Text>
-
-      {distanceMi != null && (
-        <View style={styles.distanceWrapper}>
-          <Text style={[styles.distanceLabel, { color: labelTextColor }]}>
-            In
-          </Text>
-          <Animated.View
-            style={[
-              styles.distanceContainer,
-              {
-                transform: [{ scale: scaleAnim }],
-                opacity: opacityAnim,
-              },
-            ]}
-          >
-            <Text style={[styles.distanceValue, { color: mainTextColor }]}>
-              {distVal}
+    <View style={styles.container}>
+      <View style={styles.contentRow}>
+        <View style={styles.textStack}>
+          <Text style={styles.instructionText}>{instruction}</Text>
+          {secondary ? (
+            <Text style={styles.secondaryText} numberOfLines={1} adjustsFontSizeToFit>
+              {secondary}
             </Text>
-            <Text style={[styles.distanceUnit, { color: unitColor }]}>
-              {distUnit}
-            </Text>
-          </Animated.View>
+          ) : null}
+          {distanceMi != null && (
+            <Animated.Text style={[styles.distanceText, { opacity: opacityAnim }]}>
+              {formatDistance(distanceMi)}
+            </Animated.Text>
+          )}
         </View>
-      )}
 
-      {secondary ? (
-        <Text style={[styles.secondary, { color: secondaryTextColor }]}>
-          {secondary}
-        </Text>
-      ) : null}
+        <View style={styles.iconContainer}>
+          <Svg width={44} height={44} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+            {getManeuverIcon(maneuverModifier)}
+          </Svg>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingTop: 24,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    backgroundColor: '#1C212A', // Dark sleek background mimicking glassmorphism
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     marginVertical: 12,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    shadowOpacity: 0.15,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)', // Translucent border stroke
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  containerDark: {
-    backgroundColor: 'rgba(30, 41, 59, 0.75)', // semi-transparent deep void
-    borderColor: '#334155', // --border-subtle
-    shadowColor: '#000000',
-  },
-  containerLight: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)', // semi-transparent light surface
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-  },
-  topAccentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: '#38BDF8', // --accent-ice
-  },
-  main: {
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 28,
-  },
-  distanceWrapper: {
+  contentRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 12,
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  distanceLabel: {
+  textStack: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  instructionText: {
     fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  secondaryText: {
+    fontSize: 26,
     fontWeight: '800',
-    textTransform: 'uppercase',
+    color: '#FFFFFF',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  distanceValue: {
-    fontSize: 48,
-    fontWeight: '900',
-  },
-  distanceUnit: {
-    fontSize: 20,
-    fontWeight: '800',
-    textTransform: 'lowercase',
-  },
-  secondary: {
-    fontSize: 15,
-    marginTop: 8,
+  distanceText: {
+    fontSize: 17,
     fontWeight: '600',
+    color: '#94A3B8', // Muted slate gray
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

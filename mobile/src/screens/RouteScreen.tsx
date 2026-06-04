@@ -200,47 +200,50 @@ export default function RouteScreen({ navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {loading && !routes ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#2E75B6'} />
-        </View>
-      ) : (
-        <FlatList
-          data={routes ?? []}
-          keyExtractor={(r) => r.route_id}
-          contentContainerStyle={styles.listContainer}
-          onRefresh={fetchRoutes}
-          refreshing={loading}
-          ListEmptyComponent={
+      <FlatList
+        data={routes ?? []}
+        keyExtractor={(r) => r.route_id}
+        contentContainerStyle={styles.listContainer}
+        onRefresh={fetchRoutes}
+        refreshing={loading}
+        ListEmptyComponent={
+          (loading && !routes) ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#2E75B6'} />
+            </View>
+          ) : (
             <View style={styles.emptyBox}>
               <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#475569' : '#CBD5E1'} strokeWidth={2}>
                 <Path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4" />
               </Svg>
               <Text style={styles.muted}>No routes assigned to you today.</Text>
             </View>
-          }
-          renderItem={renderRouteItem}
-        />
-      )}
+          )
+        }
+        renderItem={renderRouteItem}
+        ListFooterComponent={
+          <View style={{ marginTop: 24 }}>
+            {/* Elegant Shift Handover Entry */}
+            <View style={styles.handoverPanel}>
+              <View style={styles.handoverInfo}>
+                <Text style={styles.handoverTitle}>Shift Handover Console</Text>
+                <Text style={styles.handoverDesc}>Transition route control to another crew driver</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.handoverBtn}
+                onPress={() => navigation.navigate('ShiftSwap')}
+                accessibilityRole="button"
+              >
+                <Text style={styles.handoverBtnText}>Open</Text>
+              </TouchableOpacity>
+            </View>
 
-      {/* Elegant Shift Handover Entry */}
-      <View style={styles.handoverPanel}>
-        <View style={styles.handoverInfo}>
-          <Text style={styles.handoverTitle}>Shift Handover Console</Text>
-          <Text style={styles.handoverDesc}>Transition route control to another crew driver</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.handoverBtn}
-          onPress={() => navigation.navigate('ShiftSwap')}
-          accessibilityRole="button"
-        >
-          <Text style={styles.handoverBtnText}>Open</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn} accessibilityRole="button">
-        <Text style={styles.secondaryText}>End Shift</Text>
-      </TouchableOpacity>
+            <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn} accessibilityRole="button">
+              <Text style={styles.secondaryText}>End Shift</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
     </View>
   );
 }
@@ -326,33 +329,33 @@ const baseStyles = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 20,
-    padding: 16,
+    padding: 20,
     borderRadius: 16,
-    borderWidth: 1.5,
     marginBottom: 16,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 4,
   },
-  handoverInfo: { flex: 1, marginRight: 12 },
-  handoverTitle: { fontSize: 15, fontWeight: '800' },
-  handoverDesc: { fontSize: 12, marginTop: 2 },
+  handoverInfo: { flex: 1, marginRight: 16 },
+  handoverTitle: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  handoverDesc: { fontSize: 13, marginTop: 4, lineHeight: 18 },
   handoverBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  handoverBtnText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase' },
+  handoverBtnText: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   secondaryBtn: {
     minHeight: 56,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  secondaryText: { fontSize: 16, fontWeight: '700' },
+  secondaryText: { fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
 };
 const lightStyles = StyleSheet.create({
   ...baseStyles,
@@ -393,21 +396,24 @@ const lightStyles = StyleSheet.create({
   handoverPanel: {
     ...baseStyles.handoverPanel,
     backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.08,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   handoverTitle: { ...baseStyles.handoverTitle, color: '#0F172A' },
   handoverDesc: { ...baseStyles.handoverDesc, color: '#64748B' },
   handoverBtn: {
     ...baseStyles.handoverBtn,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#0F172A',
   },
-  handoverBtnText: { ...baseStyles.handoverBtnText, color: '#475569' },
+  handoverBtnText: { ...baseStyles.handoverBtnText, color: '#FFFFFF' },
   secondaryBtn: {
     ...baseStyles.secondaryBtn,
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
+    backgroundColor: 'rgba(225, 29, 72, 0.05)',
+    borderColor: 'rgba(225, 29, 72, 0.2)',
   },
-  secondaryText: { ...baseStyles.secondaryText, color: '#475569' },
+  secondaryText: { ...baseStyles.secondaryText, color: '#E11D48' },
 } as any);
 
 const darkStyles = StyleSheet.create({
@@ -450,19 +456,22 @@ const darkStyles = StyleSheet.create({
   handoverPanel: {
     ...baseStyles.handoverPanel,
     backgroundColor: '#1E293B',
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    borderWidth: 1,
     borderColor: '#334155',
   },
   handoverTitle: { ...baseStyles.handoverTitle, color: '#FFFFFF' },
   handoverDesc: { ...baseStyles.handoverDesc, color: '#94A3B8' },
   handoverBtn: {
     ...baseStyles.handoverBtn,
-    backgroundColor: '#334155',
+    backgroundColor: '#38BDF8',
   },
-  handoverBtnText: { ...baseStyles.handoverBtnText, color: '#E2E8F0' },
+  handoverBtnText: { ...baseStyles.handoverBtnText, color: '#0B0F19' },
   secondaryBtn: {
     ...baseStyles.secondaryBtn,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    borderColor: 'rgba(244, 63, 94, 0.2)',
   },
-  secondaryText: { ...baseStyles.secondaryText, color: '#94A3B8' },
+  secondaryText: { ...baseStyles.secondaryText, color: '#FB7185' },
 } as any);
