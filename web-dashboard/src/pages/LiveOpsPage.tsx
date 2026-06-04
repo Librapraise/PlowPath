@@ -888,6 +888,11 @@ export default function LiveOpsPage() {
                             <div className="truncate">
                               <div className="text-slate-200 truncate">{stop.name}</div>
                               <div className="text-[9px] text-slate-500 truncate mt-0.5 leading-normal">{stop.address}</div>
+                              {stop.notes && (
+                                <div className="text-[9px] text-emerald-400 font-medium italic mt-1 pl-1 border-l border-emerald-500/30 truncate max-w-full">
+                                  "{stop.notes}"
+                                </div>
+                              )}
                             </div>
                           </div>
 
