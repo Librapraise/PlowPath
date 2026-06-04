@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Clipboard } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../services/api';
 import { useSettingsStore } from '../store/settingsStore';
@@ -30,6 +30,17 @@ export default function ShiftSwapScreen({ navigation }: Props) {
       Alert.alert('Generation Failed', msg, [{ text: 'OK' }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (qrToken) {
+      Clipboard.setString(qrToken);
+      Alert.alert(
+        'Copied! 📋',
+        'Handover key copied to clipboard. You can send it to the incoming driver.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -84,15 +95,12 @@ export default function ShiftSwapScreen({ navigation }: Props) {
         {qrToken ? (
           <View style={styles.qrContainer}>
             <Text style={styles.qrLabel}>SECURE HANDOVER KEY (ACTIVE 15M):</Text>
-            <TextInput
-              style={styles.qrText}
-              value={qrToken}
-              editable={false}
-              selectTextOnFocus
-              multiline
-            />
+            <TouchableOpacity onPress={copyToClipboard} activeOpacity={0.7} style={styles.qrClickable}>
+              <Text style={styles.qrTextDisplay}>{qrToken}</Text>
+              <Text style={styles.qrCopyBadge}>📋 Copy Code</Text>
+            </TouchableOpacity>
             <Text style={styles.qrInstruction}>
-              Tap text to select and copy. The next driver can paste this on their device!
+              Tap the code block above to copy it! Share this 6-character code with the incoming driver.
             </Text>
           </View>
         ) : (
@@ -180,7 +188,17 @@ const baseStyles = {
     marginTop: 4,
   },
   qrLabel: { fontSize: 10, fontWeight: '900', marginBottom: 6 },
-  qrText: { fontSize: 12, fontFamily: 'monospace', minHeight: 60, textAlignVertical: 'top' },
+  qrClickable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 4,
+  },
+  qrTextDisplay: { fontSize: 22, fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: 2 },
+  qrCopyBadge: { fontSize: 11, fontWeight: '700' },
   qrInstruction: { fontSize: 9, fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
   textInput: {
     borderWidth: 1.5,
@@ -223,7 +241,13 @@ const lightStyles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   qrLabel: { ...baseStyles.qrLabel, color: '#2E75B6' },
-  qrText: { ...baseStyles.qrText, color: '#0F172A' },
+  qrClickable: {
+    ...baseStyles.qrClickable,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
+  },
+  qrTextDisplay: { ...baseStyles.qrTextDisplay, color: '#0F172A' },
+  qrCopyBadge: { ...baseStyles.qrCopyBadge, color: '#2E75B6' },
   qrInstruction: { ...baseStyles.qrInstruction, color: '#64748B' },
   textInput: {
     ...baseStyles.textInput,
@@ -255,7 +279,13 @@ const darkStyles = StyleSheet.create({
     borderColor: '#475569',
   },
   qrLabel: { ...baseStyles.qrLabel, color: '#38BDF8' },
-  qrText: { ...baseStyles.qrText, color: '#E2E8F0' },
+  qrClickable: {
+    ...baseStyles.qrClickable,
+    backgroundColor: '#1E293B',
+    borderColor: '#475569',
+  },
+  qrTextDisplay: { ...baseStyles.qrTextDisplay, color: '#E2E8F0' },
+  qrCopyBadge: { ...baseStyles.qrCopyBadge, color: '#38BDF8' },
   qrInstruction: { ...baseStyles.qrInstruction, color: '#64748B' },
   textInput: {
     ...baseStyles.textInput,

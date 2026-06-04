@@ -1,10 +1,12 @@
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { pool, query } from '../config/db';
 import { env } from '../config/env';
 import { HttpError } from '../utils/httpError';
 import { getIo } from '../sockets';
+import { redis } from '../config/redis';
 
 const heartbeatSchema = z.object({
   is_moving: z.boolean(),
@@ -150,16 +152,29 @@ export async function handleShiftHandover(req: Request, res: Response): Promise<
   }
 
   const { qrToken } = handoverSchema.parse(req.body);
+  const tokenClean = qrToken.trim().toUpperCase();
 
-  let decoded: any;
-  try {
-    decoded = jwt.verify(qrToken, env.JWT_SECRET);
-  } catch (err) {
-    throw HttpError.unauthorized('Invalid or expired handover token.');
-  }
+  let decoded: { shiftId: string; routeId: string | null };
+  const redisKey = `plowpath:handover:${tokenClean}`;
+  const cached = await redis.get(redisKey);
 
-  if (decoded.sub !== 'driver_shift_handover') {
-    throw HttpError.badRequest('Invalid handover token type.');
+  if (cached) {
+    decoded = JSON.parse(cached);
+    // Delete one-time use token
+    await redis.del(redisKey);
+  } else {
+    try {
+      const jwtDecoded = jwt.verify(qrToken, env.JWT_SECRET) as any;
+      if (jwtDecoded.sub !== 'driver_shift_handover') {
+        throw HttpError.badRequest('Invalid handover token type.');
+      }
+      decoded = {
+        shiftId: jwtDecoded.shiftId,
+        routeId: jwtDecoded.routeId,
+      };
+    } catch (err) {
+      throw HttpError.unauthorized('Invalid or expired handover token.');
+    }
   }
 
   const currentShift = await query(
@@ -282,17 +297,21 @@ export async function getHandoverToken(req: Request, res: Response): Promise<voi
 
   const routeId = activeRoute.rows[0]?.route_id || null;
 
-  // 3. Sign short lived JWT
-  const qrToken = jwt.sign(
-    {
-      sub: 'driver_shift_handover',
+  // 3. Generate secure, short 6-character alphanumeric code
+  const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+  // 4. Save in Redis with 15-minute expiration
+  const redisKey = `plowpath:handover:${code}`;
+  await redis.set(
+    redisKey,
+    JSON.stringify({
       shiftId: activeShift.rows[0].id,
       routeId,
-    },
-    env.JWT_SECRET,
-    { expiresIn: '15m' }
+    }),
+    'EX',
+    900 // 15 minutes
   );
 
-  res.json({ qrToken });
+  res.json({ qrToken: code });
 }
 
