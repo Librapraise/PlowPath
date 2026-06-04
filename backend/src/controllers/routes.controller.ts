@@ -21,7 +21,7 @@ const generateSchema = z.object({
 
 const updateStopSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed', 'skipped']),
-  notes: z.string().max(2000).optional(),
+  notes: z.string().max(500000).optional(),
 });
 
 type CustomerRow = {

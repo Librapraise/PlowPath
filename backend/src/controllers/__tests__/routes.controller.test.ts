@@ -70,6 +70,12 @@ describe('Routes Controller - SMS Integration', () => {
         rowCount: 1,
       });
 
+      // 3. Mock DB returning pending count for auto-promote
+      (query as jest.Mock).mockResolvedValueOnce({
+        rows: [{ pending_count: '1' }],
+        rowCount: 1,
+      });
+
       await updateStop(mockReq as Request, mockRes as Response);
 
       expect(query).toHaveBeenNthCalledWith(

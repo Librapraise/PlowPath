@@ -441,7 +441,12 @@ export default function RoutesPage() {
                           <span>"{stop.notes}"</span>
                           {stop.notes.includes('Proof of service uploaded') && (
                             <button
-                              onClick={() => setPreviewImage('/mock_s3_compressed_146kb.jpg')}
+                              onClick={() => {
+                                const notesStr = stop.notes || '';
+                                const idx = notesStr.indexOf('Proof of service uploaded: ');
+                                const imgUrl = idx !== -1 ? notesStr.substring(idx + 27) : '/mock_s3_compressed_146kb.jpg';
+                                setPreviewImage(imgUrl.startsWith('data:image/') ? imgUrl : '/mock_s3_compressed_146kb.jpg');
+                              }}
                               className="px-2 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[9px] font-extrabold cursor-pointer transition-colors"
                             >
                               📷 View Proof Photo

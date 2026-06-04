@@ -896,7 +896,12 @@ export default function LiveOpsPage() {
                                   </div>
                                   {stop.notes.includes('Proof of service uploaded') && (
                                     <button
-                                      onClick={() => setPreviewImage('/mock_s3_compressed_146kb.jpg')}
+                                      onClick={() => {
+                                        const notesStr = stop.notes || '';
+                                        const idx = notesStr.indexOf('Proof of service uploaded: ');
+                                        const imgUrl = idx !== -1 ? notesStr.substring(idx + 27) : '/mock_s3_compressed_146kb.jpg';
+                                        setPreviewImage(imgUrl.startsWith('data:image/') ? imgUrl : '/mock_s3_compressed_146kb.jpg');
+                                      }}
                                       className="px-1.5 py-0.5 mt-0.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[8px] font-bold cursor-pointer transition-colors"
                                     >
                                       📷 View Proof Photo

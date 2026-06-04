@@ -170,6 +170,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
         cameraType: 'back',
         quality: 0.8,
         saveToPhotos: false,
+        includeBase64: true,
       },
       async (response) => {
         setIsCapturing(false);
@@ -200,7 +201,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
             if (prev >= 100) {
               clearInterval(interval);
               setIsCompressing(false);
-              setCapturedPhotoUrl(asset.uri ?? null);
+              setCapturedPhotoUrl(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri ?? null);
               setIsUploading(true);
               setTimeout(() => {
                 setIsUploading(false);
@@ -219,7 +220,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
     setProofModalOpen(false);
     
     const notes = capturedPhotoUrl 
-      ? `Proof of service uploaded: mock_s3_compressed_146kb.jpg` 
+      ? `Proof of service uploaded: ${capturedPhotoUrl}` 
       : 'Stop cleared';
       
     await markStopStatus(data.route_id, stop.stop_id, 'completed', notes);
