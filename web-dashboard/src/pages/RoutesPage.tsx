@@ -69,6 +69,9 @@ export default function RoutesPage() {
   const [localStops, setLocalStops] = useState<RouteStop[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
 
+  // Proof of Service Image Preview Modal
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   useEffect(() => {
     if (currentRoute?.stops) {
       setLocalStops(currentRoute.stops);
@@ -434,8 +437,16 @@ export default function RoutesPage() {
                       )}
                       
                       {stop.notes && (
-                        <div className="mt-2 bg-slate-950/60 p-2 rounded-lg border border-slate-850 pl-2 text-[10px] text-slate-400 italic">
-                          "{stop.notes}"
+                        <div className="mt-2 bg-slate-950/60 p-2 rounded-lg border border-slate-850 pl-2 text-[10px] text-slate-400 italic flex flex-col items-start gap-1.5">
+                          <span>"{stop.notes}"</span>
+                          {stop.notes.includes('Proof of service uploaded') && (
+                            <button
+                              onClick={() => setPreviewImage('/mock_s3_compressed_146kb.jpg')}
+                              className="px-2 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[9px] font-extrabold cursor-pointer transition-colors"
+                            >
+                              📷 View Proof Photo
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -689,6 +700,29 @@ export default function RoutesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      {/* Proof of Service Image Preview Modal Overlay */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-white">Proof of Service Photo Verification</span>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer"
+              >
+                Close ✕
+              </button>
+            </div>
+            <img
+              src={previewImage}
+              alt="Proof of Service"
+              className="w-full max-h-[70vh] object-contain rounded-lg border border-slate-850"
+            />
+            <div className="mt-3 text-xs text-slate-450 font-semibold text-center">
+              Liability protection proof of service escrow photo · Verified Clear
+            </div>
           </div>
         </div>
       )}

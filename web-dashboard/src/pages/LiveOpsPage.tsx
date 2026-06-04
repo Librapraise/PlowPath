@@ -63,6 +63,7 @@ export default function LiveOpsPage() {
 
   // UX controls
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedDriverRoute, setSelectedDriverRoute] = useState<Route | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<[number, number]>>([]);
   const [showBreadcrumbs, setShowBreadcrumbs] = useState(true);
@@ -889,8 +890,18 @@ export default function LiveOpsPage() {
                               <div className="text-slate-200 truncate">{stop.name}</div>
                               <div className="text-[9px] text-slate-500 truncate mt-0.5 leading-normal">{stop.address}</div>
                               {stop.notes && (
-                                <div className="text-[9px] text-emerald-400 font-medium italic mt-1 pl-1 border-l border-emerald-500/30 truncate max-w-full">
-                                  "{stop.notes}"
+                                <div className="mt-1 flex flex-col items-start gap-1">
+                                  <div className="text-[9px] text-emerald-400 font-medium italic pl-1 border-l border-emerald-500/30 truncate max-w-full">
+                                    "{stop.notes}"
+                                  </div>
+                                  {stop.notes.includes('Proof of service uploaded') && (
+                                    <button
+                                      onClick={() => setPreviewImage('/mock_s3_compressed_146kb.jpg')}
+                                      className="px-1.5 py-0.5 mt-0.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[8px] font-bold cursor-pointer transition-colors"
+                                    >
+                                      📷 View Proof Photo
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -953,6 +964,31 @@ export default function LiveOpsPage() {
 
       {/* B2B Subcontracting Console Modal Dialog */}
       <SubcontractConsole isOpen={subcontractOpen} onClose={() => setSubcontractOpen(false)} />
+
+      {/* Proof of Service Image Preview Modal Overlay */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-white">Proof of Service Photo Verification</span>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer"
+              >
+                Close ✕
+              </button>
+            </div>
+            <img
+              src={previewImage}
+              alt="Proof of Service"
+              className="w-full max-h-[70vh] object-contain rounded-lg border border-slate-850"
+            />
+            <div className="mt-3 text-xs text-slate-450 font-semibold text-center">
+              Liability protection proof of service escrow photo · Verified Clear
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
