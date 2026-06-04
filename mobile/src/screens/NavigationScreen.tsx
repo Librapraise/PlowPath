@@ -1,7 +1,140 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image, Platform, PermissionsAndroid } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image, Platform, PermissionsAndroid, Animated, Easing } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { launchCamera } from 'react-native-image-picker';
+
+// Premium SVG custom icons for Navigation/HUD
+const PlowIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+    <Path d="M4 11h16M4 15h16M8 11v8M16 11v8" />
+    <Circle cx="12" cy="7" r="3" />
+  </Svg>
+);
+
+const CheckIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+    <Path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <Path d="M22 4L12 14.01l-3-3" />
+  </Svg>
+);
+
+const SkipIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M15 9l-6 6M9 9l6 6" />
+  </Svg>
+);
+
+const MicIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+    <Path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+    <Path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+  </Svg>
+);
+
+const AlertIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+    <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <Path d="M12 9v4M12 17h.01" />
+  </Svg>
+);
+
+const CameraIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <Circle cx="12" cy="13" r="4" />
+  </Svg>
+);
+
+const HandshakeIcon = ({ color }: { color: string }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+    <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </Svg>
+);
+
+const InfoIcon = ({ color }: { color: string }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M12 16v-4M12 8h.01" />
+  </Svg>
+);
+
+const GoogleMapsIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+    <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="#34A853" />
+    <Path d="M12 2C8.13 2 5 5.13 5 9c0 1.22.38 2.37 1 3.34l6-6.34V2z" fill="#4285F4" />
+    <Path d="M12 22s7-7.75 7-13c0-1.22-.38-2.37-1-3.34l-6 6.34V22z" fill="#EA4335" />
+    <Path d="M12 9a2.5 2.5 0 100 5 2.5 2.5 0 000-5z" fill="#F9BC05" />
+  </Svg>
+);
+
+const AppleMapsIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+    <Circle cx="12" cy="12" r="10" fill="#E5E5EA" stroke="#007AFF" strokeWidth="2" />
+    <Path d="M12 2v20M2 12h20" stroke="#007AFF" strokeWidth="1.5" />
+    <Path d="M16.24 7.76l-3.53 3.53-3.53 3.53 1.41-4.95z" fill="#FF3B30" />
+    <Path d="M7.76 16.24l3.53-3.53 3.53-3.53-1.41 4.95z" fill="#1D1D1F" />
+  </Svg>
+);
+
+const WazeIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+    <Path d="M19 14.5a3.5 3.5 0 01-3.5 3.5 3.5 3.5 0 01-.64-.06 5.5 5.5 0 01-5.72-5.18l-.14-.76c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5c0 1.25-.42 2.4-1.12 3.32.07.2.12.4.12.62z" fill="#33CCFF" />
+    <Circle cx="12.5" cy="12.5" r="1" fill="#000000" />
+    <Circle cx="16.5" cy="12.5" r="1" fill="#000000" />
+    <Path d="M6 18a2 2 0 100-4 2 2 0 000 4zm12 0a2 2 0 100-4 2 2 0 000 4z" fill="#F2A900" />
+  </Svg>
+);
+
+const ShimmerBadge = ({ isDark, partnerName }: { isDark: boolean; partnerName: string }) => {
+  const shimmerAnim = useRef(new Animated.Value(-100)).current;
+
+  useEffect(() => {
+    let active = true;
+    const runShimmer = () => {
+      if (!active) return;
+      shimmerAnim.setValue(-150);
+      Animated.timing(shimmerAnim, {
+        toValue: 350,
+        duration: 2200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(() => {
+        if (active) runShimmer();
+      });
+    };
+    runShimmer();
+    return () => { active = false; };
+  }, [shimmerAnim]);
+
+  const styleBadge = isDark ? darkStyles.subcontractBadge : lightStyles.subcontractBadge;
+  const styleText = isDark ? darkStyles.subcontractText : lightStyles.subcontractText;
+
+  return (
+    <View style={[styleBadge, { overflow: 'hidden', position: 'relative' }]}>
+      <HandshakeIcon color={isDark ? '#818CF8' : '#4F46E5'} />
+      <Text style={styleText}>
+        Enterprise Partner Job: {partnerName || 'B2B Shared Stop'}
+      </Text>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          width: 80,
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.35)',
+          transform: [
+            { translateX: shimmerAnim },
+            { skewX: '-25deg' }
+          ],
+        }}
+      />
+    </View>
+  );
+};
+
 import * as turf from '@turf/turf';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -46,6 +179,56 @@ export default function NavigationScreen({ route, navigation }: Props) {
   const [compressionProgress, setCompressionProgress] = useState(0);
   const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Pulse animation for arrival radius
+  const isWithinRadius = distanceMi !== null && (distanceMi * 1609.34) <= ARRIVAL_RADIUS_M;
+  const glowAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+    if (isWithinRadius) {
+      animation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1.0,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0.4,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+        ])
+      );
+      animation.start();
+    } else {
+      glowAnim.setValue(0);
+    }
+    return () => {
+      if (animation) animation.stop();
+    };
+  }, [isWithinRadius, glowAnim]);
+
+  const primaryGlowStyle = isWithinRadius
+    ? {
+        shadowColor: isDark ? '#38BDF8' : '#10B981',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: glowAnim,
+        shadowRadius: glowAnim.interpolate({
+          inputRange: [0.4, 1.0],
+          outputRange: [6, 16],
+        }),
+        elevation: glowAnim.interpolate({
+          inputRange: [0.4, 1.0],
+          outputRange: [3, 8],
+        }),
+        borderColor: isDark ? '#38BDF8' : '#10B981',
+        borderWidth: 1.5,
+      }
+    : {};
 
   // Load route: prefer server (download); fall back to cached offline copy.
   useEffect(() => {
@@ -168,7 +351,9 @@ export default function NavigationScreen({ route, navigation }: Props) {
       {
         mediaType: 'photo',
         cameraType: 'back',
-        quality: 0.8,
+        quality: 0.5,
+        maxWidth: 1280,
+        maxHeight: 960,
         saveToPhotos: false,
         includeBase64: true,
       },
@@ -371,71 +556,111 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
       <RouteProgress total={data.stops.length} currentIndex={stepIndex} />
 
-      {/* Subcontracted Enterprise Rival Badge indicator */}
+      {/* Subcontracted Enterprise Rival Badge with Shimmer Animation */}
       {isSubcontracted && (
-        <View style={styles.subcontractBadge}>
-          <Text style={styles.subcontractText}>
-            🤝 Enterprise Partner Job: {(currentStop as any).partner_company_name || 'B2B Shared Stop'}
-          </Text>
-        </View>
+        <ShimmerBadge
+          isDark={isDark}
+          partnerName={(currentStop as any).partner_company_name || (currentStop as any).partner_company}
+        />
       )}
 
       <Text style={styles.stopInfo}>
         Stop {stepIndex + 1} / {data.stops.length} · Completed {completed}
       </Text>
+
+      {/* Access Notes with left-edge border and InfoIcon */}
       {currentStop.access_notes ? (
         <View style={styles.notesBox}>
-          <Text style={styles.notesHeader}>Access Notes:</Text>
+          <View style={styles.notesHeaderRow}>
+            <InfoIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+            <Text style={styles.notesHeader}>Access Notes</Text>
+          </View>
           <Text style={styles.notes}>{currentStop.access_notes}</Text>
         </View>
       ) : null}
 
-      {/* External Map Selectors HUD */}
+      {/* External Map Selectors HUD with Brand Logos */}
       <View style={styles.navRow}>
         <Text style={styles.hudLabel}>Launch HUD Navigation:</Text>
         <View style={styles.navButtons}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('google')}>
-            <Text style={styles.navBtnText}>Google Maps</Text>
+          <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('google')} accessibilityRole="button">
+            <GoogleMapsIcon />
+            <Text style={styles.navBtnText}>Google</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('apple')}>
-            <Text style={styles.navBtnText}>Apple Maps</Text>
+          <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('apple')} accessibilityRole="button">
+            <AppleMapsIcon />
+            <Text style={styles.navBtnText}>Apple</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('waze')}>
-            <Text style={styles.navBtnText}>Waze Launcher</Text>
+          <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('waze')} accessibilityRole="button">
+            <WazeIcon />
+            <Text style={styles.navBtnText}>Waze</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Glove-friendly oversized buttons console */}
       <View style={styles.buttonRow}>
+        {/* Primary CTA (Mark In Progress / Clear Stop) with Pulsing Glow on Arrival */}
         {currentStop.status === 'pending' ? (
-          <TouchableOpacity
-            style={[styles.btn, styles.primaryBtn]}
-            onPress={() => onMarkInProgress(currentStop)}
-          >
-            <Text style={styles.btnText}>🚜 Mark In Progress</Text>
-          </TouchableOpacity>
+          <Animated.View style={[styles.primaryGlowContainer, primaryGlowStyle]}>
+            <TouchableOpacity
+              style={[styles.btn, styles.primaryBtn, { minHeight: 64 }]}
+              onPress={() => onMarkInProgress(currentStop)}
+              accessibilityRole="button"
+            >
+              <PlowIcon color="white" />
+              <Text style={styles.btnText}>Mark In Progress</Text>
+            </TouchableOpacity>
+          </Animated.View>
         ) : (
-          <TouchableOpacity
-            style={[styles.btn, styles.successBtn]}
-            onPress={() => onTriggerMarkComplete(currentStop)}
-          >
-            <Text style={styles.btnText}>✅ Clear Stop (Mark Complete)</Text>
-          </TouchableOpacity>
+          <Animated.View style={[styles.primaryGlowContainer, primaryGlowStyle]}>
+            <TouchableOpacity
+              style={[styles.btn, styles.successBtn, { minHeight: 64 }]}
+              onPress={() => onTriggerMarkComplete(currentStop)}
+              accessibilityRole="button"
+            >
+              <CheckIcon color="white" />
+              <Text style={styles.btnText}>Clear Stop (Mark Complete)</Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
 
-        <TouchableOpacity style={[styles.btn, styles.skipBtn]} onPress={() => onSkipPropertyConfirm(currentStop)}>
-          <Text style={[styles.btnText, { color: isDark ? '#ffffff' : '#1E293B' }]}>❌ Skip Property</Text>
-        </TouchableOpacity>
+        {/* Secondary CTAs (Skip Property & Glove Voice Control side-by-side) */}
+        <View style={styles.secondaryActionsRow}>
+          <TouchableOpacity
+            style={[styles.btn, styles.skipBtn, { flex: 1, minHeight: 52 }]}
+            onPress={() => onSkipPropertyConfirm(currentStop)}
+            accessibilityRole="button"
+          >
+            <SkipIcon color={isDark ? '#EF4444' : '#DC2626'} />
+            <Text style={[styles.btnText, { color: isDark ? '#FFFFFF' : '#1E293B', fontSize: 14 }]}>Skip Stop</Text>
+          </TouchableOpacity>
 
-        {/* Hands-Free Voice Glove simulator Trigger panel */}
-        <TouchableOpacity style={[styles.btn, styles.voiceTriggerBtn]} onPress={simulateVoiceCommand}>
-          <Text style={[styles.btnText, { color: isDark ? '#38BDF8' : '#2E75B6' }]}>🎙️ Glove Voice Simulation Control</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.btn, styles.voiceTriggerBtn, { flex: 1, minHeight: 52 }]}
+            onPress={simulateVoiceCommand}
+            accessibilityRole="button"
+          >
+            <MicIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+            <Text style={[styles.btnText, { color: isDark ? '#38BDF8' : '#2E75B6', fontSize: 14 }]}>Voice Control</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={[styles.btn, styles.stopRouteBtn]} onPress={onStopRouteConfirm}>
-          <Text style={styles.btnText}>⚠️ Emergency Finalize Route</Text>
-        </TouchableOpacity>
+        {/* Safety Critical Danger Zone (Finalize Route) isolated with 32px gap */}
+        <View style={styles.dangerZoneContainer}>
+          <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+          <Text style={styles.dangerZoneDesc}>
+            Accidentally ending the route will finalize escrow hours and skip all remaining stop assignments.
+          </Text>
+          <TouchableOpacity
+            style={[styles.btn, styles.stopRouteBtn, { minHeight: 52 }]}
+            onPress={onStopRouteConfirm}
+            accessibilityRole="button"
+          >
+            <AlertIcon color="white" />
+            <Text style={styles.btnText}>Emergency Finalize Route</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Simulated voice HUD modal overlay */}
@@ -443,7 +668,10 @@ export default function NavigationScreen({ route, navigation }: Props) {
         <Modal transparent animationType="fade" visible={isVoiceActive}>
           <View style={styles.voiceOverlay}>
             <View style={styles.voiceCard}>
-              <Text style={styles.voiceTitle}>🎙️ Voice Command Listening...</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <MicIcon color="#38b0f8" />
+                <Text style={styles.voiceTitle}>Voice Command Listening...</Text>
+              </View>
               <Text style={styles.voiceSub}>"PlowPath, Mark Complete" or "PlowPath, Skip Property"</Text>
               <ActivityIndicator size="large" color="#38b0f8" style={{ marginVertical: 15 }} />
               <Text style={styles.voiceTranscript}>{voiceTranscript}</Text>
@@ -489,7 +717,8 @@ export default function NavigationScreen({ route, navigation }: Props) {
                   </View>
                 ) : (
                   <TouchableOpacity style={styles.cameraBtn} onPress={simulatePhotoCapture}>
-                    <Text style={styles.cameraBtnText}>📸 Snap Clearing Proof Photo</Text>
+                    <CameraIcon color="white" />
+                    <Text style={styles.cameraBtnText}>Snap Clearing Proof Photo</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -532,20 +761,24 @@ const baseStyles = {
   stopInfo: { fontSize: 14, marginTop: 16, fontWeight: '800' },
   notesBox: {
     borderWidth: 1.5,
+    borderLeftWidth: 5,
     padding: 14,
     borderRadius: 12,
     marginTop: 12,
   },
+  notesHeaderRow: { flexDirection: 'row' as any, alignItems: 'center' as any, marginBottom: 4 },
   notesHeader: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' as any },
-  notes: { fontSize: 13, marginTop: 4, fontStyle: 'italic', fontWeight: '500' },
+  notes: { fontSize: 13, fontStyle: 'italic', fontWeight: '500' },
   subcontractBadge: {
     borderWidth: 1.5,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
     marginTop: 12,
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
   },
-  subcontractText: { fontSize: 12, fontWeight: '800' },
+  subcontractText: { fontSize: 12, fontWeight: '800', flexShrink: 1 },
   navRow: {
     borderRadius: 12,
     borderWidth: 1.5,
@@ -553,17 +786,18 @@ const baseStyles = {
     marginTop: 16,
   },
   hudLabel: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' as any, marginBottom: 8 },
-  navButtons: { flexDirection: 'row', gap: 8 },
+  navButtons: { flexDirection: 'row' as any, gap: 8 },
   navBtn: {
     flex: 1,
     minHeight: 44,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
+    flexDirection: 'row' as any,
   },
   navBtnText: { fontSize: 12, fontWeight: '800' },
   buttonRow: { marginTop: 24, gap: 12 },
-  btn: { minHeight: 64, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  btn: { minHeight: 64, borderRadius: 12, alignItems: 'center' as any, justifyContent: 'center' as any, flexDirection: 'row' as any },
   primaryBtn: { backgroundColor: '#F97316' }, // orange in progress
   successBtn: { backgroundColor: '#10B981' }, // green complete
   skipBtn: { borderWidth: 1.5 },
@@ -571,6 +805,18 @@ const baseStyles = {
   stopRouteBtn: { backgroundColor: '#EF4444' },
   btnText: { color: 'white', fontSize: 16, fontWeight: '900' },
   
+  // Redesign custom additions
+  primaryGlowContainer: { borderRadius: 12 },
+  secondaryActionsRow: { flexDirection: 'row' as any, gap: 12 },
+  dangerZoneContainer: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 32,
+  },
+  dangerZoneTitle: { fontSize: 13, fontWeight: '900' as any, textTransform: 'uppercase' as any, marginBottom: 4 },
+  dangerZoneDesc: { fontSize: 11, marginBottom: 12, lineHeight: 15 },
+
   // Voice HUD overlay
   voiceOverlay: {
     flex: 1,
@@ -618,6 +864,9 @@ const baseStyles = {
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
   },
   cameraBtnText: { color: 'white', fontSize: 14, fontWeight: '900' },
   cameraSim: { alignItems: 'center', gap: 10 },
@@ -669,6 +918,7 @@ const lightStyles = StyleSheet.create({
     ...baseStyles.notesBox,
     backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
+    borderLeftColor: '#2E75B6',
   },
   notesHeader: { ...baseStyles.notesHeader, color: '#2E75B6' },
   notes: { ...baseStyles.notes, color: '#1E293B' },
@@ -699,6 +949,13 @@ const lightStyles = StyleSheet.create({
     backgroundColor: 'rgba(46, 117, 182, 0.06)',
     borderColor: '#2E75B6',
   },
+  dangerZoneContainer: {
+    ...baseStyles.dangerZoneContainer,
+    borderColor: '#CBD5E1',
+    backgroundColor: 'rgba(15, 23, 42, 0.02)',
+  },
+  dangerZoneTitle: { ...baseStyles.dangerZoneTitle, color: '#DC2626' },
+  dangerZoneDesc: { ...baseStyles.dangerZoneDesc, color: '#64748B' },
   voiceCard: {
     ...baseStyles.voiceCard,
     backgroundColor: '#FFFFFF',
@@ -741,6 +998,7 @@ const darkStyles = StyleSheet.create({
     ...baseStyles.notesBox,
     backgroundColor: '#1E293B',
     borderColor: '#334155',
+    borderLeftColor: '#38BDF8',
   },
   notesHeader: { ...baseStyles.notesHeader, color: '#38BDF8' },
   notes: { ...baseStyles.notes, color: '#F1F5F9' },
@@ -771,6 +1029,13 @@ const darkStyles = StyleSheet.create({
     backgroundColor: 'rgba(56, 176, 248, 0.12)',
     borderColor: '#38BDF8',
   },
+  dangerZoneContainer: {
+    ...baseStyles.dangerZoneContainer,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+  },
+  dangerZoneTitle: { ...baseStyles.dangerZoneTitle, color: '#EF4444' },
+  dangerZoneDesc: { ...baseStyles.dangerZoneDesc, color: '#94A3B8' },
   voiceCard: {
     ...baseStyles.voiceCard,
     backgroundColor: '#1E293B',

@@ -17,6 +17,7 @@ export interface QueuedStopStatus {
   status: 'pending' | 'in_progress' | 'completed' | 'skipped';
   notes?: string;
   timestamp: string;
+  retryCount?: number;
 }
 
 async function readQueue(): Promise<QueuedSample[]> {
@@ -92,9 +93,12 @@ export async function enqueueStopStatus(
     status,
     notes,
     timestamp: new Date().toISOString(),
+    retryCount: 0,
   });
   await writeStopQueue(queue);
 }
+
+const MAX_RETRIES = 3;
 
 export async function flushStopQueue(): Promise<{ flushed: number } | { skipped: string }> {
   const net = await NetInfo.fetch();
@@ -104,6 +108,8 @@ export async function flushStopQueue(): Promise<{ flushed: number } | { skipped:
   if (queue.length === 0) return { flushed: 0 };
 
   let flushedCount = 0;
+  const retry: QueuedStopStatus[] = [];
+
   for (const item of queue) {
     try {
       await api.put(`/routes/${item.routeId}/stops/${item.stopId}`, {
@@ -111,15 +117,21 @@ export async function flushStopQueue(): Promise<{ flushed: number } | { skipped:
         notes: item.notes,
       });
       flushedCount++;
-    } catch (err) {
-      console.error('Failed to flush stop status', item, err);
-      const remaining = queue.slice(flushedCount);
-      await writeStopQueue(remaining);
-      return { skipped: 'request_failed' };
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const retries = (item.retryCount ?? 0) + 1;
+
+      // Drop items that have exceeded max retries or received permanent errors (413, 400)
+      if (retries >= MAX_RETRIES || status === 413 || status === 400) {
+        console.warn(`[OFFLINE] Dropping stop queue item after ${retries} attempts (HTTP ${status})`, item.stopId);
+        // The status is already saved in the local AsyncStorage cache — safe to drop
+      } else {
+        retry.push({ ...item, retryCount: retries });
+      }
     }
   }
 
-  await writeStopQueue([]);
+  await writeStopQueue(retry);
   return { flushed: flushedCount };
 }
 

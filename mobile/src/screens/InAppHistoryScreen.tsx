@@ -165,7 +165,9 @@ const lightStyles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   timestamp: { ...baseStyles.timestamp, color: '#64748B' },
   title: { ...baseStyles.title, color: '#0F172A' },
@@ -181,11 +183,15 @@ const darkStyles = StyleSheet.create({
     ...baseStyles.card,
     backgroundColor: '#1E293B',
     borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   timestamp: { ...baseStyles.timestamp, color: '#94A3B8' },
   title: { ...baseStyles.title, color: '#FFFFFF' },
   body: { ...baseStyles.body, color: '#CBD5E1' },
   emptyText: { ...baseStyles.emptyText, color: '#94A3B8' },
 } as any);
+
+

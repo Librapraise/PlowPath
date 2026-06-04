@@ -6,7 +6,7 @@ axios.defaults.headers.common['x-client-type'] = 'mobile-app';
 
 const baseURL = process.env.API_URL ?? 'http://10.0.2.2:3000/api/v1';
 
-export const api = axios.create({ baseURL, timeout: 15_000 });
+export const api = axios.create({ baseURL, timeout: 30_000 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   config.headers.set('X-Client-Type', 'mobile-app');

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -31,6 +31,33 @@ export default function RouteScreen({ navigation }: Props) {
   const [routes, setRoutes] = useState<RouteSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    let active = true;
+    const runPulse = () => {
+      if (!active) return;
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 1100,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        if (active) runPulse();
+      });
+    };
+    runPulse();
+    return () => {
+      active = false;
+    };
+  }, [pulseAnim]);
 
   const fetchRoutes = () => {
     if (!user?.driver_id) return;
@@ -166,7 +193,7 @@ export default function RouteScreen({ navigation }: Props) {
           <Text style={styles.driverName}>{user.name}</Text>
         </View>
         <View style={styles.activeIndicatorBox}>
-          <View style={styles.greenPulseDot} />
+          <Animated.View style={[styles.greenPulseDot, { opacity: pulseAnim }]} />
           <Text style={styles.activeText}>Active Shift</Text>
         </View>
       </View>
@@ -327,7 +354,6 @@ const baseStyles = {
   },
   secondaryText: { fontSize: 16, fontWeight: '700' },
 };
-
 const lightStyles = StyleSheet.create({
   ...baseStyles,
   container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
@@ -341,6 +367,8 @@ const lightStyles = StyleSheet.create({
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
     shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   cardTitle: { ...baseStyles.cardTitle, color: '#0F172A' },
   statValue: { ...baseStyles.statValue, color: '#0F172A' },
@@ -351,6 +379,8 @@ const lightStyles = StyleSheet.create({
     backgroundColor: '#2E75B6',
     shadowColor: '#2E75B6',
     shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   completedBtn: {
     backgroundColor: '#E2E8F0',
@@ -391,8 +421,10 @@ const darkStyles = StyleSheet.create({
     ...baseStyles.card,
     backgroundColor: '#1E293B',
     borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   cardTitle: { ...baseStyles.cardTitle, color: '#FFFFFF' },
   statValue: { ...baseStyles.statValue, color: '#FFFFFF' },
@@ -403,6 +435,8 @@ const darkStyles = StyleSheet.create({
     backgroundColor: '#38BDF8',
     shadowColor: '#38BDF8',
     shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   primaryText: { ...baseStyles.primaryText, color: '#0B0F19' },
   completedBtn: {

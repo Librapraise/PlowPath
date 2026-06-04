@@ -151,7 +151,6 @@ export default function ShiftSwapScreen({ navigation }: Props) {
     </ScrollView>
   );
 }
-
 const baseStyles = {
   container: { flexGrow: 1, padding: 20 },
   title: { fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 6 },
@@ -168,7 +167,7 @@ const baseStyles = {
   cardHeader: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
   cardMuted: { fontSize: 12, marginBottom: 16, lineHeight: 18 },
   btn: {
-    minHeight: 52,
+    minHeight: 58, // glove-friendly minimum height
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -197,16 +196,16 @@ const baseStyles = {
     borderWidth: 1,
     marginVertical: 4,
   },
-  qrTextDisplay: { fontSize: 22, fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: 2 },
+  qrTextDisplay: { fontSize: 26, fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: 3 }, // enlarged for readability
   qrCopyBadge: { fontSize: 11, fontWeight: '700' },
   qrInstruction: { fontSize: 9, fontStyle: 'italic', marginTop: 6, textAlign: 'center' },
   textInput: {
     borderWidth: 1.5,
     borderRadius: 12,
     padding: 12,
-    fontSize: 12,
+    fontSize: 15,
     fontFamily: 'monospace',
-    minHeight: 70,
+    minHeight: 80, // glove-friendly text inputs
     textAlignVertical: 'top',
     marginBottom: 12,
   },

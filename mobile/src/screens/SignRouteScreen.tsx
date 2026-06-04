@@ -145,7 +145,24 @@ export default function SignRouteScreen() {
 
               <View style={styles.actionRow}>
                 <Text style={styles.statusLabel}>
-                  Status: <Text style={styles.statusVal}>{item.sign_status.toUpperCase()}</Text>
+                  Status:{' '}
+                  <Text
+                    style={[
+                      styles.statusVal,
+                      {
+                        color:
+                          item.sign_status === 'installed'
+                            ? '#10B981'
+                            : item.sign_status === 'needs_service'
+                            ? '#F59E0B'
+                            : isDark
+                            ? '#94A3B8'
+                            : '#64748B',
+                      },
+                    ]}
+                  >
+                    {item.sign_status.replace('_', ' ').toUpperCase()}
+                  </Text>
                 </Text>
 
                 {action === 'install' ? (
@@ -201,23 +218,23 @@ const baseStyles = {
     marginHorizontal: 20,
     marginBottom: 16,
     borderWidth: 1.5,
+    height: 56, // glove-friendly height
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 8,
-    height: 44,
+    height: 46, // inner segment height
     justifyContent: 'center',
   },
   activeTab: {
     shadowColor: '#000',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  tabText: { fontSize: 13, fontWeight: '800' },
+  tabText: { fontSize: 14, fontWeight: '800' },
   activeTabText: { color: 'white' },
   statsCard: {
     padding: 16,
@@ -234,7 +251,7 @@ const baseStyles = {
   statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
   statVal: { fontSize: 16, fontWeight: '900', marginTop: 4, textAlign: 'center' },
   divider: { width: 1.5, height: 32 },
-  errorText: { color: '#ef4444', marginBottom: 12, textAlign: 'center', fontWeight: '700' },
+  errorText: { color: '#EF4444', marginBottom: 12, textAlign: 'center', fontWeight: '700' },
   emptyText: { marginTop: 32, textAlign: 'center', fontSize: 14, fontWeight: '600' },
   stopCard: {
     padding: 16,
@@ -270,14 +287,14 @@ const baseStyles = {
   statusVal: { fontWeight: '900' },
   btn: {
     paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 8,
+    height: 46, // glove-friendly actions in cards
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   installBtn: { backgroundColor: '#10B981' },
   removeBtn: { backgroundColor: '#3B82F6' },
-  btnText: { color: 'white', fontSize: 12, fontWeight: '900' },
+  btnText: { color: 'white', fontSize: 13, fontWeight: '900' },
 };
 
 const lightStyles = StyleSheet.create({

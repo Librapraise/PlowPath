@@ -15,6 +15,10 @@ redis.on('error', (err) => {
 
 export function getBullOptions() {
   return {
+    settings: {
+      drainDelay: 30000, // wait 30 seconds instead of 5 when queue is empty
+      stalledInterval: 120000, // check for stalled jobs every 2 minutes instead of 30s
+    },
     createClient: (type: 'client' | 'subscriber' | 'bclient') => {
       const client = new Redis(env.REDIS_URL, {
         maxRetriesPerRequest: null,

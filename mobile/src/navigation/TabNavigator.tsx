@@ -44,10 +44,10 @@ export default function TabNavigator() {
   const isDark = theme === 'dark';
 
   // Premium design tokens
-  const bgColor = isDark ? '#1E293B' : '#FFFFFF';
-  const borderTopColor = isDark ? '#334155' : '#E2E8F0';
-  const activeColor = isDark ? '#38BDF8' : '#2E75B6';
-  const inactiveColor = isDark ? '#64748B' : '#94A3B8';
+  const bgColor = isDark ? '#1E293B' : '#FFFFFF'; // --bg-surface
+  const borderTopColor = isDark ? '#334155' : '#E2E8F0'; // --border-subtle
+  const activeColor = isDark ? '#38BDF8' : '#2E75B6'; // --accent-ice
+  const inactiveColor = isDark ? '#94A3B8' : '#64748B'; // --text-muted / text-dim
 
   return (
     <Tab.Navigator
@@ -57,21 +57,21 @@ export default function TabNavigator() {
           backgroundColor: bgColor,
           borderTopColor: borderTopColor,
           borderTopWidth: 1.5,
-          height: 68,
-          paddingBottom: 10,
+          height: 72, // increased height for accessibility
+          paddingBottom: 12,
           paddingTop: 8,
-          shadowColor: '#000',
+          shadowColor: '#000000',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: isDark ? 0.2 : 0.05,
-          shadowRadius: 8,
-          elevation: 10,
+          shadowOpacity: isDark ? 0.35 : 0.06,
+          shadowRadius: 12,
+          elevation: 12,
         },
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 12, // match typography scale
           fontWeight: '800',
-          letterSpacing: 0.3,
+          letterSpacing: 0.5,
         },
       }}
     >
