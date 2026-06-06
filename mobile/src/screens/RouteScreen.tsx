@@ -204,7 +204,7 @@ export default function RouteScreen({ navigation }: Props) {
           <View style={styles.statPod}>
             <View style={[styles.statIconBox, { backgroundColor: isDark ? 'rgba(129, 140, 248, 0.12)' : 'rgba(99, 102, 241, 0.1)' }]}>
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#818CF8' : '#6366F1'} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                <Path d="M3 17l4-10 4 6 4-4 4 8" />
               </Svg>
             </View>
             <View style={styles.statInfo}>

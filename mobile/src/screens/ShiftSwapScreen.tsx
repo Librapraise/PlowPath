@@ -154,8 +154,8 @@ export default function ShiftSwapScreen({ navigation }: Props) {
 }
 const baseStyles = {
   container: { flexGrow: 1, padding: 20 },
-  title: { fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 6 },
-  subtitle: { fontSize: 13, textAlign: 'center', marginBottom: 24, lineHeight: 18 },
+  title: { fontSize: 24, fontWeight: '900', textAlign: 'left', marginBottom: 6 },
+  subtitle: { fontSize: 13, textAlign: 'left', marginBottom: 24, lineHeight: 18 },
   card: {
     padding: 20,
     borderRadius: 16,
