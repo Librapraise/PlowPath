@@ -1,5 +1,6 @@
+import AppText from '../components/AppText';
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, StatusBar, Image } from 'react-native';
+import { View, StyleSheet, Animated, Easing, StatusBar, Image } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Path, Circle } from 'react-native-svg';
 import { useAuthStore } from '../store/authStore';
 
@@ -151,8 +152,8 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
         </Animated.View>
 
         {/* Branding Typography */}
-        <Text style={styles.title}>PLOWPATH</Text>
-        <Text style={styles.subtitle}>Smart Winter Operations</Text>
+        <AppText style={styles.title}>PLOWPATH</AppText>
+        <AppText style={styles.subtitle}>Smart Winter Operations</AppText>
 
         {/* Custom Progress Bar */}
         <View style={styles.progressContainer}>

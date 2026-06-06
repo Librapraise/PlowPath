@@ -1,5 +1,6 @@
+import AppText from '../components/AppText';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { api } from '../services/api';
@@ -335,13 +336,13 @@ export default function LoginScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
 
 
-        <Text style={styles.title}>
+        <AppText style={styles.title}>
           {view === 'login' ? 'Start Shift' : view === 'forgot' ? 'Forgot Password' : 'Reset Password'}
-        </Text>
+        </AppText>
 
         {view === 'login' && (
           <>
-            <Text style={styles.label}>Phone number</Text>
+            <AppText style={styles.label}>Phone number</AppText>
             <TextInput
               value={identifier}
               onChangeText={setIdentifier}
@@ -354,7 +355,7 @@ export default function LoginScreen() {
               accessibilityLabel="Phone number or email"
             />
 
-            <Text style={styles.label}>Password</Text>
+            <AppText style={styles.label}>Password</AppText>
             <View style={styles.inputContainer}>
               <TextInput
                 value={password}
@@ -384,17 +385,17 @@ export default function LoginScreen() {
               accessibilityRole="button"
               accessibilityLabel="Forgot Password"
             >
-              <Text style={styles.forgotBtnText}>Forgot password?</Text>
+              <AppText style={styles.forgotBtnText}>Forgot password?</AppText>
             </TouchableOpacity>
 
-            <Text style={styles.label}>Active Vehicle</Text>
+            <AppText style={styles.label}>Active Vehicle</AppText>
             <TouchableOpacity
               onPress={() => setShowVehicleDropdown((prev) => !prev)}
               style={styles.dropdownHeader}
               accessibilityRole="button"
               accessibilityLabel={`Selected vehicle: ${selectedVehicle}. Double tap to change.`}
             >
-              <Text style={styles.dropdownHeaderText}>{selectedVehicle}</Text>
+              <AppText style={styles.dropdownHeaderText}>{selectedVehicle}</AppText>
               <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2.5}>
                 {showVehicleDropdown ? (
                   <Path d="M18 15l-6-6-6 6" />
@@ -420,20 +421,20 @@ export default function LoginScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Select ${option}`}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.dropdownOptionText,
                         selectedVehicle === option && styles.dropdownOptionTextSelected,
                       ]}
                     >
                       {option}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? <AppText style={styles.error}>{error}</AppText> : null}
 
             <TouchableOpacity
               onPress={onSubmit}
@@ -442,18 +443,18 @@ export default function LoginScreen() {
               accessibilityRole="button"
               accessibilityLabel="Log in"
             >
-              {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Log In</Text>}
+              {submitting ? <ActivityIndicator color="white" /> : <AppText style={styles.buttonText}>Log In</AppText>}
             </TouchableOpacity>
           </>
         )}
 
         {view === 'forgot' && (
           <>
-            <Text style={styles.subTitle}>
+            <AppText style={styles.subTitle}>
               Enter your phone number or email to receive a 6-digit verification code.
-            </Text>
+            </AppText>
 
-            <Text style={styles.label}>Phone number or Email</Text>
+            <AppText style={styles.label}>Phone number or Email</AppText>
             <TextInput
               value={resetIdentifier}
               onChangeText={setResetIdentifier}
@@ -466,7 +467,7 @@ export default function LoginScreen() {
               accessibilityLabel="Reset identifier"
             />
 
-            {resetError ? <Text style={styles.error}>{resetError}</Text> : null}
+            {resetError ? <AppText style={styles.error}>{resetError}</AppText> : null}
 
             <TouchableOpacity
               onPress={handleRequestCode}
@@ -478,7 +479,7 @@ export default function LoginScreen() {
               {sendingCode ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.buttonText}>Request Verification Code</Text>
+                <AppText style={styles.buttonText}>Request Verification Code</AppText>
               )}
             </TouchableOpacity>
 
@@ -491,18 +492,18 @@ export default function LoginScreen() {
               accessibilityRole="button"
               accessibilityLabel="Back to login"
             >
-              <Text style={styles.backBtnText}>Back to Login</Text>
+              <AppText style={styles.backBtnText}>Back to Login</AppText>
             </TouchableOpacity>
           </>
         )}
 
         {view === 'reset' && (
           <>
-            <Text style={styles.subTitle}>
+            <AppText style={styles.subTitle}>
               We have sent a verification code to your email or phone number.
-            </Text>
+            </AppText>
 
-            <Text style={styles.label}>6-Digit Verification Code</Text>
+            <AppText style={styles.label}>6-Digit Verification Code</AppText>
             <TextInput
               value={resetCode}
               onChangeText={setResetCode}
@@ -514,7 +515,7 @@ export default function LoginScreen() {
               accessibilityLabel="Verification Code"
             />
 
-            <Text style={styles.label}>New Password</Text>
+            <AppText style={styles.label}>New Password</AppText>
             <TextInput
               value={newPassword}
               onChangeText={setNewPassword}
@@ -525,7 +526,7 @@ export default function LoginScreen() {
               accessibilityLabel="New Password"
             />
 
-            <Text style={styles.label}>Confirm New Password</Text>
+            <AppText style={styles.label}>Confirm New Password</AppText>
             <TextInput
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
@@ -536,7 +537,7 @@ export default function LoginScreen() {
               accessibilityLabel="Confirm Password"
             />
 
-            {resetError ? <Text style={styles.error}>{resetError}</Text> : null}
+            {resetError ? <AppText style={styles.error}>{resetError}</AppText> : null}
 
             <TouchableOpacity
               onPress={handleResetPassword}
@@ -548,7 +549,7 @@ export default function LoginScreen() {
               {resettingPassword ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.buttonText}>Set New Password</Text>
+                <AppText style={styles.buttonText}>Set New Password</AppText>
               )}
             </TouchableOpacity>
 
@@ -561,7 +562,7 @@ export default function LoginScreen() {
               accessibilityRole="button"
               accessibilityLabel="Back to request code"
             >
-              <Text style={styles.backBtnText}>Back</Text>
+              <AppText style={styles.backBtnText}>Back</AppText>
             </TouchableOpacity>
           </>
         )}

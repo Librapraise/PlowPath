@@ -1,14 +1,16 @@
+import AppText from '../components/AppText';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
+import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, RadialGradient, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import type { RootStackParamList } from '../services/navigation';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import { subscribeToConnectivity, flushAllQueues } from '../services/offline.service';
+import GlassContainer from '../components/GlassContainer';
 
 interface RouteSummary {
   route_id: string;
@@ -123,9 +125,9 @@ export default function RouteScreen({ navigation }: Props) {
   if (!user?.driver_id) {
     return (
       <View style={[styles.center, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
-        <Text style={[styles.heading, { color: isDark ? '#FFF' : '#0F172A' }]}>You are not assigned as a driver.</Text>
+        <AppText style={[styles.heading, { color: isDark ? '#FFF' : '#0F172A' }]}>You are not assigned as a driver.</AppText>
         <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn}>
-          <Text style={styles.secondaryText}>Sign out</Text>
+          <AppText style={styles.secondaryText}>Sign out</AppText>
         </TouchableOpacity>
       </View>
     );
@@ -135,36 +137,80 @@ export default function RouteScreen({ navigation }: Props) {
     const isCompleted = item.status === 'completed';
     const isInProgress = item.status === 'in_progress';
 
-    let statusColor = isDark ? '#64748B' : '#94A3B8';
-    let statusBg = isDark ? 'rgba(100, 116, 139, 0.15)' : 'rgba(148, 163, 184, 0.15)';
+    let statusColor = isDark ? '#38BDF8' : '#0284C7';
+    let statusBg = isDark ? 'rgba(56, 189, 248, 0.1)' : 'rgba(2, 132, 199, 0.08)';
+    let statusBorder = isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.3)';
+
     if (isCompleted) {
       statusColor = '#10B981';
-      statusBg = isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)';
+      statusBg = isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.08)';
+      statusBorder = 'rgba(16, 185, 129, 0.3)';
     } else if (isInProgress) {
       statusColor = '#F97316';
-      statusBg = isDark ? 'rgba(249, 115, 22, 0.15)' : 'rgba(249, 115, 22, 0.1)';
+      statusBg = isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.08)';
+      statusBorder = 'rgba(249, 115, 22, 0.3)';
     }
 
+    // Button gradient definitions
+    const startColor = isDark ? '#06B6D4' : '#3B82F6';
+    const endColor = isDark ? '#3B82F6' : '#1D4ED8';
+
     return (
-      <View style={styles.card}>
+      <GlassContainer style={styles.card} isDark={isDark}>
+        {/* Card refraction glow */}
+        <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          <Defs>
+            <RadialGradient id="cardGlow" cx="20%" cy="20%" rx="55%" ry="55%">
+              <Stop offset="0%" stopColor={isDark ? '#38BDF8' : '#2E75B6'} stopOpacity={isDark ? 0.08 : 0.05} />
+              <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#cardGlow)" rx={16} />
+        </Svg>
+
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{item.route_name}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-            <Text style={[styles.statusBadgeText, { color: statusColor }]}>
+          <View style={styles.cardTitleContainer}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#38BDF8' : '#2E75B6'} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={styles.cardHeaderIcon}>
+              <Rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
+              <Line x1={16} y1={2} x2={16} y2={6} />
+              <Line x1={8} y1={2} x2={8} y2={6} />
+              <Line x1={3} y1={10} x2={21} y2={10} />
+            </Svg>
+            <AppText style={styles.cardTitle}>{item.route_name}</AppText>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusBg, borderColor: statusBorder, borderWidth: 1 }]}>
+            <AppText style={[styles.statusBadgeText, { color: statusColor }]}>
               {item.status.replace('_', ' ').toUpperCase()}
-            </Text>
+            </AppText>
           </View>
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCol}>
-            <Text style={styles.statValue}>{item.stop_count}</Text>
-            <Text style={styles.statLabel}>STOPS</Text>
+          {/* Stops Pod */}
+          <View style={[styles.statPod, { marginRight: 12 }]}>
+            <View style={[styles.statIconBox, { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(46, 117, 182, 0.1)' }]}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#38BDF8' : '#2E75B6'} strokeWidth={2.5}>
+                <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <Circle cx={12} cy={10} r={3} />
+              </Svg>
+            </View>
+            <View style={styles.statInfo}>
+              <AppText style={styles.statValue}>{item.stop_count}</AppText>
+              <AppText style={styles.statLabel}>STOPS</AppText>
+            </View>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statCol}>
-            <Text style={styles.statValue}>{item.total_distance?.toFixed?.(1) ?? '0.0'}</Text>
-            <Text style={styles.statLabel}>MILES</Text>
+
+          {/* Distance Pod */}
+          <View style={styles.statPod}>
+            <View style={[styles.statIconBox, { backgroundColor: isDark ? 'rgba(129, 140, 248, 0.12)' : 'rgba(99, 102, 241, 0.1)' }]}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#818CF8' : '#6366F1'} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+              </Svg>
+            </View>
+            <View style={styles.statInfo}>
+              <AppText style={styles.statValue}>{item.total_distance?.toFixed?.(1) ?? '0.0'}</AppText>
+              <AppText style={styles.statLabel}>MILES</AppText>
+            </View>
           </View>
         </View>
 
@@ -174,11 +220,34 @@ export default function RouteScreen({ navigation }: Props) {
           disabled={isCompleted}
           accessibilityRole="button"
         >
-          <Text style={[styles.primaryText, isCompleted && styles.completedText]}>
-            {isCompleted ? 'Route Completed' : isInProgress ? 'Resume Route' : 'Start Route'}
-          </Text>
+          {!isCompleted && (
+            <>
+              {/* Button Gradient */}
+              <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+                <Defs>
+                  <LinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor={startColor} />
+                    <Stop offset="100%" stopColor={endColor} />
+                  </LinearGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" rx={28} fill="url(#btnGrad)" />
+              </Svg>
+              {/* Glossy top reflection line */}
+              <View style={styles.btnReflection} />
+            </>
+          )}
+          <View style={styles.buttonContent}>
+            <AppText style={[styles.primaryText, isCompleted && styles.completedText]}>
+              {isCompleted ? 'Route Completed' : isInProgress ? 'Resume Route' : 'Start Route'}
+            </AppText>
+            {!isCompleted && (
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#0B0F19' : 'white'} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={styles.arrowIcon}>
+                <Path d="M5 12h14M12 5l7 7-7 7" />
+              </Svg>
+            )}
+          </View>
         </TouchableOpacity>
-      </View>
+      </GlassContainer>
     );
   };
 
@@ -186,19 +255,40 @@ export default function RouteScreen({ navigation }: Props) {
     <View style={styles.container}>
       <OfflineStatusBar />
 
+      {/* Ambient glassmorphism blobs */}
+      <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Defs>
+          <LinearGradient id="screenBg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor={isDark ? '#0B0F19' : '#EEF2F6'} />
+            <Stop offset="100%" stopColor={isDark ? '#080B12' : '#F8FAFC'} />
+          </LinearGradient>
+          <RadialGradient id="grad1" cx="85%" cy="15%" rx="55%" ry="55%">
+            <Stop offset="0%" stopColor={isDark ? '#0284C7' : '#0EA5E9'} stopOpacity={isDark ? 0.18 : 0.15} />
+            <Stop offset="100%" stopColor={isDark ? '#0B0F19' : '#F8FAFC'} stopOpacity="0" />
+          </RadialGradient>
+          <RadialGradient id="grad2" cx="15%" cy="65%" rx="60%" ry="60%">
+            <Stop offset="0%" stopColor={isDark ? '#6366F1' : '#818CF8'} stopOpacity={isDark ? 0.15 : 0.12} />
+            <Stop offset="100%" stopColor={isDark ? '#0B0F19' : '#F8FAFC'} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#screenBg)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
+      </Svg>
+
       {/* Branded Profile Header Area */}
       <View style={styles.headerArea}>
         <View>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.driverName}>{user.name}</Text>
+          <AppText style={styles.welcomeText}>Welcome back,</AppText>
+          <AppText style={styles.driverName}>{user.name}</AppText>
         </View>
         <View style={styles.activeIndicatorBox}>
           <Animated.View style={[styles.greenPulseDot, { opacity: pulseAnim }]} />
-          <Text style={styles.activeText}>Active Shift</Text>
+          <AppText style={styles.activeText}>Active Shift</AppText>
         </View>
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <AppText style={styles.error}>{error}</AppText> : null}
 
       <FlatList
         data={routes ?? []}
@@ -216,7 +306,7 @@ export default function RouteScreen({ navigation }: Props) {
               <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#475569' : '#CBD5E1'} strokeWidth={2}>
                 <Path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4" />
               </Svg>
-              <Text style={styles.muted}>No routes assigned to you today.</Text>
+              <AppText style={styles.muted}>No routes assigned to you today.</AppText>
             </View>
           )
         }
@@ -226,20 +316,20 @@ export default function RouteScreen({ navigation }: Props) {
             {/* Elegant Shift Handover Entry */}
             <View style={styles.handoverPanel}>
               <View style={styles.handoverInfo}>
-                <Text style={styles.handoverTitle}>Shift Handover Console</Text>
-                <Text style={styles.handoverDesc}>Transition route control to another crew driver</Text>
+                <AppText style={styles.handoverTitle}>Shift Handover Console</AppText>
+                <AppText style={styles.handoverDesc}>Transition route control to another crew driver</AppText>
               </View>
               <TouchableOpacity
                 style={styles.handoverBtn}
                 onPress={() => navigation.navigate('ShiftSwap')}
                 accessibilityRole="button"
               >
-                <Text style={styles.handoverBtnText}>Open</Text>
+                <AppText style={styles.handoverBtnText}>Open</AppText>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn} accessibilityRole="button">
-              <Text style={styles.secondaryText}>End Shift</Text>
+              <AppText style={styles.secondaryText}>End Shift</AppText>
             </TouchableOpacity>
           </View>
         }
@@ -265,14 +355,30 @@ const baseStyles = {
     paddingTop: 24,
     paddingBottom: 16,
   },
-  welcomeText: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  driverName: { fontSize: 24, fontWeight: '900', marginTop: 2 },
+  welcomeText: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    textTransform: 'uppercase', 
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.05)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  driverName: { 
+    fontSize: 24, 
+    fontWeight: '900', 
+    marginTop: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.08)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
+  },
   activeIndicatorBox: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 99,
+    borderWidth: 1,
   },
   greenPulseDot: {
     width: 8,
@@ -286,17 +392,22 @@ const baseStyles = {
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  cardTitle: { fontSize: 20, fontWeight: '900', flex: 1, marginRight: 8 },
+  cardTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  cardHeaderIcon: {
+    marginRight: 8,
+  },
+  cardTitle: { fontSize: 20, fontWeight: '900', flex: 1 },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -306,25 +417,58 @@ const baseStyles = {
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 16,
   },
-  statCol: {
+  statPod: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  statValue: { fontSize: 22, fontWeight: '900' },
-  statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 4 },
-  statDivider: { width: 1, height: 28 },
-  primaryBtn: {
-    minHeight: 56,
+    padding: 12,
     borderRadius: 12,
+    borderWidth: 1,
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 2,
+    marginRight: 12,
+  },
+  statInfo: {
+    flexDirection: 'column',
+  },
+  statValue: { fontSize: 22, fontWeight: '900' },
+  statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowIcon: {
+    marginLeft: 8,
+  },
+  primaryBtn: {
+    minHeight: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   primaryText: { color: 'white', fontSize: 17, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  btnReflection: {
+    position: 'absolute',
+    top: 0,
+    left: 16,
+    right: 16,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+  },
   handoverPanel: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -362,21 +506,23 @@ const lightStyles = StyleSheet.create({
   container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
   welcomeText: { ...baseStyles.welcomeText, color: '#64748B' },
   driverName: { ...baseStyles.driverName, color: '#0F172A' },
-  activeIndicatorBox: { ...baseStyles.activeIndicatorBox, backgroundColor: 'rgba(16, 185, 129, 0.1)' },
+  activeIndicatorBox: { 
+    ...baseStyles.activeIndicatorBox, 
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+  },
   muted: { ...baseStyles.muted, color: '#64748B' },
   card: {
     ...baseStyles.card,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
   },
   cardTitle: { ...baseStyles.cardTitle, color: '#0F172A' },
   statValue: { ...baseStyles.statValue, color: '#0F172A' },
   statLabel: { ...baseStyles.statLabel, color: '#64748B' },
-  statDivider: { ...baseStyles.statDivider, backgroundColor: '#E2E8F0' },
+  statPod: {
+    ...baseStyles.statPod,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
   primaryBtn: {
     ...baseStyles.primaryBtn,
     backgroundColor: '#2E75B6',
@@ -421,21 +567,23 @@ const darkStyles = StyleSheet.create({
   container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
   welcomeText: { ...baseStyles.welcomeText, color: '#94A3B8' },
   driverName: { ...baseStyles.driverName, color: '#FFFFFF' },
-  activeIndicatorBox: { ...baseStyles.activeIndicatorBox, backgroundColor: 'rgba(16, 185, 129, 0.15)' },
+  activeIndicatorBox: { 
+    ...baseStyles.activeIndicatorBox, 
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
   muted: { ...baseStyles.muted, color: '#94A3B8' },
   card: {
     ...baseStyles.card,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-    shadowColor: '#000000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
   },
   cardTitle: { ...baseStyles.cardTitle, color: '#FFFFFF' },
   statValue: { ...baseStyles.statValue, color: '#FFFFFF' },
   statLabel: { ...baseStyles.statLabel, color: '#94A3B8' },
-  statDivider: { ...baseStyles.statDivider, backgroundColor: '#334155' },
+  statPod: {
+    ...baseStyles.statPod,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
   primaryBtn: {
     ...baseStyles.primaryBtn,
     backgroundColor: '#38BDF8',

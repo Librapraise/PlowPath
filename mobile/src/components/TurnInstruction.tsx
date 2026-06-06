@@ -1,6 +1,8 @@
+import AppText from './AppText';
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import GlassContainer from './GlassContainer';
 
 interface Props {
   instruction: string;
@@ -69,14 +71,14 @@ export default function TurnInstruction({ instruction, secondary, distanceMi, ma
   }, [distanceMi, opacityAnim]);
 
   return (
-    <View style={styles.container}>
+    <GlassContainer style={styles.container}>
       <View style={styles.contentRow}>
         <View style={styles.textStack}>
-          <Text style={styles.instructionText}>{instruction}</Text>
+          <AppText style={styles.instructionText}>{instruction}</AppText>
           {secondary ? (
-            <Text style={styles.secondaryText} numberOfLines={1} adjustsFontSizeToFit>
+            <AppText style={styles.secondaryText} numberOfLines={1} adjustsFontSizeToFit>
               {secondary}
-            </Text>
+            </AppText>
           ) : null}
           {distanceMi != null && (
             <Animated.Text style={[styles.distanceText, { opacity: opacityAnim }]}>
@@ -91,24 +93,16 @@ export default function TurnInstruction({ instruction, secondary, distanceMi, ma
           </Svg>
         </View>
       </View>
-    </View>
+    </GlassContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1C212A', // Dark sleek background mimicking glassmorphism
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 18,
     marginVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)', // Translucent border stroke
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
   },
   contentRow: {
     flexDirection: 'row',
@@ -123,12 +117,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
     marginBottom: 4,
   },
   secondaryText: {
     fontSize: 26,
     fontWeight: '800',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
     marginBottom: 6,
     letterSpacing: -0.5,
   },

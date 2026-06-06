@@ -1,5 +1,6 @@
+import AppText from '../components/AppText';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Clipboard } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Clipboard } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../services/api';
 import { useSettingsStore } from '../store/settingsStore';
@@ -81,27 +82,27 @@ export default function ShiftSwapScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Part-Time Shift Handover Console</Text>
-      <Text style={styles.subtitle}>
+      <AppText style={styles.title}>Part-Time Shift Handover Console</AppText>
+      <AppText style={styles.subtitle}>
         Seamlessly transition active plowing routes and lock escrow hours securely between drivers.
-      </Text>
+      </AppText>
 
       {/* OUTGOING DRIVER SEGMENT */}
       <View style={styles.card}>
-        <Text style={styles.cardHeader}>1. Leaving Shift? (Outgoing Driver)</Text>
-        <Text style={styles.cardMuted}>
+        <AppText style={styles.cardHeader}>1. Leaving Shift? (Outgoing Driver)</AppText>
+        <AppText style={styles.cardMuted}>
           Generate a secure, short-lived handover token to transfer your current active routes.
-        </Text>
+        </AppText>
         {qrToken ? (
           <View style={styles.qrContainer}>
-            <Text style={styles.qrLabel}>SECURE HANDOVER KEY (ACTIVE 15M):</Text>
+            <AppText style={styles.qrLabel}>SECURE HANDOVER KEY (ACTIVE 15M):</AppText>
             <TouchableOpacity onPress={copyToClipboard} activeOpacity={0.7} style={styles.qrClickable}>
-              <Text style={styles.qrTextDisplay}>{qrToken}</Text>
-              <Text style={styles.qrCopyBadge}>📋 Copy Code</Text>
+              <AppText style={styles.qrTextDisplay}>{qrToken}</AppText>
+              <AppText style={styles.qrCopyBadge}>📋 Copy Code</AppText>
             </TouchableOpacity>
-            <Text style={styles.qrInstruction}>
+            <AppText style={styles.qrInstruction}>
               Tap the code block above to copy it! Share this 6-character code with the incoming driver.
-            </Text>
+            </AppText>
           </View>
         ) : (
           <TouchableOpacity
@@ -112,7 +113,7 @@ export default function ShiftSwapScreen({ navigation }: Props) {
             {isLoading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.btnText}>Generate Handover Token</Text>
+              <AppText style={styles.btnText}>Generate Handover Token</AppText>
             )}
           </TouchableOpacity>
         )}
@@ -120,10 +121,10 @@ export default function ShiftSwapScreen({ navigation }: Props) {
 
       {/* INCOMING DRIVER SEGMENT */}
       <View style={styles.card}>
-        <Text style={styles.cardHeader}>2. Starting Shift? (Incoming Driver)</Text>
-        <Text style={styles.cardMuted}>
+        <AppText style={styles.cardHeader}>2. Starting Shift? (Incoming Driver)</AppText>
+        <AppText style={styles.cardMuted}>
           Enter the outgoing driver's secure handover token to immediately assume their route queue and end their active shift timer.
-        </Text>
+        </AppText>
         <TextInput
           placeholder="Paste outgoing driver's secure key here..."
           placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
@@ -140,13 +141,13 @@ export default function ShiftSwapScreen({ navigation }: Props) {
           {isLoading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.btnText}>Accept Shift & Routes</Text>
+            <AppText style={styles.btnText}>Accept Shift & Routes</AppText>
           )}
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Route')}>
-        <Text style={styles.backBtnText}>Return to Today's Route</Text>
+        <AppText style={styles.backBtnText}>Return to Today's Route</AppText>
       </TouchableOpacity>
     </ScrollView>
   );

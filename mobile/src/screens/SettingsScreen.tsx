@@ -199,7 +199,14 @@ export default function SettingsScreen() {
       accessibilityRole="button"
       accessibilityLabel="Back to settings menu"
     >
-      <Text style={styles.backButtonText}>← Back to Settings</Text>
+      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
+        stroke={isDark ? '#38BDF8' : '#2E75B6'}
+        strokeWidth={2.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <Path d="M19 12H5M12 5l-7 7 7 7" />
+      </Svg>
     </TouchableOpacity>
   );
 
@@ -519,13 +526,14 @@ const baseStyles = {
   menuItemSubtitle: { fontSize: 12, marginTop: 2 },
   backButton: {
     alignSelf: 'flex-start' as any,
-    marginBottom: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    marginBottom: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
   },
-  backButtonText: { fontSize: 13, fontWeight: '700' as any },
   section: {
     borderRadius: 16,
     padding: 16,
@@ -634,9 +642,13 @@ const lightStyles = StyleSheet.create({
   backButton: {
     ...baseStyles.backButton,
     borderColor: '#CBD5E1',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  backButtonText: { ...baseStyles.backButtonText, color: '#475569' },
   section: {
     ...baseStyles.section,
     backgroundColor: '#FFFFFF',
@@ -685,10 +697,14 @@ const darkStyles = StyleSheet.create({
   menuIconWrapper: { ...baseStyles.menuIconWrapper, backgroundColor: '#0F172A' },
   backButton: {
     ...baseStyles.backButton,
-    borderColor: '#475569',
-    backgroundColor: '#0B0F19',
+    borderColor: '#334155',
+    backgroundColor: '#1E293B',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  backButtonText: { ...baseStyles.backButtonText, color: '#94A3B8' },
   section: {
     ...baseStyles.section,
     backgroundColor: '#1E293B',

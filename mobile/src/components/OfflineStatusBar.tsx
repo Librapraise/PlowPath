@@ -1,5 +1,6 @@
+import AppText from './AppText';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { getQueueDepths } from '../services/offline.service';
 
@@ -84,16 +85,16 @@ export default function OfflineStatusBar() {
       <View style={styles.contentRow}>
         <View style={styles.statusDotRow}>
           <View style={[styles.statusDot, isConnected === false ? styles.offlineDot : styles.syncingDot]} />
-          <Text style={styles.statusText}>
+          <AppText style={styles.statusText}>
             {isConnected === false ? 'Working Offline' : 'Syncing Data…'}
-          </Text>
+          </AppText>
         </View>
-        <Text style={styles.queueText}>
+        <AppText style={styles.queueText}>
           {stopCount > 0 ? `⚡ ${stopCount} stop change${stopCount > 1 ? 's' : ''}` : ''}
           {stopCount > 0 && gpsCount > 0 ? ' · ' : ''}
           {gpsCount > 0 ? `📍 ${gpsCount} GPS point${gpsCount > 1 ? 's' : ''}` : ''}
           {!hasPendingItems && isConnected === false ? 'All progress saved locally' : ''}
-        </Text>
+        </AppText>
       </View>
     </Animated.View>
   );

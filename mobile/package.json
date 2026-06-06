@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "android": "react-native run-android",
+    "android": "react-native run-android --appId com.plowpath.mobile",
     "ios": "react-native run-ios",
     "start": "react-native start",
     "typecheck": "tsc --noEmit",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@mauron85/react-native-background-geolocation": "^0.6.3",
     "@react-native-async-storage/async-storage": "^1.21.0",
+    "@react-native-community/blur": "^4.4.1",
     "@react-native-community/netinfo": "^11.2.1",
     "@react-native-firebase/app": "^18.7.3",
     "@react-native-firebase/messaging": "^18.7.3",

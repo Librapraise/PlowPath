@@ -1,5 +1,6 @@
+import AppText from '../components/AppText';
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image, Platform, PermissionsAndroid, Animated, Easing } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView, Modal, ActivityIndicator, Image, Platform, PermissionsAndroid, Animated, Easing } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { launchCamera } from 'react-native-image-picker';
@@ -115,9 +116,9 @@ const ShimmerBadge = ({ isDark, partnerName }: { isDark: boolean; partnerName: s
   return (
     <View style={[styleBadge, { overflow: 'hidden', position: 'relative' }]}>
       <HandshakeIcon color={isDark ? '#818CF8' : '#4F46E5'} />
-      <Text style={styleText}>
+      <AppText style={styleText}>
         Enterprise Partner Job: {partnerName || 'B2B Shared Stop'}
-      </Text>
+      </AppText>
       <Animated.View
         style={{
           position: 'absolute',
@@ -152,6 +153,7 @@ import TurnInstruction from '../components/TurnInstruction';
 import { fetchRouteSteps, OsrmStep } from '../services/osrm.service';
 import { captureException } from '../services/sentry';
 import type { RootStackParamList } from '../services/navigation';
+import GlassContainer from '../components/GlassContainer';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Navigation'>;
 
@@ -570,14 +572,14 @@ export default function NavigationScreen({ route, navigation }: Props) {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.error}>{error}</Text>
+        <AppText style={styles.error}>{error}</AppText>
       </View>
     );
   }
   if (!data || !currentStop) {
     return (
       <View style={styles.container}>
-        <Text style={styles.muted}>{data ? 'Route complete.' : 'Loading…'}</Text>
+        <AppText style={styles.muted}>{data ? 'Route complete.' : 'Loading…'}</AppText>
       </View>
     );
   }
@@ -607,36 +609,36 @@ export default function NavigationScreen({ route, navigation }: Props) {
         />
       )}
 
-      <Text style={styles.stopInfo}>
+      <AppText style={styles.stopInfo}>
         Stop {stepIndex + 1} / {data.stops.length} · Completed {completed}
-      </Text>
+      </AppText>
 
       {/* Access Notes with left-edge border and InfoIcon */}
       {currentStop.access_notes ? (
         <View style={styles.notesBox}>
           <View style={styles.notesHeaderRow}>
             <InfoIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            <Text style={styles.notesHeader}>Access Notes</Text>
+            <AppText style={styles.notesHeader}>Access Notes</AppText>
           </View>
-          <Text style={styles.notes}>{currentStop.access_notes}</Text>
+          <AppText style={styles.notes}>{currentStop.access_notes}</AppText>
         </View>
       ) : null}
 
       {/* External Map Selectors HUD with Brand Logos */}
       <View style={styles.navRow}>
-        <Text style={styles.hudLabel}>Launch HUD Navigation:</Text>
+        <AppText style={styles.hudLabel}>Launch HUD Navigation:</AppText>
         <View style={styles.navButtons}>
           <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('google')} accessibilityRole="button">
             <GoogleMapsIcon />
-            <Text style={styles.navBtnText}>Google</Text>
+            <AppText style={styles.navBtnText}>Google</AppText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('apple')} accessibilityRole="button">
             <AppleMapsIcon />
-            <Text style={styles.navBtnText}>Apple</Text>
+            <AppText style={styles.navBtnText}>Apple</AppText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => launchExternalNav('waze')} accessibilityRole="button">
             <WazeIcon />
-            <Text style={styles.navBtnText}>Waze</Text>
+            <AppText style={styles.navBtnText}>Waze</AppText>
           </TouchableOpacity>
         </View>
       </View>
@@ -652,7 +654,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
               accessibilityRole="button"
             >
               <PlowIcon color="white" />
-              <Text style={styles.btnText}>Mark In Progress</Text>
+              <AppText style={styles.btnText}>Mark In Progress</AppText>
             </TouchableOpacity>
           </Animated.View>
         ) : (
@@ -663,7 +665,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
               accessibilityRole="button"
             >
               <CheckIcon color="white" />
-              <Text style={styles.btnText}>Clear Stop (Mark Complete)</Text>
+              <AppText style={styles.btnText}>Clear Stop (Mark Complete)</AppText>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -676,7 +678,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
             accessibilityRole="button"
           >
             <SkipIcon color={isDark ? '#EF4444' : '#DC2626'} />
-            <Text style={[styles.btnText, { color: isDark ? '#FFFFFF' : '#1E293B', fontSize: 14 }]}>Skip Stop</Text>
+            <AppText style={[styles.btnText, { color: isDark ? '#FFFFFF' : '#1E293B', fontSize: 14 }]}>Skip Stop</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -685,23 +687,23 @@ export default function NavigationScreen({ route, navigation }: Props) {
             accessibilityRole="button"
           >
             <MicIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            <Text style={[styles.btnText, { color: isDark ? '#38BDF8' : '#2E75B6', fontSize: 14 }]}>Voice Control</Text>
+            <AppText style={[styles.btnText, { color: isDark ? '#38BDF8' : '#2E75B6', fontSize: 14 }]}>Voice Control</AppText>
           </TouchableOpacity>
         </View>
 
         {/* Safety Critical Danger Zone (Finalize Route) isolated with 32px gap */}
         <View style={styles.dangerZoneContainer}>
-          <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
-          <Text style={styles.dangerZoneDesc}>
+          <AppText style={styles.dangerZoneTitle}>Danger Zone</AppText>
+          <AppText style={styles.dangerZoneDesc}>
             Accidentally ending the route will finalize escrow hours and skip all remaining stop assignments.
-          </Text>
+          </AppText>
           <TouchableOpacity
             style={[styles.btn, styles.stopRouteBtn, { minHeight: 52 }]}
             onPress={onStopRouteConfirm}
             accessibilityRole="button"
           >
             <AlertIcon color="white" />
-            <Text style={styles.btnText}>Emergency Finalize Route</Text>
+            <AppText style={styles.btnText}>Emergency Finalize Route</AppText>
           </TouchableOpacity>
         </View>
       </View>
@@ -710,15 +712,15 @@ export default function NavigationScreen({ route, navigation }: Props) {
       {isVoiceActive && (
         <Modal transparent animationType="fade" visible={isVoiceActive}>
           <View style={styles.voiceOverlay}>
-            <View style={styles.voiceCard}>
+            <GlassContainer style={styles.voiceCard} isDark={isDark}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <MicIcon color="#38b0f8" />
-                <Text style={styles.voiceTitle}>Voice Command Listening...</Text>
+                <AppText style={styles.voiceTitle}>Voice Command Listening...</AppText>
               </View>
-              <Text style={styles.voiceSub}>"PlowPath, Mark Complete" or "PlowPath, Skip Property"</Text>
+              <AppText style={styles.voiceSub}>"PlowPath, Mark Complete" or "PlowPath, Skip Property"</AppText>
               <ActivityIndicator size="large" color="#38b0f8" style={{ marginVertical: 15 }} />
-              <Text style={styles.voiceTranscript}>{voiceTranscript}</Text>
-            </View>
+              <AppText style={styles.voiceTranscript}>{voiceTranscript}</AppText>
+            </GlassContainer>
           </View>
         </Modal>
       )}
@@ -726,42 +728,42 @@ export default function NavigationScreen({ route, navigation }: Props) {
       {/* Proof of Service completion modal with local high-performance compression progress bar */}
       <Modal transparent animationType="slide" visible={proofModalOpen} onRequestClose={() => setProofModalOpen(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Liability Protection Proof of Service</Text>
-            <Text style={styles.modalSub}>
+          <GlassContainer style={styles.modalCard} isDark={isDark}>
+            <AppText style={styles.modalTitle}>Liability Protection Proof of Service</AppText>
+            <AppText style={styles.modalSub}>
               Take a photo of the completed driveway. Photos are automatically compressed locally under 200KB before secure escrow upload.
-            </Text>
+            </AppText>
 
             {capturedPhotoUrl ? (
               <View style={styles.photoPreviewBox}>
                 <Image source={{ uri: capturedPhotoUrl }} style={styles.photoPreview as any} />
-                <Text style={styles.compressionStat}>
-                  ⚡ Compressed successfully: <Text style={{ color: '#10b981', fontWeight: '900' }}>146 KB</Text> (Optimized)
-                </Text>
+                <AppText style={styles.compressionStat}>
+                  ⚡ Compressed successfully: <AppText style={{ color: '#10b981', fontWeight: '900' }}>146 KB</AppText> (Optimized)
+                </AppText>
               </View>
             ) : (
               <View style={styles.cameraTriggerBox}>
                 {isCapturing ? (
                   <View style={styles.cameraSim}>
-                    <Text style={styles.cameraText}>Opening high-contrast camera shroud...</Text>
+                    <AppText style={styles.cameraText}>Opening high-contrast camera shroud...</AppText>
                     <ActivityIndicator size="small" color="white" />
                   </View>
                 ) : isCompressing ? (
                   <View style={styles.cameraSim}>
-                    <Text style={styles.cameraText}>Compressing Image File ({compressionProgress}%)</Text>
+                    <AppText style={styles.cameraText}>Compressing Image File ({compressionProgress}%)</AppText>
                     <View style={styles.progressBarBg}>
                       <View style={[styles.progressBarFill, { width: `${compressionProgress}%` }]} />
                     </View>
                   </View>
                 ) : isUploading ? (
                   <View style={styles.cameraSim}>
-                    <Text style={styles.cameraText}>Securing Stripe Connect Escrow release...</Text>
+                    <AppText style={styles.cameraText}>Securing Stripe Connect Escrow release...</AppText>
                     <ActivityIndicator size="small" color="#38b0f8" />
                   </View>
                 ) : (
                   <TouchableOpacity style={styles.cameraBtn} onPress={simulatePhotoCapture}>
                     <CameraIcon color="white" />
-                    <Text style={styles.cameraBtnText}>Snap Clearing Proof Photo</Text>
+                    <AppText style={styles.cameraBtnText}>Snap Clearing Proof Photo</AppText>
                   </TouchableOpacity>
                 )}
               </View>
@@ -769,17 +771,17 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setProofModalOpen(false)}>
-                <Text style={styles.cancelModalText}>Cancel</Text>
+                <AppText style={styles.cancelModalText}>Cancel</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmModalBtn, !capturedPhotoUrl && styles.disabledModalBtn]}
                 onPress={() => onMarkComplete(currentStop)}
                 disabled={!capturedPhotoUrl}
               >
-                <Text style={styles.confirmModalText}>Clear Stop & Release Escrow</Text>
+                <AppText style={styles.confirmModalText}>Clear Stop & Release Escrow</AppText>
               </TouchableOpacity>
             </View>
-          </View>
+          </GlassContainer>
         </View>
       </Modal>
     </ScrollView>
@@ -840,13 +842,25 @@ const baseStyles = {
   },
   navBtnText: { fontSize: 12, fontWeight: '800' },
   buttonRow: { marginTop: 24, gap: 12 },
-  btn: { minHeight: 64, borderRadius: 12, alignItems: 'center' as any, justifyContent: 'center' as any, flexDirection: 'row' as any },
-  primaryBtn: { backgroundColor: '#F97316' }, // orange in progress
-  successBtn: { backgroundColor: '#10B981' }, // green complete
+  btn: {
+    minHeight: 64,
+    borderRadius: 18,
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
+    flexDirection: 'row' as any,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  primaryBtn: { backgroundColor: '#F97316', shadowColor: '#F97316' }, // orange in progress
+  successBtn: { backgroundColor: '#10B981', shadowColor: '#10B981' }, // green complete
   skipBtn: { borderWidth: 1.5 },
   voiceTriggerBtn: { borderWidth: 1.5 },
-  stopRouteBtn: { backgroundColor: '#EF4444' },
-  btnText: { color: 'white', fontSize: 16, fontWeight: '900' },
+  stopRouteBtn: { backgroundColor: '#EF4444', shadowColor: '#EF4444' },
+  btnText: { color: 'white', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
   
   // Redesign custom additions
   primaryGlowContainer: { borderRadius: 12 },
@@ -906,10 +920,16 @@ const baseStyles = {
   cameraBtn: {
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 18,
     flexDirection: 'row' as any,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   cameraBtnText: { color: 'white', fontSize: 14, fontWeight: '900' },
   cameraSim: { alignItems: 'center', gap: 10 },
@@ -934,7 +954,7 @@ const baseStyles = {
   cancelModalBtn: {
     flex: 1,
     minHeight: 52,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -944,12 +964,19 @@ const baseStyles = {
     flex: 2,
     minHeight: 52,
     backgroundColor: '#10B981',
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   disabledModalBtn: { opacity: 0.4 },
-  confirmModalText: { color: 'white', fontSize: 14, fontWeight: '900' },
+  confirmModalText: { color: 'white', fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
 };
 
 const lightStyles = StyleSheet.create({
@@ -1001,13 +1028,9 @@ const lightStyles = StyleSheet.create({
   dangerZoneDesc: { ...baseStyles.dangerZoneDesc, color: '#64748B' },
   voiceCard: {
     ...baseStyles.voiceCard,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
   },
   modalCard: {
     ...baseStyles.modalCard,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
   },
   modalTitle: { ...baseStyles.modalTitle, color: '#0F172A' },
   modalSub: { ...baseStyles.modalSub, color: '#64748B' },
@@ -1081,13 +1104,9 @@ const darkStyles = StyleSheet.create({
   dangerZoneDesc: { ...baseStyles.dangerZoneDesc, color: '#94A3B8' },
   voiceCard: {
     ...baseStyles.voiceCard,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
   },
   modalCard: {
     ...baseStyles.modalCard,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
   },
   modalTitle: { ...baseStyles.modalTitle, color: '#FFFFFF' },
   modalSub: { ...baseStyles.modalSub, color: '#94A3B8' },

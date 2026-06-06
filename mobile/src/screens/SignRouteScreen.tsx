@@ -1,5 +1,6 @@
+import AppText from '../components/AppText';
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { api } from '../services/api';
 import { useSettingsStore } from '../store/settingsStore';
 import OfflineStatusBar from '../components/OfflineStatusBar';
@@ -70,7 +71,7 @@ export default function SignRouteScreen() {
     <View style={styles.container}>
       <OfflineStatusBar />
 
-      <Text style={styles.header}>Sign Crew</Text>
+      <AppText style={styles.header}>Sign Crew</AppText>
 
       {/* Header Controls */}
       <View style={styles.tabContainer}>
@@ -78,17 +79,17 @@ export default function SignRouteScreen() {
           style={[styles.tabButton, action === 'install' && styles.activeTab]}
           onPress={() => setAction('install')}
         >
-          <Text style={[styles.tabText, action === 'install' && styles.activeTabText]}>
+          <AppText style={[styles.tabText, action === 'install' && styles.activeTabText]}>
             Install Signs
-          </Text>
+          </AppText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, action === 'remove' && styles.activeTab]}
           onPress={() => setAction('remove')}
         >
-          <Text style={[styles.tabText, action === 'remove' && styles.activeTabText]}>
+          <AppText style={[styles.tabText, action === 'remove' && styles.activeTabText]}>
             Remove Signs
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
 
@@ -97,29 +98,29 @@ export default function SignRouteScreen() {
         <View style={styles.statsCard}>
           <View style={styles.statRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>STOPS TO GO</Text>
-              <Text style={styles.statVal}>{routeData.stops.length}</Text>
+              <AppText style={styles.statLabel}>STOPS TO GO</AppText>
+              <AppText style={styles.statVal}>{routeData.stops.length}</AppText>
             </View>
             <View style={styles.divider} />
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>DISTANCE</Text>
-              <Text style={styles.statVal}>{routeData.total_miles} mi</Text>
+              <AppText style={styles.statLabel}>DISTANCE</AppText>
+              <AppText style={styles.statVal}>{routeData.total_miles} mi</AppText>
             </View>
             <View style={styles.divider} />
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>PROGRESS</Text>
-              <Text style={styles.statVal}>{routeData.progress}%</Text>
+              <AppText style={styles.statLabel}>PROGRESS</AppText>
+              <AppText style={styles.statVal}>{routeData.progress}%</AppText>
             </View>
           </View>
         </View>
       )}
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <AppText style={styles.errorText}>{error}</AppText>}
 
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#2E75B6'} />
-          <Text style={styles.loadingText}>Calculating optimized TSP route...</Text>
+          <AppText style={styles.loadingText}>Calculating optimized TSP route...</AppText>
         </View>
       ) : (
         <FlatList
@@ -127,26 +128,26 @@ export default function SignRouteScreen() {
           keyExtractor={(s) => s.customer_id}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>
+            <AppText style={styles.emptyText}>
               All properties are completed for this off-season sign operation!
-            </Text>
+            </AppText>
           }
           renderItem={({ item }) => (
             <View style={styles.stopCard}>
               <View style={styles.stopHeader}>
                 <View style={styles.seqBadge}>
-                  <Text style={styles.seqText}>{item.sequence_number}</Text>
+                  <AppText style={styles.seqText}>{item.sequence_number}</AppText>
                 </View>
                 <View style={styles.metaCol}>
-                  <Text style={styles.stopName}>{item.name}</Text>
-                  <Text style={styles.stopAddr}>{item.address}</Text>
+                  <AppText style={styles.stopName}>{item.name}</AppText>
+                  <AppText style={styles.stopAddr}>{item.address}</AppText>
                 </View>
               </View>
 
               <View style={styles.actionRow}>
-                <Text style={styles.statusLabel}>
+                <AppText style={styles.statusLabel}>
                   Status:{' '}
-                  <Text
+                  <AppText
                     style={[
                       styles.statusVal,
                       {
@@ -162,8 +163,8 @@ export default function SignRouteScreen() {
                     ]}
                   >
                     {item.sign_status.replace('_', ' ').toUpperCase()}
-                  </Text>
-                </Text>
+                  </AppText>
+                </AppText>
 
                 {action === 'install' ? (
                   <TouchableOpacity
@@ -174,7 +175,7 @@ export default function SignRouteScreen() {
                     {updatingId === item.customer_id ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
-                      <Text style={styles.btnText}>Mark Installed</Text>
+                      <AppText style={styles.btnText}>Mark Installed</AppText>
                     )}
                   </TouchableOpacity>
                 ) : (
@@ -186,7 +187,7 @@ export default function SignRouteScreen() {
                     {updatingId === item.customer_id ? (
                       <ActivityIndicator size="small" color="white" />
                     ) : (
-                      <Text style={styles.btnText}>Mark Removed</Text>
+                      <AppText style={styles.btnText}>Mark Removed</AppText>
                     )}
                   </TouchableOpacity>
                 )}
