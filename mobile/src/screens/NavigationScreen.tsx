@@ -136,7 +136,29 @@ const ShimmerBadge = ({ isDark, partnerName }: { isDark: boolean; partnerName: s
   );
 };
 
-import * as turf from '@turf/turf';
+function haversineDistance(
+  coord1: [number, number],
+  coord2: [number, number],
+  units: 'meters' | 'miles',
+): number {
+  const lon1 = coord1[0];
+  const lat1 = coord1[1];
+  const lon2 = coord2[0];
+  const lat2 = coord2[1];
+
+  const R = units === 'miles' ? 3958.8 : 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import {
@@ -198,55 +220,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
   const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Pulse animation for arrival radius
-  const isWithinRadius = distanceMi !== null && (distanceMi * 1609.34) <= ARRIVAL_RADIUS_M;
-  const glowAnim = useRef(new Animated.Value(0.4)).current;
 
-  useEffect(() => {
-    let animation: Animated.CompositeAnimation | null = null;
-    if (isWithinRadius) {
-      animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 1.0,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: false,
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0.4,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: false,
-          }),
-        ])
-      );
-      animation.start();
-    } else {
-      glowAnim.setValue(0);
-    }
-    return () => {
-      if (animation) animation.stop();
-    };
-  }, [isWithinRadius, glowAnim]);
-
-  const primaryGlowStyle = isWithinRadius
-    ? {
-        shadowColor: isDark ? '#38BDF8' : '#10B981',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: glowAnim,
-        shadowRadius: glowAnim.interpolate({
-          inputRange: [0.4, 1.0],
-          outputRange: [6, 16],
-        }),
-        elevation: glowAnim.interpolate({
-          inputRange: [0.4, 1.0],
-          outputRange: [3, 8],
-        }),
-        borderColor: isDark ? '#38BDF8' : '#10B981',
-        borderWidth: 1.5,
-      }
-    : {};
 
   // Load route: prefer server (download); fall back to cached offline copy.
   useEffect(() => {
@@ -329,10 +303,10 @@ export default function NavigationScreen({ route, navigation }: Props) {
        });
     } else if (routeStepsRef.current.length > 0 && currentStepIndexRef.current < routeStepsRef.current.length) {
        const step = routeStepsRef.current[currentStepIndexRef.current];
-       const stepDist = turf.distance(
-         turf.point([sample.lon, sample.lat]),
-         turf.point(step.maneuver.location),
-         { units: 'meters' }
+       const stepDist = haversineDistance(
+         [sample.lon, sample.lat],
+         step.maneuver.location,
+         'meters'
        );
        if (stepDist < 25 && currentStepIndexRef.current < routeStepsRef.current.length - 1) {
           currentStepIndexRef.current += 1;
@@ -340,10 +314,10 @@ export default function NavigationScreen({ route, navigation }: Props) {
        }
     }
 
-    const meters = turf.distance(
-      turf.point([sample.lon, sample.lat]),
-      turf.point([stop.lon, stop.lat]),
-      { units: 'meters' },
+    const meters = haversineDistance(
+      [sample.lon, sample.lat],
+      [stop.lon, stop.lat],
+      'meters'
     );
     setDistanceMi(meters / 1609.34);
     if (meters <= ARRIVAL_RADIUS_M && stop.status === 'pending') {
@@ -595,7 +569,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
       <TurnInstruction
         instruction={activeStep?.maneuver.type === 'arrive' ? 'Arriving at' : (activeStep?.maneuver.modifier ? `Turn ${activeStep.maneuver.modifier}` : activeStep?.maneuver.type || 'Drive to')}
         secondary={activeStep?.name || currentStop.address || currentStop.name}
-        distanceMi={activeStep && currentLocation ? turf.distance(turf.point([currentLocation.lon, currentLocation.lat]), turf.point(activeStep.maneuver.location), { units: 'miles' }) : distanceMi}
+        distanceMi={activeStep && currentLocation ? haversineDistance([currentLocation.lon, currentLocation.lat], activeStep.maneuver.location, 'miles') : distanceMi}
         maneuverModifier={activeStep?.maneuver.modifier}
       />
 
@@ -645,29 +619,24 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
       {/* Glove-friendly oversized buttons console */}
       <View style={styles.buttonRow}>
-        {/* Primary CTA (Mark In Progress / Clear Stop) with Pulsing Glow on Arrival */}
         {currentStop.status === 'pending' ? (
-          <Animated.View style={[styles.primaryGlowContainer, primaryGlowStyle]}>
-            <TouchableOpacity
-              style={[styles.btn, styles.primaryBtn, { minHeight: 64 }]}
-              onPress={() => onMarkInProgress(currentStop)}
-              accessibilityRole="button"
-            >
-              <PlowIcon color="white" />
-              <AppText style={styles.btnText}>Mark In Progress</AppText>
-            </TouchableOpacity>
-          </Animated.View>
+          <TouchableOpacity
+            style={[styles.btn, styles.primaryBtn, { minHeight: 64 }]}
+            onPress={() => onMarkInProgress(currentStop)}
+            accessibilityRole="button"
+          >
+            <PlowIcon color="white" />
+            <AppText style={styles.btnText}>Mark In Progress</AppText>
+          </TouchableOpacity>
         ) : (
-          <Animated.View style={[styles.primaryGlowContainer, primaryGlowStyle]}>
-            <TouchableOpacity
-              style={[styles.btn, styles.successBtn, { minHeight: 64 }]}
-              onPress={() => onTriggerMarkComplete(currentStop)}
-              accessibilityRole="button"
-            >
-              <CheckIcon color="white" />
-              <AppText style={styles.btnText}>Clear Stop (Mark Complete)</AppText>
-            </TouchableOpacity>
-          </Animated.View>
+          <TouchableOpacity
+            style={[styles.btn, styles.successBtn, { minHeight: 64 }]}
+            onPress={() => onTriggerMarkComplete(currentStop)}
+            accessibilityRole="button"
+          >
+            <CheckIcon color="white" />
+            <AppText style={styles.btnText}>Clear Stop (Mark Complete)</AppText>
+          </TouchableOpacity>
         )}
 
         {/* Secondary CTAs (Skip Property & Glove Voice Control side-by-side) */}
@@ -848,18 +817,12 @@ const baseStyles = {
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
     flexDirection: 'row' as any,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
   },
-  primaryBtn: { backgroundColor: '#F97316', shadowColor: '#F97316' }, // orange in progress
-  successBtn: { backgroundColor: '#10B981', shadowColor: '#10B981' }, // green complete
+  primaryBtn: { backgroundColor: '#F97316' }, // orange in progress
+  successBtn: { backgroundColor: '#10B981' }, // green complete
   skipBtn: { borderWidth: 1.5 },
   voiceTriggerBtn: { borderWidth: 1.5 },
-  stopRouteBtn: { backgroundColor: '#EF4444', shadowColor: '#EF4444' },
+  stopRouteBtn: { backgroundColor: '#EF4444' },
   btnText: { color: 'white', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
   
   // Redesign custom additions
@@ -924,12 +887,6 @@ const baseStyles = {
     flexDirection: 'row' as any,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
   },
   cameraBtnText: { color: 'white', fontSize: 14, fontWeight: '900' },
   cameraSim: { alignItems: 'center', gap: 10 },
@@ -967,13 +924,6 @@ const baseStyles = {
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
   },
   disabledModalBtn: { opacity: 0.4 },
   confirmModalText: { color: 'white', fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
@@ -1016,7 +966,7 @@ const lightStyles = StyleSheet.create({
   },
   voiceTriggerBtn: {
     ...baseStyles.voiceTriggerBtn,
-    backgroundColor: 'rgba(46, 117, 182, 0.06)',
+    backgroundColor: '#ECF2F8',
     borderColor: '#2E75B6',
   },
   dangerZoneContainer: {
@@ -1092,7 +1042,7 @@ const darkStyles = StyleSheet.create({
   },
   voiceTriggerBtn: {
     ...baseStyles.voiceTriggerBtn,
-    backgroundColor: 'rgba(56, 176, 248, 0.12)',
+    backgroundColor: '#102434',
     borderColor: '#38BDF8',
   },
   dangerZoneContainer: {

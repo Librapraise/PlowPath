@@ -141,7 +141,7 @@ export default function ShiftSwapScreen({ navigation }: Props) {
           {isLoading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <AppText style={styles.btnText}>Accept Shift & Routes</AppText>
+            <AppText style={[styles.btnText, { color: 'white' }]}>Accept Shift & Routes</AppText>
           )}
         </TouchableOpacity>
       </View>
@@ -173,9 +173,6 @@ const baseStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 1,
   },
   primaryBtn: { backgroundColor: '#38BDF8' },
   successBtn: { backgroundColor: '#10B981' },

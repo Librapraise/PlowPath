@@ -15,7 +15,7 @@ const App = function App() {
 
   useEffect(() => {
     // Register FCM foreground/background handlers so incoming push
-    // notifications get logged to AsyncStorage (visible in the Inbox screen).
+    // notifications get logged to AsyncStorage (visible in the Notifications screen).
     const unsubscribe = pushService.registerNotificationHandlers();
     return unsubscribe;
   }, []);

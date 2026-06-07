@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Circle, Defs, RadialGradient, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -157,17 +157,6 @@ export default function RouteScreen({ navigation }: Props) {
 
     return (
       <GlassContainer style={styles.card} isDark={isDark}>
-        {/* Card refraction glow */}
-        <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          <Defs>
-            <RadialGradient id="cardGlow" cx="20%" cy="20%" rx="55%" ry="55%">
-              <Stop offset="0%" stopColor={isDark ? '#38BDF8' : '#2E75B6'} stopOpacity={isDark ? 0.08 : 0.05} />
-              <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#cardGlow)" rx={16} />
-        </Svg>
-
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleContainer}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#38BDF8' : '#2E75B6'} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={styles.cardHeaderIcon}>
@@ -220,28 +209,12 @@ export default function RouteScreen({ navigation }: Props) {
           disabled={isCompleted}
           accessibilityRole="button"
         >
-          {!isCompleted && (
-            <>
-              {/* Button Gradient */}
-              <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
-                <Defs>
-                  <LinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0%" stopColor={startColor} />
-                    <Stop offset="100%" stopColor={endColor} />
-                  </LinearGradient>
-                </Defs>
-                <Rect x="0" y="0" width="100%" height="100%" rx={28} fill="url(#btnGrad)" />
-              </Svg>
-              {/* Glossy top reflection line */}
-              <View style={styles.btnReflection} />
-            </>
-          )}
           <View style={styles.buttonContent}>
             <AppText style={[styles.primaryText, isCompleted && styles.completedText]}>
               {isCompleted ? 'Route Completed' : isInProgress ? 'Resume Route' : 'Start Route'}
             </AppText>
             {!isCompleted && (
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#0B0F19' : 'white'} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={styles.arrowIcon}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={styles.arrowIcon}>
                 <Path d="M5 12h14M12 5l7 7-7 7" />
               </Svg>
             )}
@@ -258,22 +231,22 @@ export default function RouteScreen({ navigation }: Props) {
       {/* Ambient glassmorphism blobs */}
       <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
         <Defs>
-          <LinearGradient id="screenBg" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor={isDark ? '#0B0F19' : '#EEF2F6'} />
-            <Stop offset="100%" stopColor={isDark ? '#080B12' : '#F8FAFC'} />
-          </LinearGradient>
-          <RadialGradient id="grad1" cx="85%" cy="15%" rx="55%" ry="55%">
-            <Stop offset="0%" stopColor={isDark ? '#0284C7' : '#0EA5E9'} stopOpacity={isDark ? 0.18 : 0.15} />
-            <Stop offset="100%" stopColor={isDark ? '#0B0F19' : '#F8FAFC'} stopOpacity="0" />
+          <RadialGradient id="grad1" cx="90%" cy="10%" rx="75%" ry="75%">
+            <Stop offset="0%" stopColor={isDark ? '#00D2FF' : '#0EA5E9'} stopOpacity={isDark ? 0.35 : 0.22} />
+            <Stop offset="100%" stopColor={isDark ? '#00D2FF' : '#0EA5E9'} stopOpacity={0} />
           </RadialGradient>
-          <RadialGradient id="grad2" cx="15%" cy="65%" rx="60%" ry="60%">
-            <Stop offset="0%" stopColor={isDark ? '#6366F1' : '#818CF8'} stopOpacity={isDark ? 0.15 : 0.12} />
-            <Stop offset="100%" stopColor={isDark ? '#0B0F19' : '#F8FAFC'} stopOpacity="0" />
+          <RadialGradient id="grad2" cx="10%" cy="80%" rx="80%" ry="80%">
+            <Stop offset="0%" stopColor={isDark ? '#7928CA' : '#C084FC'} stopOpacity={isDark ? 0.30 : 0.18} />
+            <Stop offset="100%" stopColor={isDark ? '#7928CA' : '#C084FC'} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="grad3" cx="80%" cy="45%" rx="65%" ry="65%">
+            <Stop offset="0%" stopColor={isDark ? '#FF007A' : '#FDA4AF'} stopOpacity={isDark ? 0.16 : 0.12} />
+            <Stop offset="100%" stopColor={isDark ? '#FF007A' : '#FDA4AF'} stopOpacity={0} />
           </RadialGradient>
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#screenBg)" />
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad3)" />
       </Svg>
 
       {/* Branded Profile Header Area */}
@@ -355,18 +328,18 @@ const baseStyles = {
     paddingTop: 24,
     paddingBottom: 16,
   },
-  welcomeText: { 
-    fontSize: 13, 
-    fontWeight: '700', 
-    textTransform: 'uppercase', 
+  welcomeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
     letterSpacing: 1,
     textShadowColor: 'rgba(0, 0, 0, 0.05)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  driverName: { 
-    fontSize: 24, 
-    fontWeight: '900', 
+  driverName: {
+    fontSize: 24,
+    fontWeight: '900',
     marginTop: 2,
     textShadowColor: 'rgba(0, 0, 0, 0.08)',
     textShadowOffset: { width: 0, height: 2 },
@@ -390,8 +363,8 @@ const baseStyles = {
   activeText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, color: '#10B981' },
   card: {
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -407,38 +380,38 @@ const baseStyles = {
   cardHeaderIcon: {
     marginRight: 8,
   },
-  cardTitle: { fontSize: 20, fontWeight: '900', flex: 1 },
+  cardTitle: { fontSize: 18, fontWeight: '900', flex: 1 },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
   },
   statusBadgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 10,
   },
   statPod: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 8,
     borderRadius: 12,
     borderWidth: 1,
   },
   statIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 8,
   },
   statInfo: {
     flexDirection: 'column',
   },
-  statValue: { fontSize: 22, fontWeight: '900' },
+  statValue: { fontSize: 18, fontWeight: '900' },
   statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
   buttonContent: {
     flexDirection: 'row',
@@ -449,26 +422,14 @@ const baseStyles = {
     marginLeft: 8,
   },
   primaryBtn: {
-    minHeight: 56,
-    borderRadius: 28,
+    minHeight: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
+    overflow: 'hidden',
+    marginTop: 12,
   },
-  primaryText: { color: 'white', fontSize: 17, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
-  btnReflection: {
-    position: 'absolute',
-    top: 0,
-    left: 16,
-    right: 16,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
-  },
+  primaryText: { color: 'white', fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   handoverPanel: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -492,8 +453,8 @@ const baseStyles = {
   },
   handoverBtnText: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   secondaryBtn: {
-    minHeight: 56,
-    borderRadius: 16,
+    minHeight: 48,
+    borderRadius: 24,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -506,8 +467,8 @@ const lightStyles = StyleSheet.create({
   container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
   welcomeText: { ...baseStyles.welcomeText, color: '#64748B' },
   driverName: { ...baseStyles.driverName, color: '#0F172A' },
-  activeIndicatorBox: { 
-    ...baseStyles.activeIndicatorBox, 
+  activeIndicatorBox: {
+    ...baseStyles.activeIndicatorBox,
     backgroundColor: 'rgba(16, 185, 129, 0.08)',
     borderColor: 'rgba(16, 185, 129, 0.25)',
   },
@@ -526,15 +487,9 @@ const lightStyles = StyleSheet.create({
   primaryBtn: {
     ...baseStyles.primaryBtn,
     backgroundColor: '#2E75B6',
-    shadowColor: '#2E75B6',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
   },
   completedBtn: {
     backgroundColor: '#E2E8F0',
-    shadowOpacity: 0,
-    elevation: 0,
   },
   completedText: {
     color: '#94A3B8',
@@ -567,8 +522,8 @@ const darkStyles = StyleSheet.create({
   container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
   welcomeText: { ...baseStyles.welcomeText, color: '#94A3B8' },
   driverName: { ...baseStyles.driverName, color: '#FFFFFF' },
-  activeIndicatorBox: { 
-    ...baseStyles.activeIndicatorBox, 
+  activeIndicatorBox: {
+    ...baseStyles.activeIndicatorBox,
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
     borderColor: 'rgba(16, 185, 129, 0.3)',
   },
@@ -586,17 +541,11 @@ const darkStyles = StyleSheet.create({
   },
   primaryBtn: {
     ...baseStyles.primaryBtn,
-    backgroundColor: '#38BDF8',
-    shadowColor: '#38BDF8',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: '#0284C7',
   },
-  primaryText: { ...baseStyles.primaryText, color: '#0B0F19' },
+  primaryText: { ...baseStyles.primaryText, color: 'white' },
   completedBtn: {
     backgroundColor: '#334155',
-    shadowOpacity: 0,
-    elevation: 0,
   },
   completedText: {
     color: '#64748B',
@@ -613,9 +562,9 @@ const darkStyles = StyleSheet.create({
   handoverDesc: { ...baseStyles.handoverDesc, color: '#94A3B8' },
   handoverBtn: {
     ...baseStyles.handoverBtn,
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#334155',
   },
-  handoverBtnText: { ...baseStyles.handoverBtnText, color: '#0B0F19' },
+  handoverBtnText: { ...baseStyles.handoverBtnText, color: 'white' },
   secondaryBtn: {
     ...baseStyles.secondaryBtn,
     backgroundColor: 'rgba(244, 63, 94, 0.1)',

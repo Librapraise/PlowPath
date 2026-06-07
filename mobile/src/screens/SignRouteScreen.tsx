@@ -228,13 +228,7 @@ const baseStyles = {
     height: 46, // inner segment height
     justifyContent: 'center',
   },
-  activeTab: {
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
+  activeTab: {},
   tabText: { fontSize: 14, fontWeight: '800' },
   activeTabText: { color: 'white' },
   statsCard: {

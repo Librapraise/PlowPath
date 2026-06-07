@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Rect, Stop, RadialGradient, Defs } from 'react-native-svg';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore, type DriverSettings } from '../store/settingsStore';
 import { flushAllQueues, getQueueDepths } from '../services/offline.service';
@@ -77,7 +77,6 @@ export default function SettingsScreen() {
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
   useEffect(() => {
-    // Fetch settings on load
     fetchSettings();
     updateQueueDepths();
   }, []);
@@ -192,318 +191,353 @@ export default function SettingsScreen() {
   const isDark = settings.theme === 'dark';
   const styles = isDark ? darkStyles : lightStyles;
 
-  const renderBackButton = () => (
-    <TouchableOpacity
-      style={styles.backButton}
-      onPress={() => setActiveScreen('menu')}
-      accessibilityRole="button"
-      accessibilityLabel="Back to settings menu"
-    >
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-        stroke={isDark ? '#38BDF8' : '#2E75B6'}
-        strokeWidth={2.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <Path d="M19 12H5M12 5l-7 7 7 7" />
-      </Svg>
-    </TouchableOpacity>
-  );
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.header}>Settings</Text>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    <View style={{ flex: 1 }}>
+      {/* Background SVG mesh gradient */}
+      <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <Defs>
+          <RadialGradient id="grad1" cx="90%" cy="10%" rx="75%" ry="75%">
+            <Stop offset="0%" stopColor={isDark ? '#00D2FF' : '#0EA5E9'} stopOpacity={isDark ? 0.35 : 0.22} />
+            <Stop offset="100%" stopColor={isDark ? '#00D2FF' : '#0EA5E9'} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="grad2" cx="10%" cy="80%" rx="80%" ry="80%">
+            <Stop offset="0%" stopColor={isDark ? '#7928CA' : '#C084FC'} stopOpacity={isDark ? 0.30 : 0.18} />
+            <Stop offset="100%" stopColor={isDark ? '#7928CA' : '#C084FC'} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="grad3" cx="80%" cy="45%" rx="65%" ry="65%">
+            <Stop offset="0%" stopColor={isDark ? '#FF007A' : '#FDA4AF'} stopOpacity={isDark ? 0.16 : 0.12} />
+            <Stop offset="100%" stopColor={isDark ? '#FF007A' : '#FDA4AF'} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad3)" />
+      </Svg>
 
-      {activeScreen === 'menu' && (
-        <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => setActiveScreen('visual')}
-          >
-            <View style={styles.menuIconWrapper}>
-              <VisualIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            </View>
-            <View style={styles.menuItemTextContainer}>
-              <Text style={styles.menuItemTitle}>Visual Preference</Text>
-              <Text style={styles.menuItemSubtitle}>Dark mode & glare preferences</Text>
-            </View>
-            <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
-          </TouchableOpacity>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {activeScreen === 'menu' ? (
+          <Text style={styles.header}>Settings</Text>
+        ) : (
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.headerBackBtn}
+              onPress={() => setActiveScreen('menu')}
+              accessibilityRole="button"
+              accessibilityLabel="Back to settings menu"
+            >
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none"
+                stroke={isDark ? '#38BDF8' : '#2E75B6'}
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <Path d="M19 12H5M12 5l-7 7 7 7" />
+              </Svg>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              {activeScreen === 'visual' && 'Visual Preference'}
+              {activeScreen === 'navigation' && 'Default Navigation'}
+              {activeScreen === 'gps' && 'GPS & Battery'}
+              {activeScreen === 'queue' && 'Sync & Cache'}
+              {activeScreen === 'security' && 'Account Security'}
+            </Text>
+          </View>
+        )}
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => setActiveScreen('navigation')}
-          >
-            <View style={styles.menuIconWrapper}>
-              <NavIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            </View>
-            <View style={styles.menuItemTextContainer}>
-              <Text style={styles.menuItemTitle}>Default Navigation App</Text>
-              <Text style={styles.menuItemSubtitle}>Choose Google Maps, Waze, etc.</Text>
-            </View>
-            <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
-          </TouchableOpacity>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => setActiveScreen('gps')}
-          >
-            <View style={styles.menuIconWrapper}>
-              <GpsIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            </View>
-            <View style={styles.menuItemTextContainer}>
-              <Text style={styles.menuItemTitle}>GPS Telemetry & Battery</Text>
-              <Text style={styles.menuItemSubtitle}>Accuracy and sync frequencies</Text>
-            </View>
-            <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
-          </TouchableOpacity>
+        {activeScreen === 'menu' && (
+          <View style={styles.menuContainer}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setActiveScreen('visual')}
+            >
+              <View style={styles.menuIconWrapper}>
+                <VisualIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+              </View>
+              <View style={styles.menuItemTextContainer}>
+                <Text style={styles.menuItemTitle}>Visual Preference</Text>
+                <Text style={styles.menuItemSubtitle}>Dark mode & glare preferences</Text>
+              </View>
+              <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => setActiveScreen('queue')}
-          >
-            <View style={styles.menuIconWrapper}>
-              <QueueIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            </View>
-            <View style={styles.menuItemTextContainer}>
-              <Text style={styles.menuItemTitle}>Queue & Cache Operations</Text>
-              <Text style={styles.menuItemSubtitle}>Offline sync & route cleanups</Text>
-            </View>
-            <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setActiveScreen('navigation')}
+            >
+              <View style={styles.menuIconWrapper}>
+                <NavIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+              </View>
+              <View style={styles.menuItemTextContainer}>
+                <Text style={styles.menuItemTitle}>Default Navigation App</Text>
+                <Text style={styles.menuItemSubtitle}>Choose Google Maps, Waze, etc.</Text>
+              </View>
+              <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => setActiveScreen('security')}
-          >
-            <View style={styles.menuIconWrapper}>
-              <SecurityIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-            </View>
-            <View style={styles.menuItemTextContainer}>
-              <Text style={styles.menuItemTitle}>Account Security</Text>
-              <Text style={styles.menuItemSubtitle}>Update account password</Text>
-            </View>
-            <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setActiveScreen('gps')}
+            >
+              <View style={styles.menuIconWrapper}>
+                <GpsIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+              </View>
+              <View style={styles.menuItemTextContainer}>
+                <Text style={styles.menuItemTitle}>GPS Telemetry & Battery</Text>
+                <Text style={styles.menuItemSubtitle}>Accuracy and sync frequencies</Text>
+              </View>
+              <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
+            </TouchableOpacity>
 
-          <Text style={styles.versionText}>PlowPath Version 0.1.0</Text>
-        </View>
-      )}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setActiveScreen('queue')}
+            >
+              <View style={styles.menuIconWrapper}>
+                <QueueIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+              </View>
+              <View style={styles.menuItemTextContainer}>
+                <Text style={styles.menuItemTitle}>Queue & Cache Operations</Text>
+                <Text style={styles.menuItemSubtitle}>Offline sync & route cleanups</Text>
+              </View>
+              <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
+            </TouchableOpacity>
 
-      {/* --- Visual Styling --- */}
-      {activeScreen === 'visual' && (
-        <View style={styles.section}>
-          {renderBackButton()}
-          <Text style={styles.sectionTitle}>Visual Preference</Text>
-          <View style={styles.row}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.label}>Night Mode / Dark Glare</Text>
-              <Text style={styles.sublabel}>High-contrast dark mode for night operations</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setActiveScreen('security')}
+            >
+              <View style={styles.menuIconWrapper}>
+                <SecurityIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
+              </View>
+              <View style={styles.menuItemTextContainer}>
+                <Text style={styles.menuItemTitle}>Account Security</Text>
+                <Text style={styles.menuItemSubtitle}>Update account password</Text>
+              </View>
+              <ChevronRight color={isDark ? '#64748B' : '#94A3B8'} />
+            </TouchableOpacity>
+
+            <Text style={styles.versionText}>Version 0.1.0</Text>
+          </View>
+        )}
+
+        {/* --- Visual Styling --- */}
+        {activeScreen === 'visual' && (
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Night Mode / Dark Glare</Text>
+                <Text style={styles.sublabel}>High-contrast dark mode for night operations</Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={handleToggleTheme}
+                trackColor={{ false: '#767577', true: '#2E75B6' }}
+                thumbColor={isDark ? '#FFF' : '#f4f3f4'}
+              />
             </View>
-            <Switch
-              value={isDark}
-              onValueChange={handleToggleTheme}
-              trackColor={{ false: '#767577', true: '#2E75B6' }}
-              thumbColor={isDark ? '#FFF' : '#f4f3f4'}
+          </View>
+        )}
+
+        {/* --- External Navigation --- */}
+        {activeScreen === 'navigation' && (
+          <View style={styles.card}>
+            <Text style={styles.label}>Preferred Navigation Tool</Text>
+            <Text style={styles.sublabel}>Select your default application for turn-by-turn routing:</Text>
+            <View style={styles.navButtonGroup}>
+              {(['google_maps', 'apple_maps', 'waze'] as const).map((app) => {
+                const isSelected = settings.navigation_app === app;
+                const appLabel = app === 'google_maps' ? 'Google Maps' : app === 'apple_maps' ? 'Apple Maps' : 'Waze';
+                return (
+                  <TouchableOpacity
+                    key={app}
+                    style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
+                    onPress={() => handleSelectNavApp(app)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${appLabel}`}
+                  >
+                    <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
+                      {appLabel}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* --- GPS Telemetry Settings --- */}
+        {activeScreen === 'gps' && (
+          <View style={{ gap: 16 }}>
+            <View style={styles.card}>
+              <Text style={styles.label}>Location Accuracy</Text>
+              <Text style={styles.sublabel}>High Precision runs the GPS continuously; Power Saver reduces background updates.</Text>
+              <View style={styles.navButtonGroup}>
+                {(['high', 'power_saver'] as const).map((acc) => {
+                  const isSelected = settings.tracking_accuracy === acc;
+                  const label = acc === 'high' ? 'High Precision' : 'Power Saver';
+                  return (
+                    <TouchableOpacity
+                      key={acc}
+                      style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
+                      onPress={() => handleToggleAccuracy(acc)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select ${label}`}
+                    >
+                      <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.label}>Coordinate Upload Frequency</Text>
+              <Text style={styles.sublabel}>Seconds between route tracking updates to the server</Text>
+              <View style={styles.stepperContainer}>
+                <TouchableOpacity
+                  style={styles.stepperBtn}
+                  onPress={() => handleAdjustFrequency(-10)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Decrease interval by 10 seconds"
+                >
+                  <Text style={styles.stepperBtnText}>- 10s</Text>
+                </TouchableOpacity>
+
+                <View style={styles.freqValueContainer}>
+                  <Text style={styles.freqValueText}>{settings.upload_frequency_seconds}s</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.stepperBtn}
+                  onPress={() => handleAdjustFrequency(10)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase interval by 10 seconds"
+                >
+                  <Text style={styles.stepperBtnText}>+ 10s</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* --- Queue Operations Console --- */}
+        {activeScreen === 'queue' && (
+          <View style={{ gap: 16 }}>
+            <View style={styles.card}>
+              <Text style={styles.label}>Pending Offline Cache</Text>
+              <Text style={styles.sublabel}>Unsynchronized route updates and telemetry samples currently queued locally</Text>
+              <View style={styles.queueStatusRow}>
+                <Text style={styles.queueStatusText}>
+                  Queued GPS: <Text style={styles.boldText}>{gpsCount}</Text> samples
+                </Text>
+                <Text style={styles.queueStatusText}>
+                  Queued Stops: <Text style={styles.boldText}>{stopCount}</Text> updates
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.btn, styles.syncBtn]}
+                onPress={handleForceSync}
+                disabled={syncing || loading}
+                accessibilityRole="button"
+                accessibilityLabel="Force Sync Queues"
+              >
+                {syncing ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={[styles.btnText, { color: 'white' }]}>Force Sync Queues</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.label}>Route Local Storage</Text>
+              <Text style={styles.sublabel}>Clearing the cache deletes stored map data. A network connection will be required to fetch them again.</Text>
+              <TouchableOpacity
+                style={[styles.btn, styles.clearBtn]}
+                onPress={handleClearRouteCache}
+                accessibilityRole="button"
+                accessibilityLabel="Clear Cached Routes"
+              >
+                <Text style={[styles.btnText, { color: '#E11D48' }]}>Clear Cached Routes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* --- Account Security --- */}
+        {activeScreen === 'security' && (
+          <View style={styles.card}>
+            <Text style={styles.label}>Update Password</Text>
+            <Text style={styles.sublabel}>Change your password to keep your account secure</Text>
+
+            <Text style={styles.inputLabel}>Current Password</Text>
+            <TextInput
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry={true}
+              style={styles.input}
+              placeholder="Enter current password"
+              placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+              accessibilityLabel="Current Password"
             />
-          </View>
-        </View>
-      )}
 
-      {/* --- External Navigation --- */}
-      {activeScreen === 'navigation' && (
-        <View style={styles.section}>
-          {renderBackButton()}
-          <Text style={styles.sectionTitle}>Default Navigation App</Text>
-          <Text style={styles.sublabel}>Select your preferred navigation redirect tool:</Text>
-          <View style={styles.navButtonGroup}>
-            {(['google_maps', 'apple_maps', 'waze'] as const).map((app) => {
-              const isSelected = settings.navigation_app === app;
-              const appLabel = app === 'google_maps' ? 'Google Maps' : app === 'apple_maps' ? 'Apple Maps' : 'Waze';
-              return (
-                <TouchableOpacity
-                  key={app}
-                  style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
-                  onPress={() => handleSelectNavApp(app)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${appLabel}`}
-                >
-                  <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
-                    {appLabel}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      )}
+            <Text style={styles.inputLabel}>New Password</Text>
+            <TextInput
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry={true}
+              style={styles.input}
+              placeholder="Min. 6 characters"
+              placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+              accessibilityLabel="New Password"
+            />
 
-      {/* --- GPS Telemetry Settings --- */}
-      {activeScreen === 'gps' && (
-        <View style={styles.section}>
-          {renderBackButton()}
-          <Text style={styles.sectionTitle}>GPS Telemetry & Battery</Text>
-
-          {/* Tracking Accuracy toggle */}
-          <Text style={styles.label}>Location Accuracy</Text>
-          <View style={styles.navButtonGroup}>
-            {(['high', 'power_saver'] as const).map((acc) => {
-              const isSelected = settings.tracking_accuracy === acc;
-              const label = acc === 'high' ? 'High Precision' : 'Power Saver';
-              return (
-                <TouchableOpacity
-                  key={acc}
-                  style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
-                  onPress={() => handleToggleAccuracy(acc)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${label}`}
-                >
-                  <Text style={[styles.segmentText, isSelected && styles.segmentTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Upload Frequency Stepper - Highly glove friendly */}
-          <Text style={[styles.label, { marginTop: 16 }]}>Coordinate Upload Frequency</Text>
-          <Text style={styles.sublabel}>Seconds between route tracking updates to the server</Text>
-          <View style={styles.stepperContainer}>
-            <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => handleAdjustFrequency(-10)}
-              accessibilityRole="button"
-              accessibilityLabel="Decrease interval by 10 seconds"
-            >
-              <Text style={styles.stepperBtnText}>- 10s</Text>
-            </TouchableOpacity>
-
-            <View style={styles.freqValueContainer}>
-              <Text style={styles.freqValueText}>{settings.upload_frequency_seconds}s</Text>
-            </View>
+            <Text style={styles.inputLabel}>Confirm New Password</Text>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={true}
+              style={styles.input}
+              placeholder="Confirm new password"
+              placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
+              accessibilityLabel="Confirm New Password"
+            />
 
             <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => handleAdjustFrequency(10)}
+              style={[styles.submitBtn, updatingPassword && styles.disabledBtn]}
+              onPress={handleChangePassword}
+              disabled={updatingPassword}
               accessibilityRole="button"
-              accessibilityLabel="Increase interval by 10 seconds"
+              accessibilityLabel="Change Password"
             >
-              <Text style={styles.stepperBtnText}>+ 10s</Text>
+              {updatingPassword ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.btnText}>Change Password</Text>
+              )}
             </TouchableOpacity>
           </View>
-        </View>
-      )}
-
-      {/* --- Queue Operations Console --- */}
-      {activeScreen === 'queue' && (
-        <View style={styles.section}>
-          {renderBackButton()}
-          <Text style={styles.sectionTitle}>Queue & Cache Operations</Text>
-          <View style={styles.queueStatusRow}>
-            <Text style={styles.queueStatusText}>
-              Queued GPS: <Text style={styles.boldText}>{gpsCount}</Text> samples
-            </Text>
-            <Text style={styles.queueStatusText}>
-              Queued Stops: <Text style={styles.boldText}>{stopCount}</Text> updates
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.btn, styles.syncBtn]}
-            onPress={handleForceSync}
-            disabled={syncing || loading}
-            accessibilityRole="button"
-            accessibilityLabel="Force Sync Queues"
-          >
-            {syncing ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.btnText}>Force Sync Queues</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.btn, styles.clearBtn]}
-            onPress={handleClearRouteCache}
-            accessibilityRole="button"
-            accessibilityLabel="Clear Cached Routes"
-          >
-            <Text style={[styles.btnText, { color: '#E11D48' }]}>Clear Cached Routes</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* --- Account Security --- */}
-      {activeScreen === 'security' && (
-        <View style={styles.section}>
-          {renderBackButton()}
-          <Text style={styles.sectionTitle}>Account Security</Text>
-          <Text style={styles.sublabel}>Change your password to keep your account secure</Text>
-
-          <Text style={styles.inputLabel}>Current Password</Text>
-          <TextInput
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            secureTextEntry={true}
-            style={styles.input}
-            placeholder="Enter current password"
-            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-            accessibilityLabel="Current Password"
-          />
-
-          <Text style={styles.inputLabel}>New Password</Text>
-          <TextInput
-            value={newPassword}
-            onChangeText={setNewPassword}
-            secureTextEntry={true}
-            style={styles.input}
-            placeholder="Min. 6 characters"
-            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-            accessibilityLabel="New Password"
-          />
-
-          <Text style={styles.inputLabel}>Confirm New Password</Text>
-          <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={true}
-            style={styles.input}
-            placeholder="Confirm new password"
-            placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
-            accessibilityLabel="Confirm New Password"
-          />
-
-          <TouchableOpacity
-            style={[styles.submitBtn, updatingPassword && styles.disabledBtn]}
-            onPress={handleChangePassword}
-            disabled={updatingPassword}
-            accessibilityRole="button"
-            accessibilityLabel="Change Password"
-          >
-            {updatingPassword ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.btnText}>Change Password</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </ScrollView>
 
       {loading ? (
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color="#2E75B6" />
         </View>
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
 const baseStyles = {
   container: { flex: 1 },
   contentContainer: { padding: 20, paddingBottom: 40 },
-  header: { fontSize: 26, fontWeight: '900', marginBottom: 20 },
+  header: { fontSize: 26, fontWeight: '900', marginBottom: 24, marginTop: 8 },
   errorText: { color: '#EF4444', marginBottom: 12, fontSize: 14, fontWeight: '600' },
   menuContainer: { gap: 16 },
   menuItem: {
@@ -511,7 +545,6 @@ const baseStyles = {
     alignItems: 'center' as any,
     padding: 16,
     borderRadius: 16,
-    borderWidth: 1.5,
   },
   menuIconWrapper: {
     marginRight: 16,
@@ -524,97 +557,105 @@ const baseStyles = {
   menuItemTextContainer: { flex: 1 },
   menuItemTitle: { fontSize: 16, fontWeight: '800' as any },
   menuItemSubtitle: { fontSize: 12, marginTop: 2 },
-  backButton: {
-    alignSelf: 'flex-start' as any,
-    marginBottom: 20,
+  headerRow: {
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  headerBackBtn: {
+    marginRight: 16,
     width: 40,
     height: 40,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    borderRadius: 20,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
   },
-  section: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1.5,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '900' as any,
+    flex: 1,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '800' as any, marginBottom: 12 },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+  },
   row: { flexDirection: 'row' as any, justifyContent: 'space-between' as any, alignItems: 'center' as any },
   labelContainer: { flex: 1, paddingRight: 10 },
-  label: { fontSize: 15, fontWeight: '700' as any },
-  sublabel: { fontSize: 12, marginTop: 2, marginBottom: 8 },
-  navButtonGroup: { flexDirection: 'row' as any, gap: 8, marginTop: 4 },
+  label: { fontSize: 16, fontWeight: '800' as any },
+  sublabel: { fontSize: 12, marginTop: 4, marginBottom: 16, lineHeight: 18 },
+  navButtonGroup: {
+    flexDirection: 'row' as any,
+    borderRadius: 12,
+    padding: 4,
+  },
   segmentBtn: {
     flex: 1,
-    height: 56, // glove-friendly segment heights
-    borderWidth: 1.5,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: 8,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
   },
   segmentBtnActive: {},
   segmentText: { fontSize: 14, fontWeight: '700' as any },
-  segmentTextActive: { color: 'white' },
+  segmentTextActive: {},
   stepperContainer: { flexDirection: 'row' as any, alignItems: 'center' as any, marginTop: 10 },
   stepperBtn: {
-    height: 56, // glove-friendly stepper height
-    width: 90,
-    borderRadius: 12,
+    height: 48,
+    width: 80,
+    borderRadius: 10,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
   },
-  stepperBtnText: { color: 'white', fontSize: 16, fontWeight: '800' as any },
+  stepperBtnText: { fontSize: 15, fontWeight: '800' as any },
   freqValueContainer: {
     flex: 1,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
-    height: 56,
+    height: 48,
   },
   freqValueText: { fontSize: 24, fontWeight: '900' as any },
-  queueStatusRow: { flexDirection: 'row' as any, justifyContent: 'space-between' as any, marginBottom: 16 },
+  queueStatusRow: { flexDirection: 'row' as any, justifyContent: 'space-between' as any, marginVertical: 16 },
   queueStatusText: { fontSize: 13, fontWeight: '600' as any },
   boldText: { fontWeight: '800' as any },
   btn: {
-    height: 56, // glove-friendly buttons
+    height: 52,
     borderRadius: 12,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   syncBtn: { backgroundColor: '#10B981' },
-  clearBtn: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: '#F43F5E' },
-  btnText: { fontSize: 15, fontWeight: '800' as any, color: 'white' },
+  clearBtn: { backgroundColor: 'rgba(244, 63, 94, 0.08)' },
+  btnText: { fontSize: 15, fontWeight: '800' as any },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'center' as any,
     alignItems: 'center' as any,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '700' as any,
-    marginTop: 12,
+    fontSize: 12,
+    fontWeight: '800' as any,
+    marginTop: 16,
     marginBottom: 6,
     textTransform: 'uppercase' as any,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   input: {
-    minHeight: 56,
+    minHeight: 52,
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 16,
-    marginBottom: 10,
+    marginBottom: 4,
   },
   submitBtn: {
-    height: 56,
+    height: 52,
     borderRadius: 12,
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
-    marginTop: 12,
-    marginBottom: 12,
+    marginTop: 24,
   },
   disabledBtn: {
     opacity: 0.6,
@@ -629,58 +670,59 @@ const baseStyles = {
 
 const lightStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
+  container: { ...baseStyles.container, backgroundColor: '#FFFFFF' },
   header: { ...baseStyles.header, color: '#0F172A' },
   menuItem: {
     ...baseStyles.menuItem,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
   },
   menuItemTitle: { ...baseStyles.menuItemTitle, color: '#0F172A' },
   menuItemSubtitle: { ...baseStyles.menuItemSubtitle, color: '#64748B' },
-  menuIconWrapper: { ...baseStyles.menuIconWrapper, backgroundColor: '#E6F0FA' },
-  backButton: {
-    ...baseStyles.backButton,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+  menuIconWrapper: { ...baseStyles.menuIconWrapper, backgroundColor: '#E2E8F0' },
+  headerBackBtn: {
+    ...baseStyles.headerBackBtn,
+    backgroundColor: 'rgba(46, 117, 182, 0.08)',
   },
-  section: {
-    ...baseStyles.section,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+  headerTitle: { ...baseStyles.headerTitle, color: '#0F172A' },
+  card: {
+    ...baseStyles.card,
+    backgroundColor: '#F1F5F9',
   },
-  sectionTitle: { ...baseStyles.sectionTitle, color: '#0F172A' },
-  label: { ...baseStyles.label, color: '#1E293B' },
+  label: { ...baseStyles.label, color: '#0F172A' },
   sublabel: { ...baseStyles.sublabel, color: '#64748B' },
-  segmentBtn: { ...baseStyles.segmentBtn, borderColor: '#CBD5E1', backgroundColor: '#F1F5F9' },
-  segmentBtnActive: { backgroundColor: '#2E75B6', borderColor: '#2E75B6' },
-  segmentText: { ...baseStyles.segmentText, color: '#475569' },
+  navButtonGroup: {
+    ...baseStyles.navButtonGroup,
+    backgroundColor: '#E2E8F0',
+  },
+  segmentBtn: {
+    ...baseStyles.segmentBtn,
+  },
+  segmentBtnActive: {
+    backgroundColor: '#2E75B6',
+  },
+  segmentText: { ...baseStyles.segmentText, color: '#64748B' },
+  segmentTextActive: { color: '#FFFFFF' },
+  stepperBtn: { ...baseStyles.stepperBtn, backgroundColor: '#E2E8F0' },
+  stepperBtnText: { ...baseStyles.stepperBtnText, color: '#475569' },
   freqValueText: { ...baseStyles.freqValueText, color: '#0F172A' },
-  queueStatusText: { ...baseStyles.queueStatusText, color: '#334155' },
-  inputLabel: { ...baseStyles.inputLabel, color: '#475569' },
+  queueStatusText: { ...baseStyles.queueStatusText, color: '#475569' },
+  inputLabel: { ...baseStyles.inputLabel, color: '#64748B' },
   input: {
     ...baseStyles.input,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     color: '#0F172A',
   },
-  stepperBtn: { ...baseStyles.stepperBtn, backgroundColor: '#2E75B6' },
   submitBtn: {
     ...baseStyles.submitBtn,
     backgroundColor: '#2E75B6',
   },
-  disabledBtn: {
-    ...baseStyles.disabledBtn,
+  btnText: { ...baseStyles.btnText, color: '#FFFFFF' },
+  clearBtn: {
+    ...baseStyles.clearBtn,
   },
-  versionText: {
-    ...baseStyles.versionText,
-    color: '#94A3B8',
-  },
+  disabledBtn: { ...baseStyles.disabledBtn },
+  versionText: { ...baseStyles.versionText, color: '#94A3B8' },
 } as any);
 
 const darkStyles = StyleSheet.create({
@@ -690,56 +732,52 @@ const darkStyles = StyleSheet.create({
   menuItem: {
     ...baseStyles.menuItem,
     backgroundColor: '#1E293B',
-    borderColor: '#334155',
   },
   menuItemTitle: { ...baseStyles.menuItemTitle, color: '#FFFFFF' },
   menuItemSubtitle: { ...baseStyles.menuItemSubtitle, color: '#94A3B8' },
   menuIconWrapper: { ...baseStyles.menuIconWrapper, backgroundColor: '#0F172A' },
-  backButton: {
-    ...baseStyles.backButton,
-    borderColor: '#334155',
-    backgroundColor: '#1E293B',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+  headerBackBtn: {
+    ...baseStyles.headerBackBtn,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
   },
-  section: {
-    ...baseStyles.section,
+  headerTitle: { ...baseStyles.headerTitle, color: '#FFFFFF' },
+  card: {
+    ...baseStyles.card,
     backgroundColor: '#1E293B',
-    borderColor: '#334155',
   },
-  sectionTitle: { ...baseStyles.sectionTitle, color: '#FFFFFF' },
-  label: { ...baseStyles.label, color: '#E2E8F0' },
+  label: { ...baseStyles.label, color: '#FFFFFF' },
   sublabel: { ...baseStyles.sublabel, color: '#94A3B8' },
-  segmentBtn: { ...baseStyles.segmentBtn, borderColor: '#475569', backgroundColor: '#0B0F19' },
-  segmentBtnActive: { backgroundColor: '#38BDF8', borderColor: '#38BDF8' },
+  navButtonGroup: {
+    ...baseStyles.navButtonGroup,
+    backgroundColor: '#0F172A',
+  },
+  segmentBtn: {
+    ...baseStyles.segmentBtn,
+  },
+  segmentBtnActive: {
+    backgroundColor: '#38BDF8',
+  },
   segmentText: { ...baseStyles.segmentText, color: '#94A3B8' },
-  segmentTextActive: { ...baseStyles.segmentTextActive, color: '#0B0F19' },
+  segmentTextActive: { color: '#0F172A' },
+  stepperBtn: { ...baseStyles.stepperBtn, backgroundColor: '#0F172A' },
+  stepperBtnText: { ...baseStyles.stepperBtnText, color: '#94A3B8' },
   freqValueText: { ...baseStyles.freqValueText, color: '#FFFFFF' },
-  queueStatusText: { ...baseStyles.queueStatusText, color: '#CBD5E1' },
+  queueStatusText: { ...baseStyles.queueStatusText, color: '#94A3B8' },
   inputLabel: { ...baseStyles.inputLabel, color: '#94A3B8' },
   input: {
     ...baseStyles.input,
     borderColor: '#475569',
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F172A',
     color: '#FFFFFF',
   },
-  stepperBtn: { ...baseStyles.stepperBtn, backgroundColor: '#334155' },
-  stepperBtnText: { ...baseStyles.stepperBtnText, color: '#E2E8F0' },
   submitBtn: {
     ...baseStyles.submitBtn,
     backgroundColor: '#38BDF8',
   },
   btnText: { ...baseStyles.btnText, color: '#0B0F19' },
-  syncBtn: { ...baseStyles.syncBtn },
-  clearBtn: { ...baseStyles.clearBtn },
-  disabledBtn: {
-    ...baseStyles.disabledBtn,
+  clearBtn: {
+    ...baseStyles.clearBtn,
   },
-  versionText: {
-    ...baseStyles.versionText,
-    color: '#475569',
-  },
+  disabledBtn: { ...baseStyles.disabledBtn },
+  versionText: { ...baseStyles.versionText, color: '#475569' },
 } as any);

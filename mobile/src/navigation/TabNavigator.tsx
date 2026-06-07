@@ -94,7 +94,7 @@ export default function TabNavigator() {
         name="History"
         component={InAppHistoryScreen}
         options={{
-          tabBarLabel: 'Inbox',
+          tabBarLabel: 'Notifications',
           tabBarIcon: ({ color }) => <BellIcon color={color} size={24} />,
         }}
       />
