@@ -218,7 +218,6 @@ const baseStyles = {
     padding: 4,
     marginHorizontal: 20,
     marginBottom: 16,
-    borderWidth: 1.5,
     height: 56, // glove-friendly height
   },
   tabButton: {
@@ -236,10 +235,6 @@ const baseStyles = {
     borderRadius: 16,
     marginHorizontal: 20,
     marginBottom: 16,
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 3,
   },
   statRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
   statItem: { alignItems: 'center' },
@@ -252,10 +247,6 @@ const baseStyles = {
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
   },
   stopHeader: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   seqBadge: {
@@ -264,7 +255,6 @@ const baseStyles = {
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
   },
   seqText: { fontWeight: '900', fontSize: 13 },
   metaCol: { flex: 1 },

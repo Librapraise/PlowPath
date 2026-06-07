@@ -437,9 +437,6 @@ const baseStyles = {
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
-    elevation: 4,
   },
   handoverInfo: { flex: 1, marginRight: 16 },
   handoverTitle: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
@@ -497,8 +494,6 @@ const lightStyles = StyleSheet.create({
   handoverPanel: {
     ...baseStyles.handoverPanel,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.08,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -553,8 +548,6 @@ const darkStyles = StyleSheet.create({
   handoverPanel: {
     ...baseStyles.handoverPanel,
     backgroundColor: '#1E293B',
-    shadowColor: '#000000',
-    shadowOpacity: 0.3,
     borderWidth: 1,
     borderColor: '#334155',
   },

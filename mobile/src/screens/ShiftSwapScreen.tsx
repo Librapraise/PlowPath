@@ -161,9 +161,6 @@ const baseStyles = {
     borderRadius: 16,
     borderWidth: 1.5,
     marginBottom: 20,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 3,
   },
   cardHeader: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
   cardMuted: { fontSize: 12, marginBottom: 16, lineHeight: 18 },
@@ -218,15 +215,13 @@ const baseStyles = {
 
 const lightStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
+  container: { ...baseStyles.container, backgroundColor: '#FFFFFF' },
   title: { ...baseStyles.title, color: '#0F172A' },
   subtitle: { ...baseStyles.subtitle, color: '#64748B' },
   card: {
     ...baseStyles.card,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 0,
   },
   cardHeader: { ...baseStyles.cardHeader, color: '#0F172A' },
   cardMuted: { ...baseStyles.cardMuted, color: '#64748B' },
@@ -234,7 +229,7 @@ const lightStyles = StyleSheet.create({
   btnText: { ...baseStyles.btnText, color: 'white' },
   qrContainer: {
     ...baseStyles.qrContainer,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderColor: '#E2E8F0',
   },
   qrLabel: { ...baseStyles.qrLabel, color: '#2E75B6' },
@@ -248,7 +243,7 @@ const lightStyles = StyleSheet.create({
   qrInstruction: { ...baseStyles.qrInstruction, color: '#64748B' },
   textInput: {
     ...baseStyles.textInput,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderColor: '#CBD5E1',
     color: '#0F172A',
   },
@@ -263,9 +258,7 @@ const darkStyles = StyleSheet.create({
   card: {
     ...baseStyles.card,
     backgroundColor: '#1E293B',
-    borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
+    borderWidth: 0,
   },
   cardHeader: { ...baseStyles.cardHeader, color: '#FFFFFF' },
   cardMuted: { ...baseStyles.cardMuted, color: '#94A3B8' },
