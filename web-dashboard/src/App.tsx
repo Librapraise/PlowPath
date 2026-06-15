@@ -16,6 +16,7 @@ const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsAndConditionsPage = lazy(() => import('./pages/TermsAndConditionsPage'));
 const DataDeletionPage = lazy(() => import('./pages/DataDeletionPage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 const PageSpinner = () => (
   <div className="flex h-full w-full items-center justify-center bg-slate-950 p-12 text-slate-400">
@@ -27,6 +28,7 @@ export default function App() {
   return (
     <Suspense fallback={<PageSpinner />}>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/delete-data" element={<DataDeletionPage />} />
@@ -34,7 +36,7 @@ export default function App() {
         
         {/* Protected Dashboard Routes */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <DashboardLayout>
@@ -117,7 +119,7 @@ export default function App() {
 
         <Route path="/track/:slug" element={<HomeownerTrackingPortal />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
   );

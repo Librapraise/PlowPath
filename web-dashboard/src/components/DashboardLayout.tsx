@@ -38,7 +38,7 @@ export default function DashboardLayout({ children }: Props) {
   };
 
   const navItems = [
-    { to: '/', label: 'Live Ops Map', icon: Activity, roles: ['owner', 'manager', 'driver'] },
+    { to: '/dashboard', label: 'Live Ops Map', icon: Activity, roles: ['owner', 'manager', 'driver'] },
     { to: '/customers', label: 'Customers', icon: Users, roles: ['owner', 'manager'] },
     { to: '/drivers', label: 'Drivers', icon: Truck, roles: ['owner', 'manager'] },
     { to: '/storms', label: 'Storms', icon: CloudSnow, roles: ['owner', 'manager'] },

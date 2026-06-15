@@ -58,7 +58,7 @@ export default function LoginPage() {
         values,
       );
       setSession({ token: data.token, refreshToken: data.refresh_token, user: data.user });
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message ??
