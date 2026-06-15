@@ -1,7 +1,47 @@
-import { ShieldAlert, ArrowLeft, Trash2, Mail } from 'lucide-react';
+import { useState } from 'react';
+import { ShieldAlert, ArrowLeft, Trash2, Mail, X, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DataDeletionPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [reason, setReason] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email || !confirm) {
+      return;
+    }
+
+    const subject = encodeURIComponent('PlowPath Data Deletion Request');
+    const body = encodeURIComponent(
+      `Please delete my PlowPath account and all associated data.\n\n` +
+      `Full Name: ${name}\n` +
+      `Registered Email: ${email}\n` +
+      `Phone Number: ${phone || 'Not provided'}\n` +
+      `Reason for deletion: ${reason || 'Not provided'}\n\n` +
+      `I understand that this request is permanent and cannot be undone.`
+    );
+
+    // Open system mail client with pre-filled details
+    window.location.href = `mailto:support@plowpath.ca?subject=${subject}&body=${body}`;
+    setIsSubmitted(true);
+  };
+
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setReason('');
+    setConfirm(false);
+    setIsSubmitted(false);
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-slate-100 p-6 font-sans relative overflow-hidden flex flex-col items-center">
       {/* Background grid pattern */}
@@ -63,16 +103,16 @@ export default function DataDeletionPage() {
                 How to Submit a Deletion Request
               </h3>
               <p className="text-slate-300 leading-relaxed">
-                To initiate a deletion request, please click the button below to generate an email template. Make sure to send the request from the email address registered to your PlowPath account.
+                Click the button below to open the data deletion request form. This will prepare a request template for our support team to process.
               </p>
               <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                <a
-                  href="mailto:support@plowpath.ca?subject=PlowPath%20Data%20Deletion%20Request&body=Please%20delete%20my%20PlowPath%20account%20and%20all%20associated%20data.%0A%0ARegistered%20Email%3A%20%0AFull%20Name%3A%20%0APhone%20Number%3A%20"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-red-650 hover:bg-red-700 bg-red-600 rounded-xl transition-all shadow-lg hover:shadow-red-500/10 border border-red-500/30"
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-lg hover:shadow-red-500/10 border border-red-500/30"
                 >
                   <Mail className="w-4 h-4" />
-                  Email Deletion Request
-                </a>
+                  Request Account Deletion
+                </button>
                 <div className="flex items-center text-xs text-slate-500">
                   Or email support@plowpath.ca directly.
                 </div>
@@ -101,6 +141,118 @@ export default function DataDeletionPage() {
           </div>
         </div>
       </div>
+
+      {/* Premium Interactive Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#0e1626]/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={resetForm}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {!isSubmitted ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-800/60">
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                  <h3 className="text-lg font-bold text-slate-100">Deletion Request Details</h3>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Please provide the details associated with your PlowPath account so we can locate and remove your information.
+                </p>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500/50"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Registered Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="john@example.com"
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500/50"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Phone Number (Optional)</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500/50"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Reason for Deletion (Optional)</label>
+                  <textarea
+                    rows={3}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Why are you requesting data deletion? (e.g. no longer driving)"
+                    className="w-full bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-red-500/50 resize-none"
+                  />
+                </div>
+
+                <div className="flex items-start gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    required
+                    id="confirm-deletion"
+                    checked={confirm}
+                    onChange={(e) => setConfirm(e.target.checked)}
+                    className="mt-1 accent-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="confirm-deletion" className="text-xs text-slate-450 text-slate-400 select-none cursor-pointer leading-relaxed">
+                    I understand that this will permanently remove my account details, location history, and operational logs from PlowPath. This action is irreversible.
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full mt-4 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-lg hover:shadow-red-500/10 border border-red-500/30"
+                >
+                  <Mail className="w-4 h-4" />
+                  Generate Deletion Email
+                </button>
+              </form>
+            ) : (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-16 h-16 bg-green-500/15 border border-green-500/30 text-green-400 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-slate-100">Request Prepared</h3>
+                  <p className="text-xs text-slate-400 px-4 leading-relaxed">
+                    Your request details have been composed and loaded into your system's default email client. Please send the pre-filled email to complete the request.
+                  </p>
+                </div>
+                <button
+                  onClick={resetForm}
+                  className="px-6 py-2.5 bg-slate-800 hover:bg-slate-750 text-xs font-bold text-slate-200 rounded-xl transition-colors border border-slate-700"
+                >
+                  Close Window
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
