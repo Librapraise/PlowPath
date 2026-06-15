@@ -145,8 +145,8 @@ Required to dispatch automated customer arrival texts, completion alerts, and in
     *   Submit for approval (takes 1–2 weeks; carriers will block unregistered SMS).
 5.  **Configure Active Webhooks**:
     *   Go to **Phone Numbers** > **Active Numbers** > Click your number.
-    *   **Voice webhook**: Under *A Call Comes In*, select **Webhook**, input `https://your-api-domain.com/api/v1/webhooks/twilio/voice`, and select **HTTP POST**.
-    *   **SMS webhook**: Under *A Message Comes In*, select **Webhook**, input `https://your-api-domain.com/api/v1/webhooks/twilio/sms`, and select **HTTP POST**.
+    *   **Voice webhook**: Under *A Call Comes In*, select **Webhook**, input `https://plowpath-api-staging.fly.dev/api/v1/webhooks/twilio/voice`, and select **HTTP POST**.
+    *   **SMS webhook**: Under *A Message Comes In*, select **Webhook**, input `https://plowpath-api-staging.fly.dev/api/v1/webhooks/twilio/sms`, and select **HTTP POST**.
 6.  **Load credentials to Backend**:
     *   Find your **Account SID** and **Auth Token** on your Twilio home console.
     *   Add them to your backend `.env`:
