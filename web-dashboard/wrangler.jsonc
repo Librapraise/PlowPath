@@ -5,7 +5,8 @@
   "compatibility_date": "2026-05-31",
   "assets": {
     // Vite writes its output here; this is what gets uploaded to Cloudflare's edge
-    "directory": "./dist"
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
   },
   // Custom domain routing — add staging.plowpath.ca here so wrangler deploy
   // registers the route automatically. Swap for dashboard.plowpath.ca on prod.
