@@ -15,6 +15,7 @@ const HomeownerTrackingPortal = lazy(() => import('./pages/HomeownerTrackingPort
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsAndConditionsPage = lazy(() => import('./pages/TermsAndConditionsPage'));
+const DataDeletionPage = lazy(() => import('./pages/DataDeletionPage'));
 
 const PageSpinner = () => (
   <div className="flex h-full w-full items-center justify-center bg-slate-950 p-12 text-slate-400">
@@ -28,6 +29,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/delete-data" element={<DataDeletionPage />} />
         <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
         
         {/* Protected Dashboard Routes */}

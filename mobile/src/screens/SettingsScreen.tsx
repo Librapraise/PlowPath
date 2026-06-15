@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Circle, Path, Rect, Stop, RadialGradient, Defs } from 'react-native-svg';
@@ -520,6 +521,31 @@ export default function SettingsScreen() {
               ) : (
                 <Text style={styles.btnText}>Change Password</Text>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.btn, styles.clearBtn, { marginTop: 20 }]}
+              onPress={() => {
+                Alert.alert(
+                  'Delete Account & Data',
+                  'To delete your account and all telemetry data, you can send an email request to our support team.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Email Support',
+                      onPress: () => {
+                        Linking.openURL(
+                          'mailto:support@plowpath.ca?subject=PlowPath%20Data%2520Deletion%2520Request&body=Please%2520delete%2520my%2520PlowPath%2520account%2520and%2520all%2520associated%2520data.%250A%250ARegistered%2520Email%253A%2520' + encodeURIComponent(user?.email || '')
+                        );
+                      }
+                    }
+                  ]
+                );
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Delete Account and Data"
+            >
+              <Text style={[styles.btnText, { color: '#EF4444' }]}>Delete Account &amp; Data</Text>
             </TouchableOpacity>
           </View>
         )}

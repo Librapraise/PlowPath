@@ -90,7 +90,17 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section className="space-y-2.5">
-              <h3 className="text-base font-bold text-slate-200">5. Contact Us</h3>
+              <h3 className="text-base font-bold text-slate-200">5. Account and Data Deletion</h3>
+              <p>
+                If you would like to request the deletion of your account and all associated personal data from our systems, you can submit a request at any time.
+              </p>
+              <p>
+                To request data deletion, please visit our dedicated <Link to="/delete-data" className="text-brand-400 hover:underline font-semibold">Data Deletion Request Page</Link>, or contact us directly at <a href="mailto:support@plowpath.ca" className="text-brand-400 hover:underline">support@plowpath.ca</a>. Your data will be deleted within 30 days of request verification.
+              </p>
+            </section>
+
+            <section className="space-y-2.5">
+              <h3 className="text-base font-bold text-slate-200">6. Contact Us</h3>
               <p>
                 If you have questions or comments about this Privacy Policy, please contact us at:
               </p>
