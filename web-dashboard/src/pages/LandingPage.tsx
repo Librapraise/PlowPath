@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import logo from '../assets/logo.png';
 import {
   Truck,
   CloudSnow,
@@ -94,9 +95,7 @@ export default function LandingPage() {
       {/* Header / Navbar */}
       <header className="relative w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-tr from-brand-500 to-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/25 ring-1 ring-white/10">
-            <Truck className="w-5 h-5" />
-          </div>
+          <img src={logo} alt="PlowPath Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/25 ring-1 ring-white/10 object-cover" />
           <div>
             <h1 className="text-xl font-black tracking-tight text-gradient">PlowPath</h1>
             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Smart Dispatch Platform</p>
@@ -400,9 +399,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center text-white font-extrabold">
-                <Truck className="w-4 h-4" />
-              </div>
+              <img src={logo} alt="PlowPath Logo" className="w-7 h-7 rounded-lg object-cover" />
               <span className="font-extrabold text-slate-200">PlowPath</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">

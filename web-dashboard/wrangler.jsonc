@@ -14,6 +14,14 @@
     {
       "pattern": "staging.plowpath.ca/*",
       "zone_name": "plowpath.ca"
+    },
+    {
+      "pattern": "plowpath.ca/*",
+      "zone_name": "plowpath.ca"
+    },
+    {
+      "pattern": "www.plowpath.ca/*",
+      "zone_name": "plowpath.ca"
     }
   ]
 }
