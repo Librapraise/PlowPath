@@ -753,7 +753,7 @@ const lightStyles = StyleSheet.create({
 
 const darkStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  container: { ...baseStyles.container, backgroundColor: '#0F141E' },
   header: { ...baseStyles.header, color: '#FFFFFF' },
   menuItem: {
     ...baseStyles.menuItem,

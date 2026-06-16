@@ -3,6 +3,7 @@ import { api } from './api';
 import { Alert, Platform, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigate } from './navigation';
+import { useAuthStore } from '../store/authStore';
 
 export interface NotificationItem {
   id: string;
@@ -56,6 +57,22 @@ export class PushNotificationService {
    * Calls the POST /drivers/me/fcm-token backend endpoint to save/update the FCM token.
    */
   public async syncTokenWithBackend(fcmToken: string): Promise<void> {
+    // Wait for the auth store to finish hydrating if it hasn't already done so
+    if (!useAuthStore.persist.hasHydrated()) {
+      await new Promise<void>((resolve) => {
+        const unsub = useAuthStore.persist.onFinishHydration(() => {
+          unsub();
+          resolve();
+        });
+      });
+    }
+
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      console.log('[PUSH] No active session token. Skipping FCM token sync with backend.');
+      return;
+    }
+
     try {
       await api.post('/drivers/me/fcm-token', { fcm_token: fcmToken });
       console.log('[PUSH] Successfully synced FCM token with the backend database roster');

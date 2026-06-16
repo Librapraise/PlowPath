@@ -90,7 +90,7 @@ export default function InAppHistoryScreen() {
               <Defs>
                 <RadialGradient id="bgGlow" cx="50%" cy="50%" rx="50%" ry="50%">
                   <Stop offset="0%" stopColor={isDark ? '#38BDF8' : '#3B82F6'} stopOpacity={isDark ? 0.18 : 0.12} />
-                  <Stop offset="100%" stopColor={isDark ? '#0B0F19' : '#F8FAFC'} stopOpacity="0" />
+                  <Stop offset="100%" stopColor={isDark ? '#0F141E' : '#F8FAFC'} stopOpacity="0" />
                 </RadialGradient>
                 <LinearGradient id="bellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <Stop offset="0%" stopColor={isDark ? '#7DD3FC' : '#60A5FA'} />
@@ -258,7 +258,7 @@ const lightStyles = StyleSheet.create({
 
 const darkStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  container: { ...baseStyles.container, backgroundColor: '#0F141E' },
   header: { ...baseStyles.header, color: '#FFFFFF' },
   card: {
     ...baseStyles.card,

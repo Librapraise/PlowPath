@@ -1,4 +1,11 @@
 {
   "name": "PlowPathDriver",
-  "displayName": "PlowPath Driver"
+  "displayName": "PlowPath Driver",
+  "slug": "plowpath",
+  "extra": {
+    "eas": {
+      "projectId": "cf5edb60-2657-4518-a66f-f506afb454ac"
+    }
+  }
 }
+

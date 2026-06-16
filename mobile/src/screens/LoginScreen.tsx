@@ -316,13 +316,13 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0B0F19' }}>
+    <View style={{ flex: 1, backgroundColor: '#0F141E' }}>
       {/* Deep Space / Winter Night Gradient Background */}
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
         <Defs>
           <LinearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor="#0B192C" stopOpacity={1} />
-            <Stop offset="100%" stopColor="#0B0F19" stopOpacity={1} />
+            <Stop offset="100%" stopColor="#0F141E" stopOpacity={1} />
           </LinearGradient>
         </Defs>
         <Rect width="100%" height="100%" fill="url(#bgGrad)" />

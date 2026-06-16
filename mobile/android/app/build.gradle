@@ -72,8 +72,10 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
-    buildToolsVersion "35.0.0"
-    compileSdk 35
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+    // buildToolsVersion "35.0.0"
+    // compileSdk 35
 
     namespace "com.plowpathtemp"
     defaultConfig {

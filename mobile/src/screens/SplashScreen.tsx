@@ -130,7 +130,7 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
         <Defs>
           <LinearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor="#0B192C" stopOpacity={1} />
-            <Stop offset="100%" stopColor="#0B0F19" stopOpacity={1} />
+            <Stop offset="100%" stopColor="#0F141E" stopOpacity={1} />
           </LinearGradient>
         </Defs>
         <Rect width="100%" height="100%" fill="url(#bgGrad)" />
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F141E',
   },
   content: {
     alignItems: 'center',

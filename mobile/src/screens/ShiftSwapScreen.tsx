@@ -252,7 +252,7 @@ const lightStyles = StyleSheet.create({
 
 const darkStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  container: { ...baseStyles.container, backgroundColor: '#0F141E' },
   title: { ...baseStyles.title, color: '#FFFFFF' },
   subtitle: { ...baseStyles.subtitle, color: '#94A3B8' },
   card: {
@@ -265,7 +265,7 @@ const darkStyles = StyleSheet.create({
   btnText: { ...baseStyles.btnText, color: '#0B0F19' },
   qrContainer: {
     ...baseStyles.qrContainer,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F141E',
     borderColor: '#475569',
   },
   qrLabel: { ...baseStyles.qrLabel, color: '#38BDF8' },
@@ -279,7 +279,7 @@ const darkStyles = StyleSheet.create({
   qrInstruction: { ...baseStyles.qrInstruction, color: '#64748B' },
   textInput: {
     ...baseStyles.textInput,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F141E',
     borderColor: '#475569',
     color: '#E2E8F0',
   },

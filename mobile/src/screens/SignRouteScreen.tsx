@@ -332,7 +332,7 @@ const lightStyles = StyleSheet.create({
 
 const darkStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
+  container: { ...baseStyles.container, backgroundColor: '#0F141E' },
   header: { ...baseStyles.header, color: '#FFFFFF' },
   loadingText: { ...baseStyles.loadingText, color: '#94A3B8' },
   tabContainer: {
@@ -342,7 +342,7 @@ const darkStyles = StyleSheet.create({
   },
   activeTab: {
     ...baseStyles.activeTab,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F141E',
   },
   tabText: { ...baseStyles.tabText, color: '#94A3B8' },
   activeTabText: { color: '#38BDF8' },
@@ -366,7 +366,7 @@ const darkStyles = StyleSheet.create({
   },
   seqBadge: {
     ...baseStyles.seqBadge,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#0F141E',
     borderColor: '#334155',
   },
   seqText: { ...baseStyles.seqText, color: '#38BDF8' },

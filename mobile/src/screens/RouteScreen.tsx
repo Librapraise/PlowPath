@@ -1,16 +1,13 @@
 import AppText from '../components/AppText';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import Svg, { Path, Circle, Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, RadialGradient, Stop, Rect, Line, LinearGradient } from 'react-native-svg';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
-import type { RootStackParamList } from '../services/navigation';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import { subscribeToConnectivity, flushAllQueues } from '../services/offline.service';
-import GlassContainer from '../components/GlassContainer';
 
 interface RouteSummary {
   route_id: string;
@@ -24,6 +21,238 @@ type Props = {
   navigation: any;
 };
 
+const CalendarIcon = ({ color, size = 20 }: { color: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
+    <Line x1={16} y1={2} x2={16} y2={6} />
+    <Line x1={8} y1={2} x2={8} y2={6} />
+    <Line x1={3} y1={10} x2={21} y2={10} />
+  </Svg>
+);
+
+const CheckIcon = ({ color, size = 20 }: { color: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M9 12l2 2 4-4" />
+  </Svg>
+);
+
+const PinIcon = ({ color, size = 16 }: { color: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+    <Circle cx="12" cy="10" r="3" />
+  </Svg>
+);
+
+const DistanceIcon = ({ color, size = 16 }: { color: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M3 17l4-10 4 6 4-4 4 8" />
+  </Svg>
+);
+
+const ClockIcon = ({ color, size = 16 }: { color: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M12 6v6l4 2" />
+  </Svg>
+);
+
+const RouteCard = ({
+  item,
+  index,
+  navigation,
+  isDark,
+  styles,
+}: {
+  item: RouteSummary;
+  index: number;
+  navigation: any;
+  isDark: boolean;
+  styles: any;
+}) => {
+  const isCompleted = item.status === 'completed';
+  const isInProgress = item.status === 'in_progress';
+
+  // Staggered FadeInUp Animation
+  const cardFade = useRef(new Animated.Value(0)).current;
+  const cardTranslateY = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(cardFade, {
+        toValue: 1,
+        duration: 350,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardTranslateY, {
+        toValue: 0,
+        duration: 350,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index]);
+
+  // Active CTA Button Arrow Nudge Animation (Once on load)
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!isCompleted) {
+      Animated.sequence([
+        Animated.delay(500 + index * 80),
+        Animated.timing(arrowAnim, {
+          toValue: 4,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(arrowAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isCompleted, index]);
+
+  // Card press scale animation
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.98,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+  const handlePressOut = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  let statusColor = '#3B82F6';
+  let statusBg = isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF';
+  let statusBorder = isDark ? 'rgba(59, 130, 246, 0.3)' : '#3B82F633';
+
+  if (isCompleted) {
+    statusColor = '#22C55E';
+    statusBg = isDark ? 'rgba(34, 197, 94, 0.15)' : '#ECFDF5';
+    statusBorder = isDark ? 'rgba(34, 197, 94, 0.3)' : '#22C55E33';
+  } else if (isInProgress) {
+    statusColor = '#F59E0B';
+    statusBg = isDark ? 'rgba(245, 158, 11, 0.15)' : '#FFF4E5';
+    statusBorder = isDark ? 'rgba(245, 158, 11, 0.3)' : '#F59E0B33';
+  }
+
+  const stopsVal = item.stop_count || '0';
+  const milesVal = item.total_distance?.toFixed?.(1) ?? '0.0';
+  const estVal = Math.max(30, parseInt(stopsVal, 10) * 15);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: cardFade,
+        transform: [{ translateY: cardTranslateY }, { scale: scaleAnim }],
+      }}
+    >
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.card}
+        onPress={() => navigation.navigate('Navigation', { routeId: item.route_id })}
+      >
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleContainer}>
+            <CalendarIcon color={statusColor} />
+            <AppText style={styles.cardTitle} numberOfLines={1}>
+              {item.route_name}
+            </AppText>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusBg, borderColor: statusBorder }]}>
+            <AppText style={[styles.statusBadgeText, { color: statusColor }]}>
+              {item.status.replace('_', ' ').toUpperCase()}
+            </AppText>
+          </View>
+        </View>
+
+        {/* Stats inline strip */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCell}>
+            <View style={styles.statHeader}>
+              <PinIcon color={statusColor} size={16} />
+              <AppText style={styles.statNumber}>{stopsVal}</AppText>
+            </View>
+            <AppText style={styles.statLabel}>Stops</AppText>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.statCell}>
+            <View style={styles.statHeader}>
+              <DistanceIcon color={statusColor} size={16} />
+              <AppText style={styles.statNumber}>{milesVal}</AppText>
+            </View>
+            <AppText style={styles.statLabel}>Miles</AppText>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.statCell}>
+            <View style={styles.statHeader}>
+              <ClockIcon color={statusColor} size={16} />
+              <AppText style={styles.statNumber}>{estVal}m</AppText>
+            </View>
+            <AppText style={styles.statLabel}>Est. Time</AppText>
+          </View>
+        </View>
+
+        {/* Actions CTA Section */}
+        {isCompleted ? (
+          <View style={styles.completedStrip}>
+            <View style={styles.completedLeft}>
+              <CheckIcon color="#22C55E" size={18} />
+              <AppText style={styles.completedText}>Completed</AppText>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Navigation', { routeId: item.route_id })}
+              accessibilityRole="button"
+            >
+              <AppText style={styles.viewSummaryLink}>View Summary →</AppText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => navigation.navigate('Navigation', { routeId: item.route_id })}
+            accessibilityRole="button"
+          >
+            <View style={StyleSheet.absoluteFill}>
+              <Svg height="100%" width="100%">
+                <Defs>
+                  <LinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor="#1D4ED8" />
+                    <Stop offset="100%" stopColor="#3B82F6" />
+                  </LinearGradient>
+                </Defs>
+                <Rect height="100%" width="100%" rx={14} fill="url(#btnGrad)" />
+              </Svg>
+            </View>
+            <View style={styles.buttonContent}>
+              <AppText style={styles.primaryText}>
+                {isInProgress ? 'RESUME ROUTE' : 'START ROUTE'}
+              </AppText>
+              <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={styles.arrowIcon}>
+                  <Path d="M5 12h14M12 5l7 7-7 7" />
+                </Svg>
+              </Animated.View>
+            </View>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
 export default function RouteScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -33,6 +262,7 @@ export default function RouteScreen({ navigation }: Props) {
   const [routes, setRoutes] = useState<RouteSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'in_progress' | 'assigned' | 'completed'>('all');
 
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
@@ -74,8 +304,6 @@ export default function RouteScreen({ navigation }: Props) {
       .finally(() => setLoading(false));
   };
 
-  // Re-fetch every time this screen gains focus so statuses stay current
-  // after a driver completes or starts a route and navigates back.
   useFocusEffect(
     useCallback(() => {
       fetchRoutes();
@@ -97,7 +325,6 @@ export default function RouteScreen({ navigation }: Props) {
 
     void flushAllQueues(user.driver_id);
 
-    // Auto-ensure active shift exists on the backend
     api.get('/shifts/active')
       .then(({ data }) => {
         if (!data) {
@@ -120,11 +347,18 @@ export default function RouteScreen({ navigation }: Props) {
     return unsubscribe;
   }, [user?.driver_id]);
 
+  const filteredRoutes = routes
+    ? routes.filter((r) => {
+        if (filter === 'all') return true;
+        return r.status === filter;
+      })
+    : [];
+
   const styles = isDark ? darkStyles : lightStyles;
 
   if (!user?.driver_id) {
     return (
-      <View style={[styles.center, { backgroundColor: isDark ? '#0F172A' : '#F8FAFC' }]}>
+      <View style={[styles.center, { backgroundColor: isDark ? '#0F141E' : '#F4F6FA' }]}>
         <AppText style={[styles.heading, { color: isDark ? '#FFF' : '#0F172A' }]}>You are not assigned as a driver.</AppText>
         <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn}>
           <AppText style={styles.secondaryText}>Sign out</AppText>
@@ -133,364 +367,387 @@ export default function RouteScreen({ navigation }: Props) {
     );
   }
 
-  const renderRouteItem = ({ item }: { item: RouteSummary }) => {
-    const isCompleted = item.status === 'completed';
-    const isInProgress = item.status === 'in_progress';
-
-    let statusColor = isDark ? '#38BDF8' : '#0284C7';
-    let statusBg = isDark ? 'rgba(56, 189, 248, 0.1)' : 'rgba(2, 132, 199, 0.08)';
-    let statusBorder = isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.3)';
-
-    if (isCompleted) {
-      statusColor = '#10B981';
-      statusBg = isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.08)';
-      statusBorder = 'rgba(16, 185, 129, 0.3)';
-    } else if (isInProgress) {
-      statusColor = '#F97316';
-      statusBg = isDark ? 'rgba(249, 115, 22, 0.1)' : 'rgba(249, 115, 22, 0.08)';
-      statusBorder = 'rgba(249, 115, 22, 0.3)';
-    }
-
-    // Button gradient definitions
-    const startColor = isDark ? '#06B6D4' : '#3B82F6';
-    const endColor = isDark ? '#3B82F6' : '#1D4ED8';
-
+  const renderRouteItem = ({ item, index }: { item: RouteSummary; index: number }) => {
     return (
-      <GlassContainer style={styles.card} isDark={isDark}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardTitleContainer}>
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#38BDF8' : '#2E75B6'} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={styles.cardHeaderIcon}>
-              <Rect x={3} y={4} width={18} height={18} rx={2} ry={2} />
-              <Line x1={16} y1={2} x2={16} y2={6} />
-              <Line x1={8} y1={2} x2={8} y2={6} />
-              <Line x1={3} y1={10} x2={21} y2={10} />
-            </Svg>
-            <AppText style={styles.cardTitle}>{item.route_name}</AppText>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusBg, borderColor: statusBorder, borderWidth: 1 }]}>
-            <AppText style={[styles.statusBadgeText, { color: statusColor }]}>
-              {item.status.replace('_', ' ').toUpperCase()}
-            </AppText>
-          </View>
-        </View>
-
-        <View style={styles.statsRow}>
-          {/* Stops Pod */}
-          <View style={[styles.statPod, { marginRight: 12 }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(46, 117, 182, 0.1)' }]}>
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#38BDF8' : '#2E75B6'} strokeWidth={2.5}>
-                <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                <Circle cx={12} cy={10} r={3} />
-              </Svg>
-            </View>
-            <View style={styles.statInfo}>
-              <AppText style={styles.statValue}>{item.stop_count}</AppText>
-              <AppText style={styles.statLabel}>STOPS</AppText>
-            </View>
-          </View>
-
-          {/* Distance Pod */}
-          <View style={styles.statPod}>
-            <View style={[styles.statIconBox, { backgroundColor: isDark ? 'rgba(129, 140, 248, 0.12)' : 'rgba(99, 102, 241, 0.1)' }]}>
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#818CF8' : '#6366F1'} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M3 17l4-10 4 6 4-4 4 8" />
-              </Svg>
-            </View>
-            <View style={styles.statInfo}>
-              <AppText style={styles.statValue}>{item.total_distance?.toFixed?.(1) ?? '0.0'}</AppText>
-              <AppText style={styles.statLabel}>MILES</AppText>
-            </View>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.primaryBtn, isCompleted && styles.completedBtn]}
-          onPress={() => navigation.navigate('Navigation', { routeId: item.route_id })}
-          disabled={isCompleted}
-          accessibilityRole="button"
-        >
-          <View style={styles.buttonContent}>
-            <AppText style={[styles.primaryText, isCompleted && styles.completedText]}>
-              {isCompleted ? 'Route Completed' : isInProgress ? 'Resume Route' : 'Start Route'}
-            </AppText>
-            {!isCompleted && (
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={styles.arrowIcon}>
-                <Path d="M5 12h14M12 5l7 7-7 7" />
-              </Svg>
-            )}
-          </View>
-        </TouchableOpacity>
-      </GlassContainer>
+      <RouteCard
+        item={item}
+        index={index}
+        navigation={navigation}
+        isDark={isDark}
+        styles={styles}
+      />
     );
   };
+
+  const activeCount = routes ? routes.filter((r) => r.status === 'in_progress').length : 0;
+  const routeCountText = routes ? `${routes.length} route${routes.length === 1 ? '' : 's'} today` : '0 routes today';
 
   return (
     <View style={styles.container}>
       <OfflineStatusBar />
 
-      {/* Ambient glassmorphism blobs */}
-      <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        <Defs>
-          <RadialGradient id="grad1" cx="90%" cy="10%" rx="75%" ry="75%">
-            <Stop offset="0%" stopColor={isDark ? '#00D2FF' : '#0EA5E9'} stopOpacity={isDark ? 0.35 : 0.22} />
-            <Stop offset="100%" stopColor={isDark ? '#00D2FF' : '#0EA5E9'} stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="grad2" cx="10%" cy="80%" rx="80%" ry="80%">
-            <Stop offset="0%" stopColor={isDark ? '#7928CA' : '#C084FC'} stopOpacity={isDark ? 0.30 : 0.18} />
-            <Stop offset="100%" stopColor={isDark ? '#7928CA' : '#C084FC'} stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="grad3" cx="80%" cy="45%" rx="65%" ry="65%">
-            <Stop offset="0%" stopColor={isDark ? '#FF007A' : '#FDA4AF'} stopOpacity={isDark ? 0.16 : 0.12} />
-            <Stop offset="100%" stopColor={isDark ? '#FF007A' : '#FDA4AF'} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad1)" />
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad2)" />
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#grad3)" />
-      </Svg>
-
-      {/* Branded Profile Header Area */}
+      {/* Header Section (Dark Zone — #0F141E) */}
       <View style={styles.headerArea}>
-        <View>
-          <AppText style={styles.welcomeText}>Welcome back,</AppText>
-          <AppText style={styles.driverName}>{user.name}</AppText>
+        <View style={styles.headerTopRow}>
+          <View>
+            <AppText style={styles.welcomeText}>WELCOME BACK,</AppText>
+            <AppText style={styles.driverName}>{user?.name || 'Mike Plowman'}</AppText>
+          </View>
+          <View style={styles.activeIndicatorBox}>
+            <Animated.View style={[styles.greenPulseDot, { opacity: pulseAnim }]} />
+            <AppText style={styles.activeText}>Active Shift</AppText>
+          </View>
         </View>
-        <View style={styles.activeIndicatorBox}>
-          <Animated.View style={[styles.greenPulseDot, { opacity: pulseAnim }]} />
-          <AppText style={styles.activeText}>Active Shift</AppText>
+
+        <AppText style={[styles.summaryStrip, { marginTop: 12 }]}>
+          {routeCountText} · {activeCount} active
+        </AppText>
+
+        <View style={styles.headerActionsRow}>
+          <TouchableOpacity
+            style={styles.headerActionBtn}
+            onPress={() => navigation.navigate('ShiftSwap')}
+            accessibilityRole="button"
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+              <Path d="M17 1l4 4-4 4M3 23l-4-4 4-4" />
+              <Path d="M21 5H9a5 5 0 0 0-5 5v3M3 19h12a5 5 0 0 0 5-5v-3" />
+            </Svg>
+            <AppText style={styles.headerActionBtnText}>Shift Handover</AppText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.headerActionBtn, styles.headerActionBtnEnd]}
+            onPress={handleEndShift}
+            accessibilityRole="button"
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+              <Path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
+            </Svg>
+            <AppText style={[styles.headerActionBtnText, { color: '#FCA5A5' }]}>End Shift</AppText>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {error ? <AppText style={styles.error}>{error}</AppText> : null}
+      {/* Curved Container Zone */}
+      <View style={styles.contentZone}>
+        <View style={styles.filterWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScrollView}
+            contentContainerStyle={styles.filterContainer}
+          >
+            {(['all', 'in_progress', 'assigned', 'completed'] as const).map((filterType) => {
+              const isActive = filter === filterType;
+              let displayLabel = '';
+              if (filterType === 'all') displayLabel = 'All';
+              else if (filterType === 'in_progress') displayLabel = 'In Progress';
+              else if (filterType === 'assigned') displayLabel = 'Assigned';
+              else if (filterType === 'completed') displayLabel = 'Completed';
 
-      <FlatList
-        data={routes ?? []}
-        keyExtractor={(r) => r.route_id}
-        contentContainerStyle={styles.listContainer}
-        onRefresh={fetchRoutes}
-        refreshing={loading}
-        ListEmptyComponent={
-          (loading && !routes) ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#2E75B6'} />
-            </View>
-          ) : (
-            <View style={styles.emptyBox}>
-              <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#475569' : '#CBD5E1'} strokeWidth={2}>
-                <Path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4" />
-              </Svg>
-              <AppText style={styles.muted}>No routes assigned to you today.</AppText>
-            </View>
-          )
-        }
-        renderItem={renderRouteItem}
-        ListFooterComponent={
-          <View style={{ marginTop: 24 }}>
-            {/* Elegant Shift Handover Entry */}
-            <View style={styles.handoverPanel}>
-              <View style={styles.handoverInfo}>
-                <AppText style={styles.handoverTitle}>Shift Handover Console</AppText>
-                <AppText style={styles.handoverDesc}>Transition route control to another crew driver</AppText>
+              return (
+                <TouchableOpacity
+                  key={filterType}
+                  style={[
+                    styles.filterPill,
+                    isActive ? styles.filterPillActive : styles.filterPillInactive
+                  ]}
+                  onPress={() => setFilter(filterType)}
+                  accessibilityRole="button"
+                >
+                  <AppText
+                    style={[
+                      styles.filterText,
+                      isActive ? styles.filterTextActive : styles.filterTextInactive
+                    ]}
+                  >
+                    {displayLabel}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <FlatList
+          data={filteredRoutes}
+          keyExtractor={(r) => r.route_id}
+          contentContainerStyle={styles.listContainer}
+          onRefresh={fetchRoutes}
+          refreshing={loading}
+          ListEmptyComponent={
+            (loading && !routes) ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#1D4ED8'} />
               </View>
-              <TouchableOpacity
-                style={styles.handoverBtn}
-                onPress={() => navigation.navigate('ShiftSwap')}
-                accessibilityRole="button"
-              >
-                <AppText style={styles.handoverBtnText}>Open</AppText>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn} accessibilityRole="button">
-              <AppText style={styles.secondaryText}>End Shift</AppText>
-            </TouchableOpacity>
-          </View>
-        }
-      />
+            ) : (
+              <View style={styles.emptyBox}>
+                <Svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#475569' : '#CBD5E1'} strokeWidth={2}>
+                  <Path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4" />
+                </Svg>
+                <AppText style={styles.muted}>
+                  {routes && routes.length > 0 ? 'No routes match this filter.' : 'No routes assigned to you today.'}
+                </AppText>
+              </View>
+            )
+          }
+          renderItem={renderRouteItem}
+          ListFooterComponent={<View style={{ height: 24 }} />}
+        />
+      </View>
     </View>
   );
 }
 
 const baseStyles = {
-  container: { flex: 1 },
-  listContainer: { paddingHorizontal: 20, paddingBottom: 20 },
+  container: { flex: 1, backgroundColor: '#0F141E' },
+  contentZone: {
+    flex: 1,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -32,
+    paddingTop: 16,
+  },
+  listContainer: { paddingBottom: 24 },
+  filterWrapper: {
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  filterScrollView: {
+    maxHeight: 48,
+  },
+  filterContainer: {
+    paddingHorizontal: 20,
+    alignItems: 'center' as any,
+    gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    justifyContent: 'center' as any,
+    alignItems: 'center' as any,
+  },
+  filterPillActive: {
+    backgroundColor: '#3B82F6',
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: '700' as any,
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  heading: { fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  heading: { fontSize: 20, fontWeight: '800', marginBottom: 16 },
   error: { color: '#F43F5E', textAlign: 'center', marginVertical: 12, fontWeight: '700' },
   muted: { fontSize: 16, marginTop: 12, textAlign: 'center' },
-  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 48 },
   emptyBox: { alignItems: 'center', marginTop: 60 },
   headerArea: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 48,
+    backgroundColor: '#0F141E',
+  },
+  headerTopRow: {
+    flexDirection: 'row' as any,
+    justifyContent: 'space-between' as any,
+    alignItems: 'center' as any,
+  },
+  headerActionsRow: {
+    flexDirection: 'row' as any,
+    gap: 12,
+    marginTop: 16,
+    width: '100%',
+  },
+  headerActionBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  headerActionBtnEnd: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  headerActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800' as any,
   },
   welcomeText: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(0, 0, 0, 0.05)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 12,
+    fontWeight: '700' as any,
+    textTransform: 'uppercase' as any,
+    letterSpacing: 2,
+    color: 'rgba(255, 255, 255, 0.45)',
   },
   driverName: {
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 2,
-    textShadowColor: 'rgba(0, 0, 0, 0.08)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 3,
+    fontSize: 26,
+    fontWeight: '900' as any,
+    color: '#FFFFFF',
+    marginTop: 4,
   },
   activeIndicatorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 99,
     borderWidth: 1,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderColor: 'rgba(34, 197, 94, 0.4)',
   },
   greenPulseDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: '#22C55E',
     marginRight: 6,
   },
-  activeText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, color: '#10B981' },
+  activeText: { fontSize: 11, fontWeight: '900' as any, textTransform: 'uppercase' as any, letterSpacing: 0.5, color: '#22C55E' },
+  summaryStrip: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.55)',
+    marginTop: 8,
+    fontWeight: '600' as any,
+  },
   card: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 20,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 12,
+    elevation: 4,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: 'row' as any,
+    justifyContent: 'space-between' as any,
+    alignItems: 'center' as any,
   },
   cardTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
     flex: 1,
     marginRight: 8,
+    gap: 8,
   },
-  cardHeaderIcon: {
-    marginRight: 8,
-  },
-  cardTitle: { fontSize: 18, fontWeight: '900', flex: 1 },
+  cardTitle: { fontSize: 15, fontWeight: '600' as any },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  statPod: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 12,
+    borderRadius: 99,
     borderWidth: 1,
   },
-  statIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
+  statusBadgeText: { fontSize: 11, fontWeight: '700' as any, letterSpacing: 0.8, textTransform: 'uppercase' as any },
+  statsRow: {
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    justifyContent: 'space-between' as any,
+    marginVertical: 20,
   },
-  statInfo: {
-    flexDirection: 'column',
+  statCell: {
+    flex: 1,
+    alignItems: 'center' as any,
   },
-  statValue: { fontSize: 18, fontWeight: '900' },
-  statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
+  statHeader: {
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    gap: 6,
+  },
+  statNumber: { fontSize: 18, fontWeight: '700' as any },
+  statLabel: { fontSize: 10, fontWeight: '500' as any, textTransform: 'uppercase' as any, marginTop: 4 },
+  divider: { width: 1, height: 24 },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
   },
   arrowIcon: {
     marginLeft: 8,
   },
   primaryBtn: {
-    minHeight: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    marginTop: 12,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
+    overflow: 'hidden' as any,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  primaryText: { color: 'white', fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  primaryText: { color: 'white', fontSize: 14, fontWeight: '800' as any, letterSpacing: 1 },
+  completedStrip: {
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    justifyContent: 'space-between' as any,
+    paddingVertical: 8,
+  },
+  completedLeft: {
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    gap: 6,
+  },
+  completedText: { fontSize: 13, fontWeight: '500' as any, color: '#22C55E' },
+  viewSummaryLink: { fontSize: 12, fontWeight: '700' as any, color: '#3B82F6' },
   handoverPanel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as any,
+    alignItems: 'center' as any,
+    justifyContent: 'space-between' as any,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
+    marginHorizontal: 16,
     marginBottom: 16,
   },
   handoverInfo: { flex: 1, marginRight: 16 },
-  handoverTitle: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
+  handoverTitle: { fontSize: 16, fontWeight: '900' as any, letterSpacing: 0.5 },
   handoverDesc: { fontSize: 13, marginTop: 4, lineHeight: 18 },
   handoverBtn: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as any,
+    alignItems: 'center' as any,
   },
-  handoverBtnText: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  handoverBtnText: { fontSize: 13, fontWeight: '900' as any, textTransform: 'uppercase' as any, letterSpacing: 0.5 },
   secondaryBtn: {
-    minHeight: 48,
-    borderRadius: 24,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as any,
+    justifyContent: 'center' as any,
+    marginHorizontal: 16,
     marginBottom: 24,
   },
-  secondaryText: { fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  secondaryText: { fontSize: 15, fontWeight: '800' as any, textTransform: 'uppercase' as any, letterSpacing: 1 },
 };
+
 const lightStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
-  welcomeText: { ...baseStyles.welcomeText, color: '#64748B' },
-  driverName: { ...baseStyles.driverName, color: '#0F172A' },
-  activeIndicatorBox: {
-    ...baseStyles.activeIndicatorBox,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+  contentZone: {
+    ...baseStyles.contentZone,
+    backgroundColor: '#F4F6FA',
   },
   muted: { ...baseStyles.muted, color: '#64748B' },
   card: {
     ...baseStyles.card,
+    backgroundColor: '#FFFFFF',
+    shadowColor: 'rgba(0, 0, 0, 0.07)',
   },
-  cardTitle: { ...baseStyles.cardTitle, color: '#0F172A' },
-  statValue: { ...baseStyles.statValue, color: '#0F172A' },
-  statLabel: { ...baseStyles.statLabel, color: '#64748B' },
-  statPod: {
-    ...baseStyles.statPod,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  primaryBtn: {
-    ...baseStyles.primaryBtn,
-    backgroundColor: '#2E75B6',
-  },
-  completedBtn: {
-    backgroundColor: '#E2E8F0',
-  },
-  completedText: {
-    color: '#94A3B8',
-  },
+  cardTitle: { ...baseStyles.cardTitle, color: '#1A1A2E' },
+  statNumber: { ...baseStyles.statNumber, color: '#0F141E' },
+  statLabel: { ...baseStyles.statLabel, color: 'rgba(0, 0, 0, 0.4)' },
+  divider: { ...baseStyles.divider, backgroundColor: 'rgba(0,0,0,0.08)' },
   handoverPanel: {
     ...baseStyles.handoverPanel,
     backgroundColor: '#FFFFFF',
@@ -510,44 +767,37 @@ const lightStyles = StyleSheet.create({
     borderColor: 'rgba(225, 29, 72, 0.2)',
   },
   secondaryText: { ...baseStyles.secondaryText, color: '#E11D48' },
+  filterWrapper: {
+    ...baseStyles.filterWrapper,
+    borderBottomColor: '#E2E8F0',
+  },
+  filterPillInactive: {
+    backgroundColor: '#E2E8F0',
+  },
+  filterTextInactive: {
+    color: '#64748B',
+  },
 } as any);
 
 const darkStyles = StyleSheet.create({
   ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#0B0F19' },
-  welcomeText: { ...baseStyles.welcomeText, color: '#94A3B8' },
-  driverName: { ...baseStyles.driverName, color: '#FFFFFF' },
-  activeIndicatorBox: {
-    ...baseStyles.activeIndicatorBox,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+  contentZone: {
+    ...baseStyles.contentZone,
+    backgroundColor: '#131820',
   },
   muted: { ...baseStyles.muted, color: '#94A3B8' },
   card: {
     ...baseStyles.card,
+    backgroundColor: '#1C2333',
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
   },
   cardTitle: { ...baseStyles.cardTitle, color: '#FFFFFF' },
-  statValue: { ...baseStyles.statValue, color: '#FFFFFF' },
-  statLabel: { ...baseStyles.statLabel, color: '#94A3B8' },
-  statPod: {
-    ...baseStyles.statPod,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  primaryBtn: {
-    ...baseStyles.primaryBtn,
-    backgroundColor: '#0284C7',
-  },
-  primaryText: { ...baseStyles.primaryText, color: 'white' },
-  completedBtn: {
-    backgroundColor: '#334155',
-  },
-  completedText: {
-    color: '#64748B',
-  },
+  statNumber: { ...baseStyles.statNumber, color: '#FFFFFF' },
+  statLabel: { ...baseStyles.statLabel, color: 'rgba(255, 255, 255, 0.35)' },
+  divider: { ...baseStyles.divider, backgroundColor: 'rgba(255,255,255,0.08)' },
   handoverPanel: {
     ...baseStyles.handoverPanel,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#1C2333',
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -564,4 +814,14 @@ const darkStyles = StyleSheet.create({
     borderColor: 'rgba(244, 63, 94, 0.2)',
   },
   secondaryText: { ...baseStyles.secondaryText, color: '#FB7185' },
+  filterWrapper: {
+    ...baseStyles.filterWrapper,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  filterPillInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  filterTextInactive: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
 } as any);

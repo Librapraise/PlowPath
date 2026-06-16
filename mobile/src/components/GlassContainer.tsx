@@ -26,9 +26,9 @@ export default function GlassContainer({
 
 const styles = StyleSheet.create({
   containerDark: {
-    backgroundColor: '#1E293B', // Solid Slate 800
+    backgroundColor: 'rgba(30, 41, 59, 0.85)', // Translucent Slate 800
   },
   containerLight: {
-    backgroundColor: '#FFFFFF', // Solid White
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', // Translucent White
   },
 });

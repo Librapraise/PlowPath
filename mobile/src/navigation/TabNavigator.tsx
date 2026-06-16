@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -44,10 +45,10 @@ export default function TabNavigator() {
   const isDark = theme === 'dark';
 
   // Premium design tokens
-  const bgColor = isDark ? '#1E293B' : '#FFFFFF'; // --bg-surface
-  const borderTopColor = isDark ? '#334155' : '#E2E8F0'; // --border-subtle
-  const activeColor = isDark ? '#38BDF8' : '#2E75B6'; // --accent-ice
-  const inactiveColor = isDark ? '#94A3B8' : '#64748B'; // --text-muted / text-dim
+  const bgColor = isDark ? '#0F141E' : '#FFFFFF';
+  const borderTopColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+  const activeColor = isDark ? '#38BDF8' : '#1D4ED8';
+  const inactiveColor = isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.35)';
 
   return (
     <Tab.Navigator
@@ -69,7 +70,7 @@ export default function TabNavigator() {
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
         tabBarLabelStyle: {
-          fontSize: 10, // reduced to fit longer labels like 'Sign Operations'
+          fontSize: 10,
           fontWeight: '800',
         },
       }}
@@ -79,7 +80,12 @@ export default function TabNavigator() {
         component={RouteScreen}
         options={{
           tabBarLabel: "Today's Route",
-          tabBarIcon: ({ color }) => <RouteIcon color={color} size={24} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              {focused && <View style={{ position: 'absolute', top: -10, width: 40, height: 2, backgroundColor: activeColor, borderRadius: 2 }} />}
+              <RouteIcon color={color} size={24} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
@@ -87,7 +93,12 @@ export default function TabNavigator() {
         component={SignRouteScreen}
         options={{
           tabBarLabel: 'Sign Operations',
-          tabBarIcon: ({ color }) => <SignIcon color={color} size={24} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              {focused && <View style={{ position: 'absolute', top: -10, width: 40, height: 2, backgroundColor: activeColor, borderRadius: 2 }} />}
+              <SignIcon color={color} size={24} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
@@ -95,7 +106,12 @@ export default function TabNavigator() {
         component={InAppHistoryScreen}
         options={{
           tabBarLabel: 'Notifications',
-          tabBarIcon: ({ color }) => <BellIcon color={color} size={24} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              {focused && <View style={{ position: 'absolute', top: -10, width: 40, height: 2, backgroundColor: activeColor, borderRadius: 2 }} />}
+              <BellIcon color={color} size={24} />
+            </View>
+          ),
         }}
       />
       <Tab.Screen
@@ -103,7 +119,12 @@ export default function TabNavigator() {
         component={SettingsScreen}
         options={{
           tabBarLabel: 'Settings',
-          tabBarIcon: ({ color }) => <SettingsIcon color={color} size={24} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              {focused && <View style={{ position: 'absolute', top: -10, width: 40, height: 2, backgroundColor: activeColor, borderRadius: 2 }} />}
+              <SettingsIcon color={color} size={24} />
+            </View>
+          ),
         }}
       />
     </Tab.Navigator>
