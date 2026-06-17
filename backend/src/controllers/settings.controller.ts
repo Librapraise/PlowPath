@@ -40,9 +40,11 @@ const organizationSettingsSchema = z.object({
 // Zod schema for driver specific device state preferences
 const driverSettingsSchema = z.object({
   theme: z.enum(['light', 'dark']),
+  theme_mode: z.enum(['light', 'dark', 'auto']).optional(),
   navigation_app: z.enum(['google_maps', 'apple_maps', 'waze']),
   tracking_accuracy: z.enum(['high', 'power_saver']),
   upload_frequency_seconds: z.number().int().positive(),
+  high_contrast_map: z.boolean().optional(),
 });
 
 // 🖥️ GET /api/v1/settings

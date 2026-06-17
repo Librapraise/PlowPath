@@ -275,14 +275,14 @@ const summaryStyles = StyleSheet.create({
   },
   title: {
     color: '#22C55E',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '900',
     letterSpacing: 1.5,
     marginBottom: 6,
   },
   routeName: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
   },
   statsRow: {
@@ -307,12 +307,12 @@ const summaryStyles = StyleSheet.create({
   },
   statNum: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
   },
   statLabel: {
     color: '#94A3B8',
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     marginTop: 2,
     textTransform: 'uppercase',
@@ -354,12 +354,12 @@ const summaryStyles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   stopIndexText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: '#94A3B8',
   },
   stopName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
   },
   textWhite: {
@@ -369,7 +369,7 @@ const summaryStyles = StyleSheet.create({
     color: '#0F172A',
   },
   stopAddress: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#64748B',
     marginTop: 2,
   },
@@ -385,7 +385,7 @@ const summaryStyles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   statusText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
   },
   statusTextCompleted: {
@@ -401,7 +401,7 @@ const summaryStyles = StyleSheet.create({
     paddingTop: 12,
   },
   proofLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     color: '#10B981',
     marginBottom: 8,
@@ -1434,9 +1434,9 @@ function applyStopStatus(route: OfflineRoute, stopId: string, status: RouteStop[
 const baseStyles = {
   container: { flexGrow: 1, padding: 20 },
   scrollContent: { flexGrow: 1, padding: 20 },
-  muted: { textAlign: 'center', marginTop: 40, fontSize: 18, fontWeight: '800' },
-  error: { color: '#F43F5E', textAlign: 'center', marginTop: 40, fontSize: 18, fontWeight: '800' },
-  stopInfo: { fontSize: 14, marginTop: 16, fontWeight: '800' },
+  muted: { textAlign: 'center', marginTop: 40, fontSize: 22, fontWeight: '800' },
+  error: { color: '#F43F5E', textAlign: 'center', marginTop: 40, fontSize: 22, fontWeight: '800' },
+  stopInfo: { fontSize: 16, marginTop: 16, fontWeight: '800' },
 
   // Top Floating Bar Styles
   topFloatingBar: {
@@ -1476,12 +1476,12 @@ const baseStyles = {
   },
   topBarAddress: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '800' as any,
   },
   topBarSub: {
     color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600' as any,
     marginTop: 2,
   },
@@ -1533,12 +1533,12 @@ const baseStyles = {
     paddingBottom: 16,
   },
   destinationTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '800' as any,
     color: '#FFFFFF',
   },
   destinationSub: {
-    fontSize: 12,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.55)',
     marginTop: 2,
   },
@@ -1555,7 +1555,7 @@ const baseStyles = {
   },
   primaryCtaText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700' as any,
     letterSpacing: 0.5,
     marginLeft: 8,
@@ -1572,7 +1572,7 @@ const baseStyles = {
     paddingBottom: 10,
   },
   stepperLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '900' as any,
     letterSpacing: 1.5,
     color: 'rgba(255, 255, 255, 0.45)',
@@ -1619,8 +1619,8 @@ const baseStyles = {
     borderLeftColor: '#38BDF8',
   },
   notesHeaderRow: { flexDirection: 'row' as any, alignItems: 'center' as any, marginBottom: 4 },
-  notesHeader: { fontSize: 11, fontWeight: '900' as any, textTransform: 'uppercase' as any, color: '#38BDF8' },
-  notes: { fontSize: 13, fontStyle: 'italic' as any, fontWeight: '500' as any, color: '#F1F5F9' },
+  notesHeader: { fontSize: 13, fontWeight: '900' as any, textTransform: 'uppercase' as any, color: '#38BDF8' },
+  notes: { fontSize: 15, fontStyle: 'italic' as any, fontWeight: '500' as any, color: '#F1F5F9' },
   subcontractBadge: {
     borderWidth: 1.5,
     paddingVertical: 8,
@@ -1629,7 +1629,7 @@ const baseStyles = {
     flexDirection: 'row' as any,
     alignItems: 'center' as any,
   },
-  subcontractText: { fontSize: 12, fontWeight: '800' as any, flexShrink: 1 },
+  subcontractText: { fontSize: 14, fontWeight: '800' as any, flexShrink: 1 },
 
   // Section 2: HUD Launcher
   navRow: {
@@ -1637,7 +1637,7 @@ const baseStyles = {
     marginTop: 20,
   },
   hudLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '900' as any,
     letterSpacing: 1.5,
     color: 'rgba(255, 255, 255, 0.4)',
@@ -1663,7 +1663,7 @@ const baseStyles = {
     marginBottom: 6,
   },
   navCardText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600' as any,
     color: '#FFFFFF',
   },
@@ -1687,7 +1687,7 @@ const baseStyles = {
     paddingVertical: 8,
   },
   secondaryBtnLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '600' as any,
     marginTop: 6,
@@ -1711,7 +1711,7 @@ const baseStyles = {
     padding: 16,
   },
   dangerZoneTitle: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900' as any,
     color: '#F87171',
     letterSpacing: 1,
@@ -1719,7 +1719,7 @@ const baseStyles = {
     textTransform: 'uppercase' as any,
   },
   dangerZoneDesc: {
-    fontSize: 13,
+    fontSize: 15,
     color: 'rgba(255, 255, 255, 0.6)',
     lineHeight: 18,
     marginBottom: 12,
@@ -1734,7 +1734,7 @@ const baseStyles = {
   },
   emergencyBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700' as any,
     marginLeft: 8,
   },
@@ -1755,9 +1755,9 @@ const baseStyles = {
     maxWidth: 320,
     alignItems: 'center' as any,
   },
-  voiceTitle: { fontSize: 16, fontWeight: '900' as any, color: 'white', marginBottom: 4 },
-  voiceSub: { fontSize: 11, color: '#94A3B8', textAlign: 'center' as any, lineHeight: 15 },
-  voiceTranscript: { fontSize: 16, fontWeight: '900' as any, color: '#10B981', fontStyle: 'italic' as any },
+  voiceTitle: { fontSize: 18, fontWeight: '900' as any, color: 'white', marginBottom: 4 },
+  voiceSub: { fontSize: 13, color: '#94A3B8', textAlign: 'center' as any, lineHeight: 15 },
+  voiceTranscript: { fontSize: 18, fontWeight: '900' as any, color: '#10B981', fontStyle: 'italic' as any },
 
   // Proof of Service Modal
   modalOverlay: {
@@ -1772,8 +1772,8 @@ const baseStyles = {
     borderWidth: 1.5,
     borderBottomWidth: 0,
   },
-  modalTitle: { fontSize: 18, fontWeight: '900' as any, marginBottom: 6 },
-  modalSub: { fontSize: 12, lineHeight: 18, marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '900' as any, marginBottom: 6 },
+  modalSub: { fontSize: 14, lineHeight: 18, marginBottom: 20 },
   cameraTriggerBox: {
     minHeight: 180,
     borderRadius: 16,
@@ -1790,9 +1790,9 @@ const baseStyles = {
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
   },
-  cameraBtnText: { color: 'white', fontSize: 14, fontWeight: '900' as any },
+  cameraBtnText: { color: 'white', fontSize: 16, fontWeight: '900' as any },
   cameraSim: { alignItems: 'center' as any, gap: 10 },
-  cameraText: { fontSize: 12, fontWeight: '800' as any },
+  cameraText: { fontSize: 14, fontWeight: '800' as any },
   progressBarBg: { width: 200, height: 8, borderRadius: 4, overflow: 'hidden' as any, marginTop: 4 },
   progressBarFill: { height: '100%' },
   photoPreviewBox: {
@@ -1804,7 +1804,7 @@ const baseStyles = {
     height: 180,
     borderRadius: 16,
   },
-  compressionStat: { fontSize: 11, fontWeight: '700' as any },
+  compressionStat: { fontSize: 13, fontWeight: '700' as any },
   modalActions: {
     flexDirection: 'row' as any,
     gap: 12,
@@ -1818,7 +1818,7 @@ const baseStyles = {
     alignItems: 'center' as any,
     justifyContent: 'center' as any,
   },
-  cancelModalText: { fontSize: 14, fontWeight: '800' as any },
+  cancelModalText: { fontSize: 16, fontWeight: '800' as any },
   confirmModalBtn: {
     flex: 2,
     minHeight: 52,
@@ -1828,7 +1828,7 @@ const baseStyles = {
     justifyContent: 'center' as any,
   },
   disabledModalBtn: { opacity: 0.4 },
-  confirmModalText: { color: 'white', fontSize: 14, fontWeight: '900' as any, letterSpacing: 0.5 },
+  confirmModalText: { color: 'white', fontSize: 16, fontWeight: '900' as any, letterSpacing: 0.5 },
 };
 
 const lightStyles = StyleSheet.create({

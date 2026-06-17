@@ -1,6 +1,16 @@
 import AppText from '../components/AppText';
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+} from 'react-native';
+import Svg, { Path, Circle, Rect, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
 import { api } from '../services/api';
 import { useSettingsStore } from '../store/settingsStore';
 import OfflineStatusBar from '../components/OfflineStatusBar';
@@ -22,7 +32,48 @@ interface SignRouteResponse {
   stops: SignStop[];
 }
 
+const windowWidth = Dimensions.get('window').width;
+
+// Gradient Button Helper using Svg
+const GradientButton = ({
+  onPress,
+  text,
+  disabled,
+  icon,
+  colors = ['#10B981', '#22C55E'],
+}: {
+  onPress: () => void;
+  text: string;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  colors?: string[];
+}) => {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.gradientBtnContainer, disabled && { opacity: 0.45 }]}
+      activeOpacity={0.8}
+    >
+      <Svg style={StyleSheet.absoluteFillObject}>
+        <Defs>
+          <SvgLinearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={colors[0]} />
+            <Stop offset="100%" stopColor={colors[1]} />
+          </SvgLinearGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#btnGrad)" />
+      </Svg>
+      <View style={styles.gradientBtnContent}>
+        {icon}
+        <AppText style={[styles.gradientBtnText, { marginLeft: icon ? 8 : 0 }]}>{text}</AppText>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 export default function SignRouteScreen() {
+  const navigation = useNavigation<any>();
   const theme = useSettingsStore((s) => s.settings.theme);
   const isDark = theme === 'dark';
 
@@ -31,6 +82,10 @@ export default function SignRouteScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Tab slider width tracking
+  const [tabWidth, setTabWidth] = useState(windowWidth - 40);
+  const slidingAnim = useRef(new Animated.Value(action === 'install' ? 0 : 1)).current;
 
   const fetchSignRoute = async () => {
     setIsLoading(true);
@@ -51,6 +106,14 @@ export default function SignRouteScreen() {
     fetchSignRoute();
   }, [action]);
 
+  useEffect(() => {
+    Animated.timing(slidingAnim, {
+      toValue: action === 'install' ? 0 : 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [action]);
+
   const handleUpdateStatus = async (customerId: string, targetStatus: 'installed' | 'removed') => {
     setUpdatingId(customerId);
     try {
@@ -65,315 +128,608 @@ export default function SignRouteScreen() {
     }
   };
 
-  const styles = isDark ? darkStyles : lightStyles;
+  const resolvedStyles = isDark ? darkStyles : lightStyles;
+
+  const activePillLeft = slidingAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [4, tabWidth / 2],
+  });
 
   return (
-    <View style={styles.container}>
+    <View style={resolvedStyles.container}>
       <OfflineStatusBar />
 
-      <AppText style={styles.header}>Sign Crew</AppText>
-
-      {/* Header Controls */}
-      <View style={styles.tabContainer}>
+      {/* Sub-page Header Pattern (Inline Back Button + Title + Bottom Divider) */}
+      <View style={resolvedStyles.headerRow}>
         <TouchableOpacity
-          style={[styles.tabButton, action === 'install' && styles.activeTab]}
-          onPress={() => setAction('install')}
+          style={resolvedStyles.headerBackBtn}
+          onPress={() => navigation.navigate('Route')}
+          accessibilityRole="button"
+          accessibilityLabel="Back to route"
         >
-          <AppText style={[styles.tabText, action === 'install' && styles.activeTabText]}>
+          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none"
+            stroke={isDark ? '#FFFFFF' : '#0F141E'}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <Path d="M19 12H5M12 5l-7 7 7 7" />
+          </Svg>
+        </TouchableOpacity>
+        <AppText style={resolvedStyles.headerTitle}>Sign Crew</AppText>
+      </View>
+
+      {/* Redesigned Sliding Tab Selector */}
+      <View
+        style={resolvedStyles.tabContainer}
+        onLayout={(e) => setTabWidth(e.nativeEvent.layout.width)}
+      >
+        <Animated.View
+          style={[
+            styles.slidingPill,
+            {
+              left: activePillLeft,
+              width: tabWidth / 2 - 4,
+              backgroundColor: isDark ? '#0F141E' : '#FFFFFF',
+            },
+          ]}
+        />
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setAction('install')}
+          activeOpacity={0.9}
+        >
+          <AppText
+            style={[
+              resolvedStyles.tabText,
+              action === 'install' && resolvedStyles.activeTabText,
+            ]}
+          >
             Install Signs
           </AppText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tabButton, action === 'remove' && styles.activeTab]}
+          style={styles.tabButton}
           onPress={() => setAction('remove')}
+          activeOpacity={0.9}
         >
-          <AppText style={[styles.tabText, action === 'remove' && styles.activeTabText]}>
+          <AppText
+            style={[
+              resolvedStyles.tabText,
+              action === 'remove' && resolvedStyles.activeTabText,
+            ]}
+          >
             Remove Signs
           </AppText>
         </TouchableOpacity>
       </View>
 
-      {/* Route Info Dashboard */}
+      {/* Redesigned Route Info Dashboard (3 side-by-side cards) */}
       {routeData && (
-        <View style={styles.statsCard}>
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <AppText style={styles.statLabel}>STOPS TO GO</AppText>
-              <AppText style={styles.statVal}>{routeData.stops.length}</AppText>
+        <View style={styles.dashboardRow}>
+          {/* Stops Left Card */}
+          <View style={resolvedStyles.statCard}>
+            <View style={styles.statIconBadge}>
+              <AppText style={{ fontSize: 16 }}>🔴</AppText>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.statItem}>
-              <AppText style={styles.statLabel}>DISTANCE</AppText>
-              <AppText style={styles.statVal}>{routeData.total_miles} mi</AppText>
+            <AppText style={resolvedStyles.statVal}>{routeData.stops.length}</AppText>
+            <AppText style={resolvedStyles.statLabel}>Stops Left</AppText>
+          </View>
+
+          {/* Distance Card */}
+          <View style={resolvedStyles.statCard}>
+            <View style={styles.statIconBadge}>
+              <AppText style={{ fontSize: 16 }}>📏</AppText>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.statItem}>
-              <AppText style={styles.statLabel}>PROGRESS</AppText>
-              <AppText style={styles.statVal}>{routeData.progress}%</AppText>
+            <AppText style={resolvedStyles.statVal}>{routeData.total_miles}mi</AppText>
+            <AppText style={resolvedStyles.statLabel}>Distance</AppText>
+          </View>
+
+          {/* Progress Card (with custom vector arc) */}
+          <View style={resolvedStyles.statCard}>
+            <View style={styles.progressRingWrapper}>
+              <Svg width={32} height={32} viewBox="0 0 36 36">
+                <Circle
+                  cx="18"
+                  cy="18"
+                  r="14"
+                  fill="none"
+                  stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,20,30,0.06)'}
+                  strokeWidth="3.5"
+                />
+                <Circle
+                  cx="18"
+                  cy="18"
+                  r="14"
+                  fill="none"
+                  stroke="#22C55E"
+                  strokeWidth="3.5"
+                  strokeDasharray="88"
+                  strokeDashoffset={88 - (88 * routeData.progress) / 100}
+                  strokeLinecap="round"
+                  transform="rotate(-90 18 18)"
+                />
+              </Svg>
             </View>
+            <AppText style={resolvedStyles.statVal}>{routeData.progress}%</AppText>
+            <AppText style={resolvedStyles.statLabel}>Done</AppText>
           </View>
         </View>
       )}
 
-      {error && <AppText style={styles.errorText}>{error}</AppText>}
+      {error && <AppText style={resolvedStyles.errorText}>{error}</AppText>}
 
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={isDark ? '#38BDF8' : '#2E75B6'} />
-          <AppText style={styles.loadingText}>Calculating optimized TSP route...</AppText>
+        <View style={resolvedStyles.center}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <AppText style={resolvedStyles.loadingText}>Calculating optimized TSP route...</AppText>
         </View>
       ) : (
         <FlatList
           data={routeData?.stops ?? []}
           keyExtractor={(s) => s.customer_id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={resolvedStyles.listContent}
           ListEmptyComponent={
-            <AppText style={styles.emptyText}>
+            <AppText style={resolvedStyles.emptyText}>
               All properties are completed for this off-season sign operation!
             </AppText>
           }
-          renderItem={({ item }) => (
-            <View style={styles.stopCard}>
-              <View style={styles.stopHeader}>
-                <View style={styles.seqBadge}>
-                  <AppText style={styles.seqText}>{item.sequence_number}</AppText>
+          renderItem={({ item }) => {
+            const isInstalled = item.sign_status === 'installed';
+            const isRemoved = item.sign_status === 'removed';
+
+            let accentColor = '#3B82F6'; // Pending blue
+            if (isInstalled) accentColor = '#22C55E'; // Success green
+            if (isRemoved) accentColor = '#F59E0B'; // Warning amber
+
+            // Mock date string for Removed stops
+            const removedDate = 'Jun 17, 2026';
+
+            return (
+              <View
+                style={resolvedStyles.stopCard}
+              >
+                <View style={styles.stopHeader}>
+                  {/* Status dot + sequence number */}
+                  <View style={[styles.seqContainer, { borderColor: accentColor }]}>
+                    <View style={[styles.statusDot, { backgroundColor: accentColor }]} />
+                    <AppText style={[resolvedStyles.seqText, { color: isDark ? '#FFFFFF' : '#0F141E' }]}>
+                      {item.sequence_number}
+                    </AppText>
+                  </View>
+
+                  <View style={styles.metaCol}>
+                    <AppText style={resolvedStyles.stopName}>{item.name}</AppText>
+                    <AppText style={resolvedStyles.stopAddr}>{item.address}</AppText>
+                    {isRemoved && (
+                      <AppText style={resolvedStyles.removedNote}>
+                        ℹ Sign was last removed on {removedDate}
+                      </AppText>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.metaCol}>
-                  <AppText style={styles.stopName}>{item.name}</AppText>
-                  <AppText style={styles.stopAddr}>{item.address}</AppText>
+
+                <View style={resolvedStyles.cardFooterRow}>
+                  <View style={resolvedStyles.badgeContainer}>
+                    <View style={[styles.pillBadge, { backgroundColor: `${accentColor}1A` }]}>
+                      <AppText style={[styles.pillBadgeText, { color: accentColor }]}>
+                        {isInstalled ? 'INSTALLED' : isRemoved ? 'REMOVED' : 'PENDING'}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <View style={styles.flex1}>
+                    {action === 'install' ? (
+                      <GradientButton
+                        disabled={updatingId === item.customer_id}
+                        onPress={() => handleUpdateStatus(item.customer_id, 'installed')}
+                        text="Mark Installed"
+                        colors={['#10B981', '#22C55E']}
+                        icon={
+                          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                            <Path d="M20 6L9 17l-5-5" />
+                          </Svg>
+                        }
+                      />
+                    ) : (
+                      <GradientButton
+                        disabled={updatingId === item.customer_id}
+                        onPress={() => handleUpdateStatus(item.customer_id, 'removed')}
+                        text="Mark Removed"
+                        colors={['#F59E0B', '#D97706']}
+                        icon={
+                          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                            <Path d="M18 6L6 18M6 6l12 12" />
+                          </Svg>
+                        }
+                      />
+                    )}
+                  </View>
                 </View>
               </View>
-
-              <View style={styles.actionRow}>
-                <AppText style={styles.statusLabel}>
-                  Status:{' '}
-                  <AppText
-                    style={[
-                      styles.statusVal,
-                      {
-                        color:
-                          item.sign_status === 'installed'
-                            ? '#10B981'
-                            : item.sign_status === 'needs_service'
-                            ? '#F59E0B'
-                            : isDark
-                            ? '#94A3B8'
-                            : '#64748B',
-                      },
-                    ]}
-                  >
-                    {item.sign_status.replace('_', ' ').toUpperCase()}
-                  </AppText>
-                </AppText>
-
-                {action === 'install' ? (
-                  <TouchableOpacity
-                    disabled={updatingId === item.customer_id}
-                    style={[styles.btn, styles.installBtn]}
-                    onPress={() => handleUpdateStatus(item.customer_id, 'installed')}
-                  >
-                    {updatingId === item.customer_id ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <AppText style={styles.btnText}>Mark Installed</AppText>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    disabled={updatingId === item.customer_id}
-                    style={[styles.btn, styles.removeBtn]}
-                    onPress={() => handleUpdateStatus(item.customer_id, 'removed')}
-                  >
-                    {updatingId === item.customer_id ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <AppText style={styles.btnText}>Mark Removed</AppText>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
+            );
+          }}
         />
       )}
     </View>
   );
 }
 
-const baseStyles = {
-  container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  header: {
-    fontSize: 26,
-    fontWeight: '900',
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  listContent: { paddingHorizontal: 20, paddingBottom: 24 },
-  loadingText: { marginTop: 12, fontSize: 14, fontWeight: '600' },
-  tabContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    height: 56, // glove-friendly height
+const styles = StyleSheet.create({
+  slidingPill: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    borderRadius: 999,
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
-    borderRadius: 8,
-    height: 46, // inner segment height
     justifyContent: 'center',
+    zIndex: 2,
   },
-  activeTab: {},
-  tabText: { fontSize: 14, fontWeight: '800' },
-  activeTabText: { color: 'white' },
-  statsCard: {
-    padding: 16,
-    borderRadius: 16,
+  dashboardRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  statRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  statItem: { alignItems: 'center' },
-  statLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  statVal: { fontSize: 16, fontWeight: '900', marginTop: 4, textAlign: 'center' },
-  divider: { width: 1.5, height: 32 },
-  errorText: { color: '#EF4444', marginBottom: 12, textAlign: 'center', fontWeight: '700' },
-  emptyText: { marginTop: 32, textAlign: 'center', fontSize: 14, fontWeight: '600' },
-  stopCard: {
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
+  statIconBadge: {
+    marginBottom: 6,
   },
-  stopHeader: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  seqBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  progressRingWrapper: {
+    marginBottom: 4,
+  },
+  stopHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  seqContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderRadius: 8,
+    gap: 6,
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  metaCol: {
+    flex: 1,
+  },
+  flex1: {
+    flex: 1,
+  },
+  gradientBtnContainer: {
+    height: 40,
+    borderRadius: 10,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gradientBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gradientBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  pillBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  pillBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+});
+
+const lightStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 12,
+    paddingBottom: 12,
+    marginHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(15,20,30,0.06)',
+  },
+  headerBackBtn: {
+    marginRight: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  seqText: { fontWeight: '900', fontSize: 13 },
-  metaCol: { flex: 1 },
-  stopName: { fontSize: 16, fontWeight: '800' },
-  stopAddr: { fontSize: 13, marginTop: 2 },
-  actionRow: {
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F141E',
+    flex: 1,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    padding: 4,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    height: 52,
+    backgroundColor: '#E2E8F0',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(15,20,30,0.5)',
+  },
+  activeTabText: {
+    color: '#3B82F6',
+    fontWeight: '700',
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  statVal: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F141E',
+  },
+  statLabel: {
+    fontSize: 10,
+    color: 'rgba(15,20,30,0.4)',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  errorText: {
+    color: '#EF4444',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: '700',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: 'rgba(15,20,30,0.5)',
+    fontWeight: '600',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  emptyText: {
+    marginTop: 32,
+    textAlign: 'center',
+    fontSize: 13,
+    color: 'rgba(15,20,30,0.5)',
+    fontWeight: '600',
+  },
+  stopCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000000',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  seqText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stopName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F141E',
+  },
+  stopAddr: {
+    fontSize: 12,
+    color: 'rgba(15,20,30,0.5)',
+    marginTop: 2,
+  },
+  removedNote: {
+    fontSize: 11,
+    color: '#F59E0B',
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  cardFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
+    borderTopColor: 'rgba(15,20,30,0.06)',
     marginTop: 12,
     paddingTop: 12,
+    gap: 12,
   },
-  statusLabel: { fontSize: 12, fontWeight: '700' },
-  statusVal: { fontWeight: '900' },
-  btn: {
-    paddingHorizontal: 16,
-    height: 46, // glove-friendly actions in cards
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  badgeContainer: {
+    flexDirection: 'row',
   },
-  installBtn: { backgroundColor: '#10B981' },
-  removeBtn: { backgroundColor: '#3B82F6' },
-  btnText: { color: 'white', fontSize: 13, fontWeight: '900' },
-};
-
-const lightStyles = StyleSheet.create({
-  ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#F8FAFC' },
-  header: { ...baseStyles.header, color: '#0F172A' },
-  loadingText: { ...baseStyles.loadingText, color: '#475569' },
-  tabContainer: {
-    ...baseStyles.tabContainer,
-    backgroundColor: '#F1F5F9',
-    borderColor: '#E2E8F0',
-  },
-  activeTab: {
-    ...baseStyles.activeTab,
-    backgroundColor: '#FFFFFF',
-  },
-  tabText: { ...baseStyles.tabText, color: '#475569' },
-  activeTabText: { color: '#2E75B6' },
-  statsCard: {
-    ...baseStyles.statsCard,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-  },
-  statLabel: { ...baseStyles.statLabel, color: '#64748B' },
-  statVal: { ...baseStyles.statVal, color: '#0F172A' },
-  divider: { ...baseStyles.divider, backgroundColor: '#E2E8F0' },
-  emptyText: { ...baseStyles.emptyText, color: '#64748B' },
-  stopCard: {
-    ...baseStyles.stopCard,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.04,
-  },
-  seqBadge: {
-    ...baseStyles.seqBadge,
-    backgroundColor: '#F1F5F9',
-    borderColor: '#E2E8F0',
-  },
-  seqText: { ...baseStyles.seqText, color: '#475569' },
-  stopName: { ...baseStyles.stopName, color: '#0F172A' },
-  stopAddr: { ...baseStyles.stopAddr, color: '#64748B' },
-  actionRow: { ...baseStyles.actionRow, borderTopColor: '#F1F5F9' },
-  statusLabel: { ...baseStyles.statusLabel, color: '#64748B' },
-  statusVal: { ...baseStyles.statusVal, color: '#0F172A' },
-  removeBtn: { backgroundColor: '#475569' },
 } as any);
 
 const darkStyles = StyleSheet.create({
-  ...baseStyles,
-  container: { ...baseStyles.container, backgroundColor: '#0F141E' },
-  header: { ...baseStyles.header, color: '#FFFFFF' },
-  loadingText: { ...baseStyles.loadingText, color: '#94A3B8' },
+  container: {
+    flex: 1,
+    backgroundColor: '#0F141E',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 12,
+    paddingBottom: 12,
+    marginHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  headerBackBtn: {
+    marginRight: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+  },
   tabContainer: {
-    ...baseStyles.tabContainer,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
+    flexDirection: 'row',
+    borderRadius: 999,
+    padding: 4,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    height: 52,
+    backgroundColor: '#161C29',
   },
-  activeTab: {
-    ...baseStyles.activeTab,
-    backgroundColor: '#0F141E',
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.55)',
   },
-  tabText: { ...baseStyles.tabText, color: '#94A3B8' },
-  activeTabText: { color: '#38BDF8' },
-  statsCard: {
-    ...baseStyles.statsCard,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-    shadowColor: '#000',
+  activeTabText: {
+    color: '#3B82F6',
+    fontWeight: '700',
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#161C29',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
     shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  statLabel: { ...baseStyles.statLabel, color: '#94A3B8' },
-  statVal: { ...baseStyles.statVal, color: '#FFFFFF' },
-  divider: { ...baseStyles.divider, backgroundColor: '#334155' },
-  emptyText: { ...baseStyles.emptyText, color: '#94A3B8' },
+  statVal: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statLabel: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.3)',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  errorText: {
+    color: '#EF4444',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: '700',
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  emptyText: {
+    marginTop: 32,
+    textAlign: 'center',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
+  },
   stopCard: {
-    ...baseStyles.stopCard,
-    backgroundColor: '#1E293B',
-    borderColor: '#334155',
-    shadowColor: '#000',
+    backgroundColor: '#161C29',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000000',
     shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  seqBadge: {
-    ...baseStyles.seqBadge,
-    backgroundColor: '#0F141E',
-    borderColor: '#334155',
+  seqText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
-  seqText: { ...baseStyles.seqText, color: '#38BDF8' },
-  stopName: { ...baseStyles.stopName, color: '#FFFFFF' },
-  stopAddr: { ...baseStyles.stopAddr, color: '#94A3B8' },
-  actionRow: { ...baseStyles.actionRow, borderTopColor: '#334155' },
-  statusLabel: { ...baseStyles.statusLabel, color: '#94A3B8' },
-  statusVal: { ...baseStyles.statusVal, color: '#FFFFFF' },
-  removeBtn: { backgroundColor: '#475569' },
+  stopName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  stopAddr: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+    marginTop: 2,
+  },
+  removedNote: {
+    fontSize: 11,
+    color: '#F59E0B',
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    marginTop: 12,
+    paddingTop: 12,
+    gap: 12,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+  },
 } as any);
