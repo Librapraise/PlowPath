@@ -72,17 +72,17 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
-    // buildToolsVersion "35.0.0"
-    // compileSdk 35
+    //buildToolsVersion rootProject.ext.buildToolsVersion
+    //compileSdk rootProject.ext.compileSdkVersion
+    buildToolsVersion "35.0.0"
+    compileSdk 35
 
     namespace "com.plowpathtemp"
     defaultConfig {
         applicationId "com.plowpath.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
+        versionCode 8
         versionName "1.0"
     }
     aaptOptions {

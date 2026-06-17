@@ -33,6 +33,27 @@ export async function requestLocationPermission(): Promise<boolean> {
 
 export type GpsWatchHandle = number;
 
+export function getCurrentLocation(): Promise<GpsSample> {
+  return new Promise((resolve, reject) => {
+    Geolocation.getCurrentPosition(
+      (pos: GeoPosition) => {
+        resolve({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          accuracy_m: pos.coords.accuracy,
+          speed_mps: pos.coords.speed ?? undefined,
+          heading_deg: pos.coords.heading ?? undefined,
+          recorded_at: new Date(pos.timestamp).toISOString(),
+        });
+      },
+      (err) => {
+        reject(new Error(`${err.code}: ${err.message}`));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+    );
+  });
+}
+
 export function watchPosition(onSample: (s: GpsSample) => void, onError?: (err: Error) => void): GpsWatchHandle {
   return Geolocation.watchPosition(
     (pos: GeoPosition) => {

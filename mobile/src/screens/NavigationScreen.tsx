@@ -236,7 +236,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import {
   downloadRoute, loadRouteOffline, markStopStatus, markRouteCompleted, type OfflineRoute, type RouteStop,
 } from '../services/route.service';
-import { requestLocationPermission, type GpsSample } from '../services/gps.service';
+import { requestLocationPermission, getCurrentLocation, type GpsSample } from '../services/gps.service';
 import {
   configureBackgroundGps, startBackgroundGps, stopBackgroundGps,
 } from '../services/backgroundGps.service';
@@ -431,6 +431,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
   const fetchingRoute = useRef(false);
   const [currentLocation, setCurrentLocation] = useState<GpsSample | null>(null);
   const currentStopRef = useRef(currentStop);
+  const gpsInitializedRef = useRef(false);
 
   const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -607,7 +608,8 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
   // Background GPS — keeps streaming with screen off / app backgrounded.
   useEffect(() => {
-    if (!driverId || !currentStop) return;
+    if (!driverId || !currentStop || gpsInitializedRef.current) return;
+    gpsInitializedRef.current = true;
 
     let active = true;
     (async () => {
@@ -625,6 +627,21 @@ export default function NavigationScreen({ route, navigation }: Props) {
           },
         });
         await startBackgroundGps();
+        
+        // Fetch a one-time quick coordinate to kickstart routing / simulation
+        try {
+          const initialLoc = await getCurrentLocation();
+          if (active) onGpsSample(initialLoc);
+        } catch (gpsErr) {
+          console.warn('[NAVIGATION] Quick location fetch failed, using fallback near destination', gpsErr);
+          if (active && currentStop) {
+            onGpsSample({
+              lat: currentStop.lat - 0.005,
+              lon: currentStop.lon - 0.005,
+              recorded_at: new Date().toISOString(),
+            });
+          }
+        }
       } catch (err) {
         setError((err as Error).message);
         captureException(err, { context: 'background_gps_start_failed', routeId });
@@ -642,7 +659,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
       unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverId, routeId]);
+  }, [driverId, routeId, currentStop]);
 
   function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
