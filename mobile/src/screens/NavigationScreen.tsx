@@ -1025,7 +1025,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
           </View>
           <View style={summaryStyles.statDivider} />
           <View style={summaryStyles.statCell}>
-            <AppText style={summaryStyles.statNum}>{(data.total_distance / 1609.34).toFixed(1)}</AppText>
+            <AppText style={summaryStyles.statNum}>{(Number(data.total_distance) / 1609.34).toFixed(1)}</AppText>
             <AppText style={summaryStyles.statLabel}>Total Mi</AppText>
           </View>
         </View>

@@ -146,8 +146,10 @@ const RouteCard = ({
   }
 
   const stopsVal = item.stop_count || '0';
-  const milesVal = item.total_distance?.toFixed?.(1) ?? '0.0';
-  const estVal = Math.max(30, parseInt(stopsVal, 10) * 15);
+  const milesVal = item.total_distance != null ? Number(item.total_distance).toFixed(1) : '0.0';
+  const stopsNum = parseInt(stopsVal, 10) || 0;
+  const milesNum = parseFloat(milesVal) || 0;
+  const estVal = Math.max(15, Math.round(stopsNum * 12 + milesNum * 3));
 
   return (
     <Animated.View
@@ -349,9 +351,9 @@ export default function RouteScreen({ navigation }: Props) {
 
   const filteredRoutes = routes
     ? routes.filter((r) => {
-        if (filter === 'all') return true;
-        return r.status === filter;
-      })
+      if (filter === 'all') return true;
+      return r.status === filter;
+    })
     : [];
 
   const styles = isDark ? darkStyles : lightStyles;
