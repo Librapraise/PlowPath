@@ -35,8 +35,9 @@ module.exports = {
                 t.isIdentifier(path.node.property)
               ) {
                 const key = path.node.property.name;
-                if (key in env) {
-                  path.replaceWith(t.valueToNode(env[key]));
+                const value = env[key] ?? process.env[key];
+                if (value !== undefined) {
+                  path.replaceWith(t.valueToNode(value));
                 }
               }
             },

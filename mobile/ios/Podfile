@@ -5,6 +5,16 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# Dynamically patch the @mauron85/react-native-background-geolocation podspec to link sqlite3
+bg_geolocation_podspec = File.join(__dir__, "../node_modules/@mauron85/react-native-background-geolocation/@mauron85_react-native-background-geolocation.podspec")
+if File.exist?(bg_geolocation_podspec)
+  podspec_contents = File.read(bg_geolocation_podspec)
+  if !podspec_contents.include?("s.library = 'sqlite3'") && !podspec_contents.include?("s.libraries =")
+    podspec_contents.gsub!("s.dependency 'React'", "s.dependency 'React'\n  s.library = 'sqlite3'")
+    File.write(bg_geolocation_podspec, podspec_contents)
+  end
+end
+
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
@@ -17,7 +27,7 @@ prepare_react_native_project!
 #   dependencies: {
 #     ...(process.env.NO_FLIPPER ? { 'react-native-flipper': { platforms: { ios: null } } } : {}),
 # ```
-flipper_config = ENV['NO_FLIPPER'] == "1" ? FlipperConfiguration.disabled : FlipperConfiguration.enabled
+flipper_config = FlipperConfiguration.disabled
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -39,6 +49,15 @@ target 'PlowPath' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # Firebase and Google dependencies require modular headers to be imported from Swift static libraries
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCoreInternal', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
+  pod 'FirebaseInstallations', :modular_headers => true
+  pod 'GoogleDataTransport', :modular_headers => true
+  pod 'nanopb', :modular_headers => true
+
   target 'PlowPathTests' do
     inherit! :complete
     # Pods for testing
@@ -51,5 +70,82 @@ target 'PlowPath' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+
+    # Patch RCT-Folly clockid_t conflict with Xcode 15/16/26 SDKs
+    folly_time_h = "#{installer.sandbox.root}/RCT-Folly/folly/portability/Time.h"
+    if File.exist?(folly_time_h)
+      time_h_contents = File.read(folly_time_h)
+      if time_h_contents.include?("typedef uint8_t clockid_t;")
+        time_h_contents.gsub!("typedef uint8_t clockid_t;", "/* typedef uint8_t clockid_t; */")
+        File.write(folly_time_h, time_h_contents)
+      end
+    end
+
+    # Patch @mauron85_react-native-background-geolocation sqlite3 imports in node_modules
+    bg_geolocation_dir = "#{Pod::Config.instance.installation_root}/../node_modules/@mauron85/react-native-background-geolocation"
+    ["MAURSQLiteLocationDAO.m", "MAURSQLiteConfigurationDAO.m"].each do |file_name|
+      file_path = "#{bg_geolocation_dir}/ios/common/BackgroundGeolocation/#{file_name}"
+      if File.exist?(file_path)
+        contents = File.read(file_path)
+        if contents.include?('#import "sqlite3.h"')
+          contents.gsub!('#import "sqlite3.h"', '#import <sqlite3.h>')
+          File.write(file_path, contents)
+        end
+      end
+    end
+
+    # Patch Reachability.m to remove private netinet6/in6.h import under Xcode 16/26
+    reachability_m = "#{bg_geolocation_dir}/ios/common/BackgroundGeolocation/Reachability.m"
+    if File.exist?(reachability_m)
+      reachability_contents = File.read(reachability_m)
+      if reachability_contents.include?('#import <netinet6/in6.h>')
+        reachability_contents.gsub!('#import <netinet6/in6.h>', '// #import <netinet6/in6.h>')
+        File.write(reachability_m, reachability_contents)
+      end
+    end
+
+    # Suppress deprecated-literal-operator warnings which fail builds on Xcode 16/26
+    installer.pods_project.targets.each do |target|
+      # Force linking of sqlite3 for the background geolocation pod
+      if target.name.include?('mauron85') && target.name.include?('background-geolocation')
+        target.build_configurations.each do |config|
+          ldflags = config.build_settings['OTHER_LDFLAGS'] || '$(inherited)'
+          if ldflags.is_a?(Array)
+            ldflags << '-lsqlite3' unless ldflags.include?('-lsqlite3')
+          else
+            ldflags += ' -lsqlite3' unless ldflags.include?('-lsqlite3')
+          end
+          config.build_settings['OTHER_LDFLAGS'] = ldflags
+        end
+      end
+
+      target.build_configurations.each do |config|
+        cflags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)'
+        if cflags.is_a?(Array)
+          cflags << '-Wno-deprecated-literal-operator' unless cflags.include?('-Wno-deprecated-literal-operator')
+        else
+          cflags += ' -Wno-deprecated-literal-operator' unless cflags.include?('-Wno-deprecated-literal-operator')
+        end
+        config.build_settings['OTHER_CPLUSPLUSFLAGS'] = cflags
+      end
+    end
+
+    # Force link sqlite3 in the main user target
+    installer.aggregate_targets.each do |target|
+      target.user_project.targets.each do |user_target|
+        if user_target.name == 'PlowPath'
+          user_target.build_configurations.each do |config|
+            ldflags = config.build_settings['OTHER_LDFLAGS'] || '$(inherited)'
+            if ldflags.is_a?(Array)
+              ldflags << '-lsqlite3' unless ldflags.include?('-lsqlite3')
+            else
+              ldflags += ' -lsqlite3' unless ldflags.include?('-lsqlite3')
+            end
+            config.build_settings['OTHER_LDFLAGS'] = ldflags
+          end
+        end
+      end
+      target.user_project.save
+    end
   end
 end
