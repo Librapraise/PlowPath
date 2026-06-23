@@ -90,6 +90,7 @@ const WazeIcon = () => (
 );
 
 const ShimmerBadge = ({ isDark, partnerName }: { isDark: boolean; partnerName: string }) => {
+  const { t } = useTranslation();
   const shimmerAnim = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
@@ -117,7 +118,7 @@ const ShimmerBadge = ({ isDark, partnerName }: { isDark: boolean; partnerName: s
     <View style={[styleBadge, { overflow: 'hidden', position: 'relative' }]}>
       <HandshakeIcon color={isDark ? '#818CF8' : '#4F46E5'} />
       <AppText style={styleText}>
-        Enterprise Partner Job: {partnerName || 'B2B Shared Stop'}
+        {t('b2bPartnerJob', { name: partnerName || 'B2B Shared Stop' })}
       </AppText>
       <Animated.View
         style={{
@@ -186,10 +187,19 @@ const WazeIconLarge = () => (
   </Svg>
 );
 
-function formatDistance(mi: number | null): string {
+function formatDistance(mi: number | null, locale: string): string {
   if (mi == null) return '';
-  if (mi < 0.1) return `${Math.round(mi * 5280)} ft`;
-  return `${mi.toFixed(1)} mi`;
+  const isMetric = locale === 'fr-QC' || locale === 'en-CA' || locale === 'en-GB';
+  if (isMetric) {
+    const meters = Math.round(mi * 1609.34);
+    if (meters < 1000) {
+      return `${meters} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+  } else {
+    if (mi < 0.1) return `${Math.round(mi * 5280)} ft`;
+    return `${mi.toFixed(1)} mi`;
+  }
 }
 
 function getManeuverIcon(modifier?: string, color: string = '#FFFFFF') {
@@ -233,6 +243,7 @@ function getManeuverIcon(modifier?: string, color: string = '#FFFFFF') {
 
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useTranslation } from '../services/i18n';
 import {
   downloadRoute, loadRouteOffline, markStopStatus, markRouteCompleted, type OfflineRoute, type RouteStop,
 } from '../services/route.service';
@@ -414,6 +425,7 @@ const summaryStyles = StyleSheet.create({
 });
 
 export default function NavigationScreen({ route, navigation }: Props) {
+  const { t, locale } = useTranslation();
   const { routeId } = route.params;
   const driverId = useAuthStore((s) => s.user?.driver_id);
   const theme = useSettingsStore((s) => s.settings.theme);
@@ -598,7 +610,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
           setData(cached);
           setCurrentStop(nextPending(cached.stops));
         } else if (!cancelled) {
-          setError('Route unavailable offline. Connect to download it once.');
+          setError(locale === 'fr-QC' ? 'Trajet non disponible hors ligne. Connecte-toi pour le télécharger une fois.' : 'Route unavailable offline. Connect to download it once.');
           captureException(err, { context: 'route_loading_failed', routeId });
         }
       }
@@ -615,7 +627,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
     (async () => {
       const granted = await requestLocationPermission();
       if (!granted) {
-        setError('Location permission denied. Navigation needs GPS.');
+        setError(locale === 'fr-QC' ? 'Autorisation de localisation refusée. La navigation a besoin du GPS.' : 'Location permission denied. Navigation needs GPS.');
         return;
       }
       try {
@@ -682,7 +694,10 @@ export default function NavigationScreen({ route, navigation }: Props) {
       setIsSimulating(false);
     } else {
       if (routeGeometry.length === 0) {
-        Alert.alert('No Route Geometry', 'Wait for the route coordinates to load before simulating.');
+        Alert.alert(
+          locale === 'fr-QC' ? 'Aucune géométrie de trajet' : 'No Route Geometry',
+          locale === 'fr-QC' ? 'Attends que les coordonnées du trajet chargent avant de simuler.' : 'Wait for the route coordinates to load before simulating.'
+        );
         return;
       }
       setIsSimulating(true);
@@ -788,14 +803,19 @@ export default function NavigationScreen({ route, navigation }: Props) {
         const result = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
-            title: 'Camera Permission Required',
-            message: 'PlowPath needs camera access to capture proof of service photos.',
-            buttonPositive: 'Allow',
-            buttonNegative: 'Deny',
+            title: locale === 'fr-QC' ? 'Autorisation de caméra requise' : 'Camera Permission Required',
+            message: locale === 'fr-QC'
+              ? 'PlowPath a besoin d\'accéder à la caméra pour prendre des photos des preuves de service.'
+              : 'PlowPath needs camera access to capture proof of service photos.',
+            buttonPositive: locale === 'fr-QC' ? 'Autoriser' : 'Allow',
+            buttonNegative: locale === 'fr-QC' ? 'Refuser' : 'Deny',
           }
         );
         if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permission Denied', 'Camera permission is required to capture proof of service.');
+          Alert.alert(
+            locale === 'fr-QC' ? 'Autorisation refusée' : 'Permission Denied',
+            locale === 'fr-QC' ? 'L\'accès à la caméra est requis pour capturer la preuve de service.' : 'Camera permission is required to capture proof of service.'
+          );
           return;
         }
       }
@@ -821,14 +841,14 @@ export default function NavigationScreen({ route, navigation }: Props) {
         }
 
         if (response.errorMessage) {
-          Alert.alert('Camera Error', response.errorMessage, [{ text: 'OK' }]);
+          Alert.alert(locale === 'fr-QC' ? 'Erreur de caméra' : 'Camera Error', response.errorMessage, [{ text: 'OK' }]);
           captureException(new Error(response.errorMessage), { context: 'camera_capture_failed' });
           return;
         }
 
         const asset = response.assets?.[0];
         if (!asset?.uri) {
-          Alert.alert('Camera Error', 'Could not retrieve captured photo location.', [{ text: 'OK' }]);
+          Alert.alert(locale === 'fr-QC' ? 'Erreur de caméra' : 'Camera Error', locale === 'fr-QC' ? 'Impossible de récupérer l\'emplacement de la photo.' : 'Could not retrieve captured photo location.', [{ text: 'OK' }]);
           return;
         }
 
@@ -875,41 +895,57 @@ export default function NavigationScreen({ route, navigation }: Props) {
     }
 
     setCurrentStop(nextPending(next.stops));
-    Alert.alert('Cleared! ✅', 'Driveway cleared successfully. Homeowner has been alerted via SMS.', [{ text: 'OK' }]);
+    Alert.alert(
+      locale === 'fr-QC' ? 'Terminé! ✅' : 'Cleared! ✅',
+      locale === 'fr-QC'
+        ? 'Entrée déneigée avec succès. Le client a été averti par SMS.'
+        : 'Driveway cleared successfully. Homeowner has been alerted via SMS.',
+      [{ text: 'OK' }]
+    );
   }
 
   function onSkipPropertyConfirm(stop: RouteStop) {
-    Alert.alert('Skip Property', `Are you sure you want to skip ${stop.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Yes, Skip', style: 'destructive',
-        onPress: async () => {
-          if (!data) return;
-          await markStopStatus(data.route_id, stop.stop_id, 'skipped');
-          const next = applyStopStatus(data, stop.stop_id, 'skipped');
-          setData(next);
-          setCurrentStop(nextPending(next.stops));
+    Alert.alert(
+      locale === 'fr-QC' ? 'Sauter la propriété' : 'Skip Property',
+      locale === 'fr-QC' ? `Es-tu sûr de vouloir sauter ${stop.name}?` : `Are you sure you want to skip ${stop.name}?`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: locale === 'fr-QC' ? 'Oui, sauter' : 'Yes, Skip', style: 'destructive',
+          onPress: async () => {
+            if (!data) return;
+            await markStopStatus(data.route_id, stop.stop_id, 'skipped');
+            const next = applyStopStatus(data, stop.stop_id, 'skipped');
+            setData(next);
+            setCurrentStop(nextPending(next.stops));
+          },
         },
-      },
-    ]);
+      ]
+    );
   }
 
   function onStopRouteConfirm() {
-    Alert.alert('STOP Route', 'Are you sure you want to STOP this route? All remaining and in-progress properties will be marked as skipped, and this route will be finalized.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Yes, STOP Route', style: 'destructive',
-        onPress: async () => {
-          if (!data) return;
-          const stopsToSkip = data.stops.filter((s) => s.status === 'pending' || s.status === 'in_progress');
-          for (const stop of stopsToSkip) {
-            await markStopStatus(data.route_id, stop.stop_id, 'skipped');
-          }
-          await markRouteCompleted(data.route_id, 'completed');
-          navigation.pop();
+    Alert.alert(
+      locale === 'fr-QC' ? 'ARRÊTER le trajet' : 'STOP Route',
+      locale === 'fr-QC'
+        ? 'Es-tu sûr de vouloir ARRÊTER ce trajet? Tous les arrêts restants ou en cours seront marqués comme sautés, et ce trajet sera complété.'
+        : 'Are you sure you want to STOP this route? All remaining and in-progress properties will be marked as skipped, and this route will be finalized.',
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: locale === 'fr-QC' ? 'Oui, ARRÊTER' : 'Yes, STOP Route', style: 'destructive',
+          onPress: async () => {
+            if (!data) return;
+            const stopsToSkip = data.stops.filter((s) => s.status === 'pending' || s.status === 'in_progress');
+            for (const stop of stopsToSkip) {
+              await markStopStatus(data.route_id, stop.stop_id, 'skipped');
+            }
+            await markRouteCompleted(data.route_id, 'completed');
+            navigation.pop();
+          },
         },
-      },
-    ]);
+      ]
+    );
   }
 
   // External Navigation Launcher Selector
@@ -931,7 +967,11 @@ export default function NavigationScreen({ route, navigation }: Props) {
         if (supported) {
           Linking.openURL(url);
         } else {
-          Alert.alert('Navigation Error', `The selected map launcher is not installed on this device.`, [{ text: 'OK' }]);
+          Alert.alert(
+            locale === 'fr-QC' ? 'Erreur de navigation' : 'Navigation Error',
+            locale === 'fr-QC' ? 'L\'application de guidage sélectionnée n\'est pas installée sur cet appareil.' : 'The selected map launcher is not installed on this device.',
+            [{ text: 'OK' }]
+          );
         }
       })
       .catch((err) => captureException(err, { context: 'nav_launch_failed' }));
@@ -940,19 +980,19 @@ export default function NavigationScreen({ route, navigation }: Props) {
   // Simulated Speech-to-Text Glove Trigger Commands
   const simulateVoiceCommand = () => {
     Alert.alert(
-      'Simulate Voice Command',
-      'Select a command to simulate speaking:',
+      locale === 'fr-QC' ? 'Simuler une commande vocale' : 'Simulate Voice Command',
+      locale === 'fr-QC' ? 'Choisis une commande à simuler :' : 'Select a command to simulate speaking:',
       [
         {
-          text: 'Cancel',
+          text: t('cancel'),
           style: 'cancel',
         },
         {
-          text: 'PlowPath, Mark Complete',
+          text: locale === 'fr-QC' ? '« arrive » (Marquer fait)' : 'Say "arrive" (Mark complete)',
           onPress: () => runVoiceSimulation('complete'),
         },
         {
-          text: 'PlowPath, Skip Property',
+          text: locale === 'fr-QC' ? '« skip » (Sauter l\'arrêt)' : 'Say "skip" (Skip property)',
           onPress: () => runVoiceSimulation('skip'),
         },
       ]
@@ -961,17 +1001,17 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
   const runVoiceSimulation = (command: 'complete' | 'skip') => {
     setIsVoiceActive(true);
-    setVoiceTranscript('Listening...');
+    setVoiceTranscript(locale === 'fr-QC' ? 'Écoute en cours...' : 'Listening...');
 
     setTimeout(() => {
       if (command === 'complete') {
-        setVoiceTranscript('"PlowPath, Mark Complete"');
+        setVoiceTranscript(locale === 'fr-QC' ? '« arrive »' : '"arrive"');
         setTimeout(() => {
           setIsVoiceActive(false);
           onTriggerMarkComplete(currentStop!);
         }, 1000);
       } else {
-        setVoiceTranscript('"PlowPath, Skip Property"');
+        setVoiceTranscript(locale === 'fr-QC' ? '« skip »' : '"skip"');
         setTimeout(() => {
           setIsVoiceActive(false);
           onSkipPropertyConfirm(currentStop!);
@@ -991,7 +1031,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
   if (!data) {
     return (
       <View style={styles.container}>
-        <AppText style={styles.muted}>Loading…</AppText>
+        <AppText style={styles.muted}>{t('loading')}</AppText>
       </View>
     );
   }
@@ -1001,6 +1041,13 @@ export default function NavigationScreen({ route, navigation }: Props) {
     const skippedStops = data.stops.filter((s) => s.status === 'skipped');
     const totalStops = data.stops.length;
 
+    const isMetric = locale === 'fr-QC' || locale === 'en-CA' || locale === 'en-GB';
+    const totalDistVal = Number(data.total_distance);
+    const totalDistLabel = isMetric ? 'Total km' : 'Total Mi';
+    const totalDistText = isMetric
+      ? (totalDistVal / 1000).toFixed(1)
+      : (totalDistVal / 1609.34).toFixed(1);
+
     return (
       <ScrollView style={[styles.container, { padding: 0 }]} contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}>
         {/* Header Section */}
@@ -1008,7 +1055,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
           <View style={summaryStyles.successBadge}>
             <CheckIcon color="#22C55E" style={{ marginRight: 0 }} />
           </View>
-          <AppText style={summaryStyles.title}>ROUTE COMPLETED</AppText>
+          <AppText style={summaryStyles.title}>{t('completeRouteTitle').toUpperCase()}</AppText>
           <AppText style={summaryStyles.routeName}>{data.route_name}</AppText>
         </View>
 
@@ -1016,23 +1063,23 @@ export default function NavigationScreen({ route, navigation }: Props) {
         <View style={summaryStyles.statsRow}>
           <View style={summaryStyles.statCell}>
             <AppText style={summaryStyles.statNum}>{completedStops.length} / {totalStops}</AppText>
-            <AppText style={summaryStyles.statLabel}>Cleared</AppText>
+            <AppText style={summaryStyles.statLabel}>{t('completed')}</AppText>
           </View>
           <View style={summaryStyles.statDivider} />
           <View style={summaryStyles.statCell}>
             <AppText style={summaryStyles.statNum}>{skippedStops.length}</AppText>
-            <AppText style={summaryStyles.statLabel}>Skipped</AppText>
+            <AppText style={summaryStyles.statLabel}>{locale === 'fr-QC' ? 'Sautés' : 'Skipped'}</AppText>
           </View>
           <View style={summaryStyles.statDivider} />
           <View style={summaryStyles.statCell}>
-            <AppText style={summaryStyles.statNum}>{(Number(data.total_distance) / 1609.34).toFixed(1)}</AppText>
-            <AppText style={summaryStyles.statLabel}>Total Mi</AppText>
+            <AppText style={summaryStyles.statNum}>{totalDistText}</AppText>
+            <AppText style={summaryStyles.statLabel}>{totalDistLabel}</AppText>
           </View>
         </View>
 
         {/* Stops Summary Title */}
         <View style={{ paddingHorizontal: 20, marginTop: 32, marginBottom: 12 }}>
-          <AppText style={styles.hudLabel}>STOP SUMMARY</AppText>
+          <AppText style={styles.hudLabel}>{locale === 'fr-QC' ? 'RÉSUMÉ DES ARRÊTS' : 'STOP SUMMARY'}</AppText>
         </View>
 
         {/* List of stops */}
@@ -1078,7 +1125,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
                 {photoUrl && (
                   <View style={summaryStyles.proofContainer}>
-                    <AppText style={summaryStyles.proofLabel}>⚡ Escrow Proof of Service Photo</AppText>
+                    <AppText style={summaryStyles.proofLabel}>{locale === 'fr-QC' ? '⚡ Preuve photo du service en fiducie' : '⚡ Escrow Proof of Service Photo'}</AppText>
                     <Image source={{ uri: photoUrl }} style={summaryStyles.proofImage} />
                   </View>
                 )}
@@ -1094,7 +1141,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
             onPress={() => navigation.pop()}
             accessibilityRole="button"
           >
-            <AppText style={styles.primaryCtaText}>BACK TO DASHBOARD</AppText>
+            <AppText style={styles.primaryCtaText}>{t('goBackRouteList').toUpperCase()}</AppText>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -1132,8 +1179,22 @@ export default function NavigationScreen({ route, navigation }: Props) {
             </AppText>
             <AppText style={styles.topBarSub} numberOfLines={1}>
               {distanceMi !== null
-                ? `${activeStep?.maneuver.type === 'arrive' ? 'Arriving' : (activeStep?.maneuver.modifier ? `Turn ${activeStep.maneuver.modifier}` : 'Drive')} · ${formatDistance(distanceMi)}`
-                : 'Calculating route...'}
+                ? `${
+                    activeStep?.maneuver.type === 'arrive'
+                      ? (locale === 'fr-QC' ? 'Arrivée' : 'Arriving')
+                      : activeStep?.maneuver.modifier
+                      ? (locale === 'fr-QC'
+                          ? activeStep.maneuver.modifier.includes('left')
+                            ? 'Tourner à gauche'
+                            : activeStep.maneuver.modifier.includes('right')
+                            ? 'Tourner à droite'
+                            : activeStep.maneuver.modifier.includes('straight')
+                            ? 'Aller tout droit'
+                            : 'Tourner'
+                          : `Turn ${activeStep.maneuver.modifier}`)
+                      : (locale === 'fr-QC' ? 'Continuer' : 'Drive')
+                  } · ${formatDistance(distanceMi, locale)}`
+                : (locale === 'fr-QC' ? 'Calcul de l\'itinéraire...' : 'Calculating route...')}
             </AppText>
           </View>
           <TouchableOpacity style={styles.topBarRight} onPress={toggleSheet} accessibilityRole="button">
@@ -1158,8 +1219,8 @@ export default function NavigationScreen({ route, navigation }: Props) {
           <View style={styles.sheetDragPill} />
 
           <View style={styles.sheetHeaderContent}>
-            <AppText style={styles.destinationTitle} numberOfLines={1}>
-              Stop {stepIndex + 1}: {currentStop.name}
+            <AppText style={styles.sheetHeaderContent && styles.destinationTitle} numberOfLines={1}>
+              {locale === 'fr-QC' ? 'Arrêt' : 'Stop'} {stepIndex + 1}: {currentStop.name}
             </AppText>
             <AppText style={styles.destinationSub} numberOfLines={1}>
               {currentStop.address}
@@ -1173,7 +1234,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                 >
                   <PlowIcon color="white" style={{ marginRight: 8 }} />
-                  <AppText style={styles.primaryCtaText}>MARK IN PROGRESS</AppText>
+                  <AppText style={styles.primaryCtaText}>{locale === 'fr-QC' ? 'MARQUER EN COURS' : 'MARK IN PROGRESS'}</AppText>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -1182,7 +1243,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                 >
                   <CheckIcon color="white" style={{ marginRight: 8 }} />
-                  <AppText style={styles.primaryCtaText}>MARK STOP COMPLETE</AppText>
+                  <AppText style={styles.primaryCtaText}>{t('markComplete').toUpperCase()}</AppText>
                 </TouchableOpacity>
               )}
             </View>
@@ -1199,7 +1260,9 @@ export default function NavigationScreen({ route, navigation }: Props) {
           {/* Section 1: Stop Progress Horizontal Stepper */}
           <View style={styles.stepperContainer}>
             <AppText style={styles.stepperLabel}>
-              STOP {stepIndex + 1} OF {data.stops.length} · {completed} COMPLETED
+              {locale === 'fr-QC'
+                ? `ARRÊT ${stepIndex + 1} SUR ${data.stops.length} · ${completed} COMPLÉTÉS`
+                : `STOP ${stepIndex + 1} OF ${data.stops.length} · ${completed} COMPLETED`}
             </AppText>
             <View style={styles.stepperRow}>
               {data.stops.map((stop, index) => {
@@ -1256,7 +1319,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
               <View style={styles.notesBox}>
                 <View style={styles.notesHeaderRow}>
                   <InfoIcon color={isDark ? '#38BDF8' : '#2E75B6'} />
-                  <AppText style={styles.notesHeader}>Access Notes</AppText>
+                  <AppText style={styles.notesHeader}>{locale === 'fr-QC' ? 'Notes d\'accès' : 'Access Notes'}</AppText>
                 </View>
                 <AppText style={styles.notes}>{currentStop.access_notes}</AppText>
               </View>
@@ -1265,7 +1328,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
           {/* Section 2: HUD Navigation Launcher */}
           <View style={styles.navRow}>
-            <AppText style={styles.hudLabel}>OPEN IN:</AppText>
+            <AppText style={styles.hudLabel}>{locale === 'fr-QC' ? 'OUVRIR DANS :' : 'OPEN IN:'}</AppText>
             <View style={styles.navButtons}>
               <TouchableOpacity style={styles.navCard} onPress={() => launchExternalNav('google')} accessibilityRole="button">
                 <View style={styles.navIconWrapper}>
@@ -1292,7 +1355,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
           {/* Section 4: Secondary Actions Row */}
           <View style={{ paddingHorizontal: 16, marginTop: 20 }}>
-            <AppText style={styles.hudLabel}>More Actions</AppText>
+            <AppText style={styles.hudLabel}>{locale === 'fr-QC' ? 'Plus d\'actions' : 'More Actions'}</AppText>
           </View>
           <View style={[styles.secondaryRow, { marginTop: 0 }]}>
             <TouchableOpacity
@@ -1301,7 +1364,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
               accessibilityRole="button"
             >
               <SkipIcon color="#EF4444" style={{ marginRight: 0 }} />
-              <AppText style={styles.secondaryBtnLabel}>Skip Stop</AppText>
+              <AppText style={styles.secondaryBtnLabel}>{t('skipStop')}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1310,7 +1373,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
               accessibilityRole="button"
             >
               <MicIcon color="#FFFFFF" style={{ marginRight: 0 }} />
-              <AppText style={styles.secondaryBtnLabel}>Voice</AppText>
+              <AppText style={styles.secondaryBtnLabel}>{locale === 'fr-QC' ? 'Voix' : 'Voice'}</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1323,7 +1386,7 @@ export default function NavigationScreen({ route, navigation }: Props) {
             >
               <PlowIcon color={isSimulating ? '#F97316' : '#FFFFFF'} style={{ marginRight: 0 }} />
               <AppText style={[styles.secondaryBtnLabel, isSimulating && { color: '#F97316' }]}>
-                {isSimulating ? 'Stop Sim' : 'Simulate'}
+                {isSimulating ? t('stopSimulation') : t('simulateDrive')}
               </AppText>
             </TouchableOpacity>
           </View>
@@ -1333,9 +1396,11 @@ export default function NavigationScreen({ route, navigation }: Props) {
             <View style={styles.dangerZoneContainer}>
               <View style={styles.dangerZoneLine} />
               <View style={styles.dangerZoneCard}>
-                <AppText style={styles.dangerZoneTitle}>⚠ DANGER ZONE</AppText>
+                <AppText style={styles.dangerZoneTitle}>{locale === 'fr-QC' ? '⚠ ZONE DE DANGER' : '⚠ DANGER ZONE'}</AppText>
                 <AppText style={styles.dangerZoneDesc}>
-                  Ending the route early will finalize escrow hours and skip all remaining stop assignments.
+                  {locale === 'fr-QC'
+                    ? 'Terminer le trajet plus tôt va finaliser les heures en fiducie et passer tous les arrêts restants.'
+                    : 'Ending the route early will finalize escrow hours and skip all remaining stop assignments.'}
                 </AppText>
 
                 <TouchableOpacity
@@ -1348,7 +1413,9 @@ export default function NavigationScreen({ route, navigation }: Props) {
                 >
                   <AlertIcon color="white" style={{ marginRight: 8 }} />
                   <AppText style={styles.emergencyBtnText}>
-                    {finalizeState === 'confirm' ? 'Tap again to confirm' : 'Emergency Finalize Route'}
+                    {finalizeState === 'confirm'
+                      ? (locale === 'fr-QC' ? 'Appuyer encore pour confirmer' : 'Tap again to confirm')
+                      : (locale === 'fr-QC' ? 'Terminer d\'urgence le trajet' : 'Emergency Finalize Route')}
                   </AppText>
                 </TouchableOpacity>
               </View>
@@ -1364,9 +1431,13 @@ export default function NavigationScreen({ route, navigation }: Props) {
             <GlassContainer style={styles.voiceCard} isDark={isDark}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <MicIcon color="#38b0f8" style={{ marginRight: 8 }} />
-                <AppText style={styles.voiceTitle}>Voice Command Listening...</AppText>
+                <AppText style={styles.voiceTitle}>{locale === 'fr-QC' ? 'Écoute de commande vocale...' : 'Voice Command Listening...'}</AppText>
               </View>
-              <AppText style={styles.voiceSub}>"PlowPath, Mark Complete" or "PlowPath, Skip Property"</AppText>
+              <AppText style={styles.voiceSub}>
+                {locale === 'fr-QC'
+                  ? 'Dis « arrive » ou « skip » pour enregistrer'
+                  : 'Say "arrive" or "skip" to trigger telemetry'}
+              </AppText>
               <ActivityIndicator size="large" color="#38b0f8" style={{ marginVertical: 15 }} />
               <AppText style={styles.voiceTranscript}>{voiceTranscript}</AppText>
             </GlassContainer>
@@ -1378,41 +1449,47 @@ export default function NavigationScreen({ route, navigation }: Props) {
       <Modal transparent animationType="slide" visible={proofModalOpen} onRequestClose={() => setProofModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <GlassContainer style={styles.modalCard} isDark={isDark}>
-            <AppText style={styles.modalTitle}>Liability Protection Proof of Service</AppText>
+            <AppText style={styles.modalTitle}>{t('proofOfService')}</AppText>
             <AppText style={styles.modalSub}>
-              Take a photo of the completed driveway. Photos are automatically compressed locally under 200KB before secure escrow upload.
+              {t('proofOfServiceDesc')}
             </AppText>
 
             {capturedPhotoUrl ? (
               <View style={styles.photoPreviewBox}>
                 <Image source={{ uri: capturedPhotoUrl }} style={styles.photoPreview as any} />
                 <AppText style={styles.compressionStat}>
-                  ⚡ Compressed successfully: <AppText style={{ color: '#10b981', fontWeight: '900' }}>146 KB</AppText> (Optimized)
+                  {locale === 'fr-QC'
+                    ? '⚡ Compressé avec succès : '
+                    : '⚡ Compressed successfully: '}
+                  <AppText style={{ color: '#10b981', fontWeight: '900' }}>146 KB</AppText>
+                  {locale === 'fr-QC' ? ' (Optimisé)' : ' (Optimized)'}
                 </AppText>
               </View>
             ) : (
               <View style={styles.cameraTriggerBox}>
                 {isCapturing ? (
                   <View style={styles.cameraSim}>
-                    <AppText style={styles.cameraText}>Opening high-contrast camera shroud...</AppText>
+                    <AppText style={styles.cameraText}>{locale === 'fr-QC' ? 'Ouverture de la caméra...' : 'Opening camera...'}</AppText>
                     <ActivityIndicator size="small" color="white" />
                   </View>
                 ) : isCompressing ? (
                   <View style={styles.cameraSim}>
-                    <AppText style={styles.cameraText}>Compressing Image File ({compressionProgress}%)</AppText>
+                    <AppText style={styles.cameraText}>
+                      {locale === 'fr-QC' ? `Compression de l'image (${compressionProgress}%)` : `Compressing Image File (${compressionProgress}%)`}
+                    </AppText>
                     <View style={styles.progressBarBg}>
                       <View style={[styles.progressBarFill, { width: `${compressionProgress}%` }]} />
                     </View>
                   </View>
                 ) : isUploading ? (
                   <View style={styles.cameraSim}>
-                    <AppText style={styles.cameraText}>Securing Stripe Connect Escrow release...</AppText>
+                    <AppText style={styles.cameraText}>{locale === 'fr-QC' ? 'Sécurisation du paiement Stripe Connect...' : 'Securing Stripe Connect Escrow release...'}</AppText>
                     <ActivityIndicator size="small" color="#38b0f8" />
                   </View>
                 ) : (
                   <TouchableOpacity style={styles.cameraBtn} onPress={simulatePhotoCapture}>
                     <CameraIcon color="white" style={{ marginRight: 8 }} />
-                    <AppText style={styles.cameraBtnText}>Snap Clearing Proof Photo</AppText>
+                    <AppText style={styles.cameraBtnText}>{t('takePhoto')}</AppText>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1420,14 +1497,18 @@ export default function NavigationScreen({ route, navigation }: Props) {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setProofModalOpen(false)}>
-                <AppText style={styles.cancelModalText}>Cancel</AppText>
+                <AppText style={styles.cancelModalText}>{t('cancel')}</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmModalBtn, !capturedPhotoUrl && styles.disabledModalBtn]}
                 onPress={() => onMarkComplete(currentStop)}
                 disabled={!capturedPhotoUrl}
               >
-                <AppText style={styles.confirmModalText}>Clear Stop & Release Escrow</AppText>
+                <AppText style={styles.confirmModalText}>
+                  {locale === 'fr-QC'
+                    ? 'Libérer le paiement & Terminer l\'arrêt'
+                    : 'Clear Stop & Release Escrow'}
+                </AppText>
               </TouchableOpacity>
             </View>
           </GlassContainer>

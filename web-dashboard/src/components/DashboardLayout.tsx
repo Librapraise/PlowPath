@@ -1,8 +1,11 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
+import { useTranslation } from '../services/i18n';
 import { Activity, Users, Truck, CloudSnow, Navigation, LogOut, Menu, X, Zap, Coins, Settings, BarChart3 } from 'lucide-react';
 import ToastContainer from './ToastContainer';
+import CustomSelect from './CustomSelect';
 import { io } from 'socket.io-client';
 import logo from '../assets/logo.png';
 
@@ -11,6 +14,9 @@ interface Props {
 }
 
 export default function DashboardLayout({ children }: Props) {
+  const { t } = useTranslation();
+  const language = useSettingsStore((s) => s.language);
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
@@ -38,14 +44,14 @@ export default function DashboardLayout({ children }: Props) {
   };
 
   const navItems = [
-    { to: '/dashboard', label: 'Live Ops Map', icon: Activity, roles: ['owner', 'manager', 'driver'] },
-    { to: '/customers', label: 'Customers', icon: Users, roles: ['owner', 'manager'] },
-    { to: '/drivers', label: 'Drivers', icon: Truck, roles: ['owner', 'manager'] },
-    { to: '/storms', label: 'Storms', icon: CloudSnow, roles: ['owner', 'manager'] },
-    { to: '/routes', label: 'Routes', icon: Navigation, roles: ['owner', 'manager'] },
-    { to: '/finance', label: 'Finance & Signs', icon: Coins, roles: ['owner', 'manager'] },
-    { to: '/analytics', label: 'Business Intelligence', icon: BarChart3, roles: ['owner', 'manager'] },
-    { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'manager'] },
+    { to: '/dashboard', labelKey: 'navLiveOps' as const, icon: Activity, roles: ['owner', 'manager', 'driver'] },
+    { to: '/customers', labelKey: 'navCustomers' as const, icon: Users, roles: ['owner', 'manager'] },
+    { to: '/drivers', labelKey: 'navDrivers' as const, icon: Truck, roles: ['owner', 'manager'] },
+    { to: '/storms', labelKey: 'navStorms' as const, icon: CloudSnow, roles: ['owner', 'manager'] },
+    { to: '/routes', labelKey: 'navRoutes' as const, icon: Navigation, roles: ['owner', 'manager'] },
+    { to: '/finance', labelKey: 'navFinance' as const, icon: Coins, roles: ['owner', 'manager'] },
+    { to: '/analytics', labelKey: 'navAnalytics' as const, icon: BarChart3, roles: ['owner', 'manager'] },
+    { to: '/settings', labelKey: 'navSettings' as const, icon: Settings, roles: ['owner', 'manager'] },
   ];
 
   const visibleNavItems = navItems.filter(
@@ -71,9 +77,9 @@ export default function DashboardLayout({ children }: Props) {
           <img src={logo} alt="PlowPath Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/25 ring-1 ring-white/10 object-cover" />
           <div>
             <h1 className="text-lg font-extrabold tracking-tight text-gradient">
-              PlowPath
+              {t('appName')}
             </h1>
-            <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Operations Console</p>
+            <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{t('operationsConsole')}</p>
           </div>
         </div>
 
@@ -94,7 +100,7 @@ export default function DashboardLayout({ children }: Props) {
                 }
               >
                 <Icon className="w-[18px] h-[18px] transition-transform duration-200 group-hover:scale-110" />
-                {item.label}
+                {t(item.labelKey)}
               </NavLink>
             );
           })}
@@ -115,7 +121,7 @@ export default function DashboardLayout({ children }: Props) {
             <button
               onClick={handleLogout}
               className="p-2 hover:bg-red-500/10 hover:text-red-400 rounded-lg text-slate-500 transition-all active:scale-95 cursor-pointer border border-transparent hover:border-red-500/15"
-              title="Sign Out"
+              title={t('logout')}
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -143,8 +149,8 @@ export default function DashboardLayout({ children }: Props) {
             <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-800/50">
               <img src={logo} alt="PlowPath Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/25 object-cover" />
               <div>
-                <h1 className="text-lg font-extrabold tracking-tight text-gradient">PlowPath</h1>
-                <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Operations Console</p>
+                <h1 className="text-lg font-extrabold tracking-tight text-gradient">{t('appName')}</h1>
+                <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">{t('operationsConsole')}</p>
               </div>
             </div>
 
@@ -166,7 +172,7 @@ export default function DashboardLayout({ children }: Props) {
                     }
                   >
                     <Icon className="w-[18px] h-[18px]" />
-                    {item.label}
+                    {t(item.labelKey)}
                   </NavLink>
                 );
               })}
@@ -199,7 +205,7 @@ export default function DashboardLayout({ children }: Props) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="flex items-center justify-between px-6 py-3 glass-panel border-t-0 border-l-0 border-r-0 shadow-lg z-10 relative">
+        <header className="flex items-center justify-between px-6 py-3 glass-panel border-t-0 border-l-0 border-r-0 shadow-lg z-[1001] relative">
           {/* Subtle bottom gradient */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-500/20 to-transparent"></div>
 
@@ -224,18 +230,31 @@ export default function DashboardLayout({ children }: Props) {
                 {socketConnected ? (
                   <span className="flex items-center gap-1.5">
                     <Zap className="w-3 h-3 text-emerald-400" />
-                    Live Telemetry Active
+                    {t('telemetryActive')}
                   </span>
                 ) : (
-                  'Connecting Stream...'
+                  t('telemetryConnecting')
                 )}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="px-3 py-1.5 bg-gradient-to-r from-brand-500/[0.08] to-indigo-500/[0.06] border border-brand-500/15 rounded-full text-[11px] font-semibold text-brand-400 tracking-wide">
-              PlowPath v3.0
+            {/* Language Dropdown Selector */}
+            <CustomSelect
+              options={[
+                { value: 'fr-QC', label: 'Français (Québec)' },
+                { value: 'en-CA', label: 'English (Canada)' },
+                { value: 'en-US', label: 'English (United States)' },
+                { value: 'en-GB', label: 'English (United Kingdom)' },
+              ]}
+              value={language}
+              onChange={(val) => setLanguage(val as any)}
+              className="w-48 z-50 text-xs"
+            />
+
+            <span className="px-3 py-1.5 bg-gradient-to-r from-brand-500/[0.08] to-indigo-500/[0.06] border border-brand-500/15 rounded-full text-[11px] font-semibold text-brand-400 tracking-wide shrink-0">
+              {t('version')}
             </span>
           </div>
         </header>

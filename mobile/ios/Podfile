@@ -71,6 +71,22 @@ target 'PlowPath' do
       :mac_catalyst_enabled => false
     )
 
+    # Strip bitcode from hermes-engine framework since Xcode 16/26 deprecates/rejects it
+    begin
+      bitcode_strip_path = `xcrun --find bitcode_strip`.chop!
+      if !bitcode_strip_path.empty?
+        Dir.glob("#{installer.sandbox.root}/hermes-engine/**/*.framework/hermes").each do |hermes_bin|
+          if File.exist?(hermes_bin)
+            command = "#{bitcode_strip_path} #{hermes_bin} -r -o #{hermes_bin}"
+            Pod::UI.puts "Stripping bitcode from: #{hermes_bin}".green
+            system(command)
+          end
+        end
+      end
+    rescue => e
+      Pod::UI.puts "Warning: Failed to strip bitcode from Hermes: #{e.message}".yellow
+    end
+
     # Patch RCT-Folly clockid_t conflict with Xcode 15/16/26 SDKs
     folly_time_h = "#{installer.sandbox.root}/RCT-Folly/folly/portability/Time.h"
     if File.exist?(folly_time_h)
@@ -104,7 +120,7 @@ target 'PlowPath' do
       end
     end
 
-    # Suppress deprecated-literal-operator warnings which fail builds on Xcode 16/26
+    # Suppress deprecated-literal-operator warnings
     installer.pods_project.targets.each do |target|
       # Force linking of sqlite3 for the background geolocation pod
       if target.name.include?('mauron85') && target.name.include?('background-geolocation')
@@ -130,22 +146,54 @@ target 'PlowPath' do
       end
     end
 
-    # Force link sqlite3 in the main user target
+    # Force link sqlite3 in the main user target and aggregate target configs
     installer.aggregate_targets.each do |target|
       target.user_project.targets.each do |user_target|
         if user_target.name == 'PlowPath'
           user_target.build_configurations.each do |config|
             ldflags = config.build_settings['OTHER_LDFLAGS'] || '$(inherited)'
             if ldflags.is_a?(Array)
-              ldflags << '-lsqlite3' unless ldflags.include?('-lsqlite3')
-            else
-              ldflags += ' -lsqlite3' unless ldflags.include?('-lsqlite3')
+              ldflags = ldflags.join(' ')
             end
+            ldflags += ' -lsqlite3' unless ldflags.include?('-lsqlite3')
             config.build_settings['OTHER_LDFLAGS'] = ldflags
+
+            # Explicitly add Swift library search paths to ensure swiftCompatibility shims are resolved
+            lib_paths = config.build_settings['LIBRARY_SEARCH_PATHS'] || '$(inherited)'
+            if lib_paths.is_a?(Array)
+              lib_paths << '$(SDKROOT)/usr/lib/swift' unless lib_paths.include?('$(SDKROOT)/usr/lib/swift')
+              lib_paths << '$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)' unless lib_paths.include?('$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)')
+            else
+              lib_paths += ' "$(SDKROOT)/usr/lib/swift"' unless lib_paths.include?('$(SDKROOT)/usr/lib/swift')
+              lib_paths += ' "$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"' unless lib_paths.include?('$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)')
+            end
+            config.build_settings['LIBRARY_SEARCH_PATHS'] = lib_paths
           end
         end
       end
       target.user_project.save
+
+      # Also inject direct flags into aggregate target xcconfig files for EAS/CI safety
+      target.xcconfigs.each_pair do |config_name, xcconfig|
+        xcconfig.attributes['OTHER_LDFLAGS'] ||= '$(inherited)'
+        ldflags = xcconfig.attributes['OTHER_LDFLAGS']
+        if ldflags.is_a?(Array)
+          ldflags = ldflags.join(' ')
+        end
+        ldflags += ' -lsqlite3' unless ldflags.include?('-lsqlite3')
+        xcconfig.attributes['OTHER_LDFLAGS'] = ldflags
+
+        xcconfig.attributes['LIBRARY_SEARCH_PATHS'] ||= '$(inherited)'
+        lib_paths = xcconfig.attributes['LIBRARY_SEARCH_PATHS']
+        if lib_paths.is_a?(Array)
+          lib_paths << '$(SDKROOT)/usr/lib/swift' unless lib_paths.include?('$(SDKROOT)/usr/lib/swift')
+          lib_paths << '$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)' unless lib_paths.include?('$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)')
+        else
+          lib_paths += ' "$(SDKROOT)/usr/lib/swift"' unless lib_paths.include?('$(SDKROOT)/usr/lib/swift')
+          lib_paths += ' "$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"' unless lib_paths.include?('$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)')
+        end
+        xcconfig.attributes['LIBRARY_SEARCH_PATHS'] = lib_paths
+      end
     end
   end
 end

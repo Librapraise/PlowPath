@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { api } from '../services/api';
 import { useSettingsStore } from '../store/settingsStore';
 import OfflineStatusBar from '../components/OfflineStatusBar';
+import { useTranslation } from '../services/i18n';
 
 interface SignStop {
   sequence_number: number;
@@ -73,6 +74,7 @@ const GradientButton = ({
 };
 
 export default function SignRouteScreen() {
+  const { t, locale, formatDate } = useTranslation();
   const navigation = useNavigation<any>();
   const theme = useSettingsStore((s) => s.settings.theme);
   const isDark = theme === 'dark';
@@ -96,7 +98,7 @@ export default function SignRouteScreen() {
       });
       setRouteData(data);
     } catch (err) {
-      setError('Could not load sign crew route. Working offline?');
+      setError(locale === 'fr-QC' ? 'Impossible de charger le trajet de l\'équipe. Es-tu hors ligne?' : 'Could not load sign crew route. Working offline?');
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +124,7 @@ export default function SignRouteScreen() {
       });
       await fetchSignRoute();
     } catch (err) {
-      setError('Failed to update sign status. Try again.');
+      setError(locale === 'fr-QC' ? 'Échec de la modification du statut du panneau. Réessaie.' : 'Failed to update sign status. Try again.');
     } finally {
       setUpdatingId(null);
     }
@@ -156,7 +158,7 @@ export default function SignRouteScreen() {
             <Path d="M19 12H5M12 5l-7 7 7 7" />
           </Svg>
         </TouchableOpacity>
-        <AppText style={resolvedStyles.headerTitle}>Sign Crew</AppText>
+        <AppText style={resolvedStyles.headerTitle}>{t('signCrew')}</AppText>
       </View>
 
       {/* Redesigned Sliding Tab Selector */}
@@ -185,7 +187,7 @@ export default function SignRouteScreen() {
               action === 'install' && resolvedStyles.activeTabText,
             ]}
           >
-            Install Signs
+            {t('installSigns')}
           </AppText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -199,7 +201,7 @@ export default function SignRouteScreen() {
               action === 'remove' && resolvedStyles.activeTabText,
             ]}
           >
-            Remove Signs
+            {t('removeSigns')}
           </AppText>
         </TouchableOpacity>
       </View>
@@ -213,7 +215,7 @@ export default function SignRouteScreen() {
               <AppText style={{ fontSize: 16 }}>🔴</AppText>
             </View>
             <AppText style={resolvedStyles.statVal}>{routeData.stops.length}</AppText>
-            <AppText style={resolvedStyles.statLabel}>Stops Left</AppText>
+            <AppText style={resolvedStyles.statLabel}>{t('stopsLeft')}</AppText>
           </View>
 
           {/* Distance Card */}
@@ -221,7 +223,11 @@ export default function SignRouteScreen() {
             <View style={styles.statIconBadge}>
               <AppText style={{ fontSize: 16 }}>📏</AppText>
             </View>
-            <AppText style={resolvedStyles.statVal}>{routeData.total_miles}mi</AppText>
+            <AppText style={resolvedStyles.statVal}>
+              {locale === 'fr-QC' || locale === 'en-CA' || locale === 'en-GB'
+                ? `${(routeData.total_miles * 1.60934).toFixed(1)} km`
+                : `${routeData.total_miles} mi`}
+            </AppText>
             <AppText style={resolvedStyles.statLabel}>Distance</AppText>
           </View>
 
@@ -252,7 +258,7 @@ export default function SignRouteScreen() {
               </Svg>
             </View>
             <AppText style={resolvedStyles.statVal}>{routeData.progress}%</AppText>
-            <AppText style={resolvedStyles.statLabel}>Done</AppText>
+            <AppText style={resolvedStyles.statLabel}>{locale === 'fr-QC' ? 'Fait' : 'Done'}</AppText>
           </View>
         </View>
       )}
@@ -262,7 +268,7 @@ export default function SignRouteScreen() {
       {isLoading ? (
         <View style={resolvedStyles.center}>
           <ActivityIndicator size="large" color="#3B82F6" />
-          <AppText style={resolvedStyles.loadingText}>Calculating optimized TSP route...</AppText>
+          <AppText style={resolvedStyles.loadingText}>{t('TSPCalculating')}</AppText>
         </View>
       ) : (
         <FlatList
@@ -271,7 +277,7 @@ export default function SignRouteScreen() {
           contentContainerStyle={resolvedStyles.listContent}
           ListEmptyComponent={
             <AppText style={resolvedStyles.emptyText}>
-              All properties are completed for this off-season sign operation!
+              {t('allCompletedSigns')}
             </AppText>
           }
           renderItem={({ item }) => {
@@ -297,33 +303,33 @@ export default function SignRouteScreen() {
                       {item.sequence_number}
                     </AppText>
                   </View>
-
+ 
                   <View style={styles.metaCol}>
                     <AppText style={resolvedStyles.stopName}>{item.name}</AppText>
                     <AppText style={resolvedStyles.stopAddr}>{item.address}</AppText>
                     {isRemoved && (
                       <AppText style={resolvedStyles.removedNote}>
-                        ℹ Sign was last removed on {removedDate}
+                        ℹ {t('lastRemoved', { date: formatDate(new Date('2026-06-17')) })}
                       </AppText>
                     )}
                   </View>
                 </View>
-
+ 
                 <View style={resolvedStyles.cardFooterRow}>
                   <View style={resolvedStyles.badgeContainer}>
                     <View style={[styles.pillBadge, { backgroundColor: `${accentColor}1A` }]}>
                       <AppText style={[styles.pillBadgeText, { color: accentColor }]}>
-                        {isInstalled ? 'INSTALLED' : isRemoved ? 'REMOVED' : 'PENDING'}
+                        {isInstalled ? t('installedPill') : isRemoved ? t('removedPill') : t('pendingPill')}
                       </AppText>
                     </View>
                   </View>
-
+ 
                   <View style={styles.flex1}>
                     {action === 'install' ? (
                       <GradientButton
                         disabled={updatingId === item.customer_id}
                         onPress={() => handleUpdateStatus(item.customer_id, 'installed')}
-                        text="Mark Installed"
+                        text={t('markInstalled')}
                         colors={['#10B981', '#22C55E']}
                         icon={
                           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -335,7 +341,7 @@ export default function SignRouteScreen() {
                       <GradientButton
                         disabled={updatingId === item.customer_id}
                         onPress={() => handleUpdateStatus(item.customer_id, 'removed')}
-                        text="Mark Removed"
+                        text={t('markRemoved')}
                         colors={['#F59E0B', '#D97706']}
                         icon={
                           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">

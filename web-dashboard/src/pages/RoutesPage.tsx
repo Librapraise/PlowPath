@@ -4,6 +4,7 @@ import { useStormsStore } from '../store/stormsStore';
 import { useDriversStore } from '../store/driversStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useToastStore } from '../store/toastStore';
+import { useTranslation } from '../services/i18n';
 import { Plus, Navigation, MapPin, Eye, Search, Check, ShieldAlert, Clock, Compass, Truck } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -46,6 +47,7 @@ const getStopIcon = (status: RouteStop['status'], seq: number) => {
 };
 
 export default function RoutesPage() {
+  const { t } = useTranslation();
   const { routes, currentRoute, isLoading, fetchRoutes, fetchRouteDetails, generateRoute, updateStopStatus, broadcastSms } = useRoutesStore();
   const { storms, fetchStorms } = useStormsStore();
   const { drivers, fetchDrivers } = useDriversStore();

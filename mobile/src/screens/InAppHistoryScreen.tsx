@@ -4,6 +4,7 @@ import { View, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 're
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigate } from '../services/navigation';
 import { useSettingsStore } from '../store/settingsStore';
+import { useTranslation } from '../services/i18n';
 import Svg, { Path, Circle, Ellipse, Defs, RadialGradient, LinearGradient, Stop, Rect, G } from 'react-native-svg';
 
 export interface NotificationItem {
@@ -16,6 +17,7 @@ export interface NotificationItem {
 }
 
 export default function InAppHistoryScreen() {
+  const { t, locale } = useTranslation();
   const theme = useSettingsStore((s) => s.settings.theme);
   const isDark = theme === 'dark';
 
@@ -60,11 +62,18 @@ export default function InAppHistoryScreen() {
     if (item.category === 'route_update') categoryColor = '#3B82F6'; // Blue
     if (item.category === 'alert') categoryColor = '#F59E0B'; // Amber
 
+    let categoryLabel = item.category?.toUpperCase() || 'INFO';
+    if (locale === 'fr-QC') {
+      if (item.category === 'urgent') categoryLabel = 'URGENT';
+      else if (item.category === 'route_update') categoryLabel = 'TRAJET';
+      else if (item.category === 'alert') categoryLabel = 'ALERTE';
+    }
+
     return (
       <TouchableOpacity style={styles.card} onPress={() => handlePressItem(item)} activeOpacity={0.8}>
         <View style={styles.cardHeader}>
           <View style={[styles.badge, { backgroundColor: categoryColor }]}>
-            <AppText style={styles.badgeText}>{item.category?.toUpperCase() || 'INFO'}</AppText>
+            <AppText style={styles.badgeText}>{categoryLabel}</AppText>
           </View>
           <AppText style={styles.timestamp}>{new Date(item.receivedAt).toLocaleTimeString()}</AppText>
         </View>
@@ -76,7 +85,7 @@ export default function InAppHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <AppText style={styles.header}>Notifications</AppText>
+      <AppText style={styles.header}>{t('tabHistory')}</AppText>
       <FlatList
         data={history}
         keyExtractor={(item) => item.id}
@@ -152,8 +161,14 @@ export default function InAppHistoryScreen() {
               <Path d="M118 50 C128 62 128 82 118 94" stroke={isDark ? '#38BDF8' : '#3B82F6'} strokeWidth="2" strokeLinecap="round" fill="none" strokeOpacity="0.3" />
             </Svg>
 
-            <AppText style={styles.emptyText}>No notifications logged yet.</AppText>
-            <AppText style={styles.emptySubText}>Push alerts from your dispatcher{`\n`}will appear here.</AppText>
+            <AppText style={styles.emptyText}>
+              {locale === 'fr-QC' ? 'Aucune notification reçue pour l\'instant.' : 'No notifications logged yet.'}
+            </AppText>
+            <AppText style={styles.emptySubText}>
+              {locale === 'fr-QC'
+                ? 'Les alertes push de ton répartiteur\napparaîtront ici.'
+                : 'Push alerts from your dispatcher\nwill appear here.'}
+            </AppText>
           </View>
         }
       />

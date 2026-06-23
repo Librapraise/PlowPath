@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useToastStore } from '../store/toastStore';
+import { useTranslation } from '../services/i18n';
 import { 
   BarChart3, Coins, Users, Clock, Fuel, Download, TrendingUp, AlertTriangle, HelpCircle, 
   ChevronRight, Calendar, ArrowUpRight, ShieldAlert, Cpu
 } from 'lucide-react';
+import CustomSelect from '../components/CustomSelect';
 
 interface StormAnalytics {
   storm_id: string;
@@ -72,6 +74,7 @@ interface PricingAlert {
 }
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
   
   // Dashboard states
@@ -256,16 +259,15 @@ export default function AnalyticsPage() {
 
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Filter Storm:</span>
-          <select
+          <CustomSelect
+            options={[
+              { value: 'all', label: 'All Storm Events (Timeline)' },
+              ...filteredStorms.map((s) => ({ value: s.storm_id, label: s.name })),
+            ]}
             value={selectedStormId}
-            onChange={(e) => setSelectedStormId(e.target.value)}
-            className="px-3 py-1.5 bg-slate-950/60 border border-slate-800/80 rounded-lg text-xs font-bold text-brand-400 focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Storm Events (Timeline)</option>
-            {filteredStorms.map((s) => (
-              <option key={s.storm_id} value={s.storm_id}>{s.name}</option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedStormId(val)}
+            className="w-56 text-xs font-bold text-brand-400"
+          />
         </div>
       </div>
 

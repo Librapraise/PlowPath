@@ -18,6 +18,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Defs, RadialGradient, Stop, Rect, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { api } from '../services/api';
 import { useAuthStore, type AuthUser } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
+import { useTranslation } from '../services/i18n';
 import { pushService } from '../services/push.service';
 
 // Icons
@@ -93,6 +95,13 @@ const LogoMark = () => (
     <Circle cx="20" cy="5" r="2" fill="#FFFFFF" />
     <Circle cx="4" cy="19" r="2" fill="#FFFFFF" />
     <Circle cx="20" cy="19" r="2" fill="#FFFFFF" />
+  </Svg>
+);
+
+const GlobeIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
   </Svg>
 );
 
@@ -269,6 +278,8 @@ const RefinedInput = ({
 };
 
 export default function LoginScreen() {
+  const { t, locale } = useTranslation();
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
   const setSession = useAuthStore((s) => s.setSession);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -280,6 +291,7 @@ export default function LoginScreen() {
   // Flow State
   const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
   const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
 
   // Forgot / Reset Password States
   const [resetIdentifier, setResetIdentifier] = useState('');
@@ -414,9 +426,9 @@ export default function LoginScreen() {
     } catch (err: unknown) {
       const apiErr = err as { response?: { status?: number } };
       if (apiErr.response?.status === 401) {
-        setError('Incorrect phone or password. Try again.');
+        setError(t('incorrectCredentials'));
       } else {
-        setError('Network error. Cannot reach the server. Please check your connection.');
+        setError(t('networkError'));
       }
     } finally {
       setSubmitting(false);
@@ -425,7 +437,7 @@ export default function LoginScreen() {
 
   async function handleRequestCode() {
     if (!resetIdentifier) {
-      setResetError('Phone number or email is required.');
+      setResetError(t('validationAllRequired'));
       return;
     }
     setResetError(null);
@@ -449,15 +461,15 @@ export default function LoginScreen() {
   async function handleResetPassword() {
     setResetError(null);
     if (!resetCode) {
-      setResetError('Verification code is required.');
+      setResetError(t('validationAllRequired'));
       return;
     }
     if (newPassword.length < 6) {
-      setResetError('New password must be at least 6 characters.');
+      setResetError(t('validationLength'));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setResetError('Confirm password does not match new password.');
+      setResetError(t('validationMatch'));
       return;
     }
     setResettingPassword(true);
@@ -477,7 +489,7 @@ export default function LoginScreen() {
       setNewPassword('');
       setConfirmNewPassword('');
       setResetError(null);
-      Alert.alert('Success', 'Password updated successfully! Please log in with your new password.');
+      Alert.alert(t('success'), t('successPasswordUpdated'));
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { error?: { message?: string } } } };
       const message = apiErr?.response?.data?.error?.message ?? 'Failed to reset password.';
@@ -508,6 +520,18 @@ export default function LoginScreen() {
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#radialGlow)" />
       </Svg>
+
+      {/* Floating Language Switcher */}
+      <TouchableOpacity
+        style={styles.languageSwitcherBtn}
+        onPress={() => setLanguagePickerOpen(true)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Change Language"
+      >
+        <GlobeIcon color="rgba(255,255,255,0.6)" />
+        <AppText style={styles.languageSwitcherText}>{locale.toUpperCase()}</AppText>
+      </TouchableOpacity>
 
       <ScrollView
         style={styles.scrollWrapper}
@@ -542,8 +566,8 @@ export default function LoginScreen() {
                 <LogoMark />
               </View>
               <AppText style={styles.brandSubtitle}>DRIVEOPS</AppText>
-              <AppText style={styles.brandTitle}>Start Shift</AppText>
-              <AppText style={styles.brandDesc}>Sign in to begin your route assignments.</AppText>
+              <AppText style={styles.brandTitle}>{t('startShiftTitle')}</AppText>
+              <AppText style={styles.brandDesc}>{t('startShiftDesc')}</AppText>
             </View>
           )}
 
@@ -552,7 +576,7 @@ export default function LoginScreen() {
             <View style={styles.formZone}>
               {/* Phone Input with Dial-Code prefix selector */}
               <RefinedInput
-                label="PHONE NUMBER"
+                label={t('phone')}
                 value={identifier}
                 onChangeText={setIdentifier}
                 placeholder="555 111 0001"
@@ -576,7 +600,7 @@ export default function LoginScreen() {
 
               {/* Password Input with eye toggle action */}
               <RefinedInput
-                label="PASSWORD"
+                label={t('password')}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
@@ -600,12 +624,12 @@ export default function LoginScreen() {
                 style={styles.forgotPassLink}
                 activeOpacity={0.7}
               >
-                <AppText style={styles.forgotPassText}>Forgot password?</AppText>
+                <AppText style={styles.forgotPassText}>{t('forgotPasswordLink')}</AppText>
               </TouchableOpacity>
 
               {/* Styled selector card for Active Vehicle */}
               <View style={styles.vehicleWrapper}>
-                <AppText style={styles.inputLabel}>ACTIVE VEHICLE</AppText>
+                <AppText style={styles.inputLabel}>{t('activeVehicle')}</AppText>
                 <TouchableOpacity
                   onPress={() => setVehiclePickerOpen(true)}
                   style={styles.vehicleSelectorCard}
@@ -623,7 +647,7 @@ export default function LoginScreen() {
 
               <View style={styles.marginTop24}>
                 <PremiumGradientButton
-                  text="START SHIFT"
+                  text={t('startShift')}
                   onPress={onSubmit}
                   disabled={submitting || !identifier || !password}
                   loading={submitting}
@@ -640,15 +664,13 @@ export default function LoginScreen() {
                 <View style={styles.lockContainer}>
                   <LockIcon color="#F59E0B" />
                 </View>
-                <AppText style={styles.forgotTitle}>Forgot Password</AppText>
-                <AppText style={styles.forgotDesc}>
-                  Enter your phone number or email and we'll send you a 6-digit recovery code.
-                </AppText>
+                <AppText style={styles.forgotTitle}>{t('forgotHeaderTitle')}</AppText>
+                <AppText style={styles.forgotDesc}>{t('forgotHeaderDesc')}</AppText>
               </View>
 
               <View style={styles.formZone}>
                 <RefinedInput
-                  label="PHONE OR EMAIL"
+                  label={t('phoneOrEmail')}
                   value={resetIdentifier}
                   onChangeText={setResetIdentifier}
                   placeholder="e.g. +1 555 111 0001"
@@ -664,14 +686,14 @@ export default function LoginScreen() {
 
                 <View style={styles.marginTop24}>
                   <PremiumGradientButton
-                    text="REQUEST CODE"
+                    text={t('requestCode')}
                     onPress={handleRequestCode}
                     disabled={sendingCode || !resetIdentifier}
                     loading={sendingCode}
                   />
                   <View style={styles.expiryRow}>
                     <LockIcon color="rgba(255,255,255,0.35)" size={14} strokeWidth={2} />
-                    <AppText style={styles.expiryNote}>Code expires in 10 minutes.</AppText>
+                    <AppText style={styles.expiryNote}>{t('codeExpires')}</AppText>
                   </View>
                 </View>
 
@@ -684,7 +706,7 @@ export default function LoginScreen() {
                   style={styles.backToLoginCenterBtn}
                   activeOpacity={0.7}
                 >
-                  <AppText style={styles.backToLoginText}>← Back to Login</AppText>
+                  <AppText style={styles.backToLoginText}>{t('backToLogin')}</AppText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -700,14 +722,14 @@ export default function LoginScreen() {
                 </Svg>
               </View>
 
-              <AppText style={styles.successTitle}>Code Sent!</AppText>
+              <AppText style={styles.successTitle}>{t('codeSentTitle')}</AppText>
               <AppText style={styles.successBody}>
-                We sent a 6-digit code to <AppText style={styles.boldWhite}>{getMaskedDestination(resetIdentifier)}</AppText>. Check your messages.
+                {t('codeSentBody', { destination: getMaskedDestination(resetIdentifier) })}
               </AppText>
 
               <View style={styles.successActions}>
                 <PremiumGradientButton
-                  text="ENTER VERIFICATION CODE"
+                  text={t('enterVerificationCode')}
                   onPress={() => setView('reset')}
                 />
 
@@ -718,7 +740,7 @@ export default function LoginScreen() {
                   activeOpacity={0.7}
                 >
                   <AppText style={styles.resendText}>
-                    {countdown > 0 ? `Resend Code (${countdown}s)` : 'Resend Code'}
+                    {countdown > 0 ? t('resendCodeSeconds', { seconds: countdown }) : t('resendCode')}
                   </AppText>
                 </TouchableOpacity>
 
@@ -730,7 +752,7 @@ export default function LoginScreen() {
                   style={styles.backToLoginCenterBtn}
                   activeOpacity={0.7}
                 >
-                  <AppText style={styles.backToLoginText}>← Back to Login</AppText>
+                  <AppText style={styles.backToLoginText}>{t('backToLogin')}</AppText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -740,14 +762,12 @@ export default function LoginScreen() {
           {view === 'reset' && (
             <View style={styles.formZone}>
               <View style={styles.forgotHeader}>
-                <AppText style={styles.forgotTitle}>Reset Password</AppText>
-                <AppText style={styles.forgotDesc}>
-                  Enter the 6-digit code and your new password.
-                </AppText>
+                <AppText style={styles.forgotTitle}>{t('resetPasswordTitle')}</AppText>
+                <AppText style={styles.forgotDesc}>{t('resetPasswordDesc')}</AppText>
               </View>
 
               <RefinedInput
-                label="6-DIGIT VERIFICATION CODE"
+                label={t('verificationCodeLabel')}
                 value={resetCode}
                 onChangeText={setResetCode}
                 placeholder="123456"
@@ -755,7 +775,7 @@ export default function LoginScreen() {
               />
 
               <RefinedInput
-                label="NEW PASSWORD"
+                label={t('newPasswordLabel')}
                 value={newPassword}
                 onChangeText={setNewPassword}
                 placeholder="Min. 6 characters"
@@ -763,7 +783,7 @@ export default function LoginScreen() {
               />
 
               <RefinedInput
-                label="CONFIRM NEW PASSWORD"
+                label={t('confirmPasswordLabel')}
                 value={confirmNewPassword}
                 onChangeText={setConfirmNewPassword}
                 placeholder="Confirm new password"
@@ -774,7 +794,7 @@ export default function LoginScreen() {
 
               <View style={styles.marginTop24}>
                 <PremiumGradientButton
-                  text="SET NEW PASSWORD"
+                  text={t('setNewPassword')}
                   onPress={handleResetPassword}
                   disabled={resettingPassword || !resetCode || !newPassword || !confirmNewPassword}
                   loading={resettingPassword}
@@ -783,7 +803,7 @@ export default function LoginScreen() {
 
               <View style={styles.marginTop16}>
                 <OutlinedSecondaryButton
-                  text="Cancel"
+                  text={t('cancel')}
                   onPress={() => {
                     setView('login');
                     setForgotSuccess(false);
@@ -798,19 +818,55 @@ export default function LoginScreen() {
         {view === 'login' && (
           <View style={styles.footerAgreement}>
             <AppText style={styles.footerText}>
-              By signing in, you agree to our{' '}
-              <AppText style={styles.footerLink} onPress={() => setTermsModalOpen(true)}>
-                Terms of Service
-              </AppText>{' '}
-              and{' '}
-              <AppText style={styles.footerLink} onPress={() => setPrivacyModalOpen(true)}>
-                Privacy Policy
-              </AppText>
-              .
+              {t('termsText')}
             </AppText>
           </View>
         )}
       </ScrollView>
+
+      {/* Language Picker Bottom Sheet Modal */}
+      <Modal
+        visible={languagePickerOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setLanguagePickerOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={() => setLanguagePickerOpen(false)}>
+            <View style={styles.modalDismissBg} />
+          </TouchableWithoutFeedback>
+          <View style={styles.modalCard}>
+            <View style={styles.modalDragBar} />
+            <AppText style={styles.modalTitle}>Sélectionner la langue / Select Language</AppText>
+            {[
+              { code: 'fr-QC', name: 'Français (Québec)', flag: '🇨🇦' },
+              { code: 'en-CA', name: 'English (Canada)', flag: '🇨🇦' },
+              { code: 'en-US', name: 'English (United States)', flag: '🇺🇸' },
+              { code: 'en-GB', name: 'English (United Kingdom)', flag: '🇬🇧' },
+            ].map((lang) => {
+              const selected = locale === lang.code;
+              return (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={styles.modalOptionRow}
+                  onPress={() => {
+                    updateSettings({ language: lang.code as any });
+                    setLanguagePickerOpen(false);
+                  }}
+                >
+                  <AppText style={styles.modalOptionFlag}>{lang.flag}</AppText>
+                  <AppText style={[styles.modalOptionName, { color: selected ? '#3B82F6' : '#FFFFFF' }]}>
+                    {lang.name}
+                  </AppText>
+                  <View style={[styles.radioOutline, selected && styles.radioOutlineSelected]}>
+                    {selected && <View style={styles.radioDot} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
 
       {/* Country Picker Bottom Sheet Modal */}
       <Modal
@@ -1380,5 +1436,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     marginTop: 12,
+  },
+  languageSwitcherBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 100,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  languageSwitcherText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

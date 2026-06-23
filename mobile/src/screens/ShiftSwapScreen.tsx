@@ -13,6 +13,7 @@ import Svg, { Path, Circle, Rect, Defs, LinearGradient as SvgLinearGradient, Sto
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { api } from '../services/api';
 import { useSettingsStore } from '../store/settingsStore';
+import { useTranslation } from '../services/i18n';
 import type { RootStackParamList } from '../services/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ShiftSwap'>;
@@ -71,6 +72,7 @@ const GradientButton = ({
 };
 
 export default function ShiftSwapScreen({ navigation }: Props) {
+  const { t, locale } = useTranslation();
   const theme = useSettingsStore((s) => s.settings.theme);
   const isDark = theme === 'dark';
 
@@ -109,13 +111,18 @@ export default function ShiftSwapScreen({ navigation }: Props) {
       const { data } = await api.get<{ qrToken: string }>('/shifts/handover-token');
       setQrToken(data.qrToken);
       Alert.alert(
-        'Handover Code Generated',
-        'Show this secure token/code to the incoming driver to take over your shift and routes.',
+        locale === 'fr-QC' ? 'Clé de transfert générée' : 'Handover Code Generated',
+        locale === 'fr-QC'
+          ? 'Montre cette clé sécurisée au chauffeur entrant pour qu\'il reprenne ton shift.'
+          : 'Show this secure token/code to the incoming driver to take over your shift and routes.',
         [{ text: 'OK' }]
       );
     } catch (err: any) {
-      const msg = err.response?.data?.error?.message ?? 'Make sure you have an active shift and an in-progress route.';
-      Alert.alert('Generation Failed', msg, [{ text: 'OK' }]);
+      const defaultMsg = locale === 'fr-QC'
+        ? 'Assure-toi d\'avoir un quart actif et un trajet en cours.'
+        : 'Make sure you have an active shift and an in-progress route.';
+      const msg = err.response?.data?.error?.message ?? defaultMsg;
+      Alert.alert(locale === 'fr-QC' ? 'Échec de génération' : 'Generation Failed', msg, [{ text: 'OK' }]);
     } finally {
       setIsLoading(false);
     }
@@ -125,8 +132,10 @@ export default function ShiftSwapScreen({ navigation }: Props) {
     if (qrToken) {
       Clipboard.setString(qrToken);
       Alert.alert(
-        'Copied! 📋',
-        'Handover key copied to clipboard. You can send it to the incoming driver.',
+        locale === 'fr-QC' ? 'Copié! 📋' : 'Copied! 📋',
+        locale === 'fr-QC'
+          ? 'Clé de transfert copiée dans le presse-papier.'
+          : 'Handover key copied to clipboard. You can send it to the incoming driver.',
         [{ text: 'OK' }]
       );
     }
@@ -139,7 +148,11 @@ export default function ShiftSwapScreen({ navigation }: Props) {
 
   const processHandover = async () => {
     if (!scanInput.trim()) {
-      Alert.alert('Input Error', 'Please paste the outgoing driver\'s secure handover token.', [{ text: 'OK' }]);
+      Alert.alert(
+        locale === 'fr-QC' ? 'Erreur de saisie' : 'Input Error',
+        locale === 'fr-QC' ? 'Colle la clé sécurisée du chauffeur sortant.' : 'Please paste the outgoing driver\'s secure handover token.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -147,11 +160,13 @@ export default function ShiftSwapScreen({ navigation }: Props) {
     try {
       const { data } = await api.post('/shifts/handover', { qrToken: scanInput.trim() });
       Alert.alert(
-        'Handover Successful! 🎉',
-        'You have successfully taken over this route and active shift sequence. Drive safely!',
+        locale === 'fr-QC' ? 'Transfert réussi! 🎉' : 'Handover Successful! 🎉',
+        locale === 'fr-QC'
+          ? 'Tu as repris le shift et les trajets actifs. Bonne route!'
+          : 'You have successfully taken over this route and active shift sequence. Drive safely!',
         [
           {
-            text: 'Let\'s Go! 🚜',
+            text: locale === 'fr-QC' ? 'C\'est parti! 🚜' : 'Let\'s Go! 🚜',
             onPress: () => {
               if (data.routeId) {
                 navigation.navigate('Navigation', { routeId: data.routeId });
@@ -163,8 +178,11 @@ export default function ShiftSwapScreen({ navigation }: Props) {
         ]
       );
     } catch (err: any) {
-      const msg = err.response?.data?.error?.message ?? 'The token may be expired or invalid.';
-      Alert.alert('Handover Failed', msg, [{ text: 'OK' }]);
+      const defaultMsg = locale === 'fr-QC'
+        ? 'La clé a peut-être expiré ou est invalide.'
+        : 'The token may be expired or invalid.';
+      const msg = err.response?.data?.error?.message ?? defaultMsg;
+      Alert.alert(locale === 'fr-QC' ? 'Échec du transfert' : 'Handover Failed', msg, [{ text: 'OK' }]);
     } finally {
       setIsLoading(false);
     }
@@ -194,16 +212,16 @@ export default function ShiftSwapScreen({ navigation }: Props) {
             <Path d="M19 12H5M12 5l-7 7 7 7" />
           </Svg>
         </TouchableOpacity>
-        <AppText style={resolvedStyles.headerTitle}>Shift Handover</AppText>
+        <AppText style={resolvedStyles.headerTitle}>{t('swapTitle')}</AppText>
 
         {/* Security Badge */}
         <View style={styles.securityBadge}>
-          <AppText style={styles.securityBadgeText}>🔒 Encrypted</AppText>
+          <AppText style={styles.securityBadgeText}>🔒 {locale === 'fr-QC' ? 'Chiffré' : 'Encrypted'}</AppText>
         </View>
       </View>
 
       <AppText style={resolvedStyles.subtitle}>
-        Transfer routes between drivers securely.
+        {t('swapSubtitle')}
       </AppText>
 
       {/* OUTGOING DRIVER SEGMENT */}
@@ -212,16 +230,16 @@ export default function ShiftSwapScreen({ navigation }: Props) {
           <View style={[styles.circleIcon, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
             <OutgoingIcon color="#F59E0B" />
           </View>
-          <AppText style={resolvedStyles.cardHeader}>Leaving Shift? (Outgoing Driver)</AppText>
+          <AppText style={resolvedStyles.cardHeader}>{t('outgoingDriverTitle')}</AppText>
         </View>
 
         <AppText style={resolvedStyles.cardMuted}>
-          Generate a secure, short-lived handover token to transfer your current active routes.
+          {t('outgoingDriverDesc')}
         </AppText>
 
         {qrToken ? (
           <View style={resolvedStyles.qrContainer}>
-            <AppText style={resolvedStyles.qrLabel}>SECURE HANDOVER KEY (ACTIVE 10M):</AppText>
+            <AppText style={resolvedStyles.qrLabel}>{t('tokenActiveLabel')}</AppText>
             <View style={resolvedStyles.qrBlockRow}>
               <View style={resolvedStyles.qrClickable}>
                 <AppText style={resolvedStyles.qrTextDisplay}>{qrToken}</AppText>
@@ -231,18 +249,18 @@ export default function ShiftSwapScreen({ navigation }: Props) {
                   <Rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                   <Path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </Svg>
-                <AppText style={resolvedStyles.copyBtnText}>Copy</AppText>
+                <AppText style={resolvedStyles.copyBtnText}>{locale === 'fr-QC' ? 'Copier' : 'Copy'}</AppText>
               </TouchableOpacity>
             </View>
             <AppText style={resolvedStyles.countdownText}>
-              Expires in {formatTime(countdown)}
+              {t('expiresIn', { time: formatTime(countdown) })}
             </AppText>
           </View>
         ) : (
           <GradientButton
             disabled={isLoading}
             onPress={generateHandoverToken}
-            text={isLoading ? 'Generating...' : 'Generate Handover Token'}
+            text={isLoading ? (locale === 'fr-QC' ? 'Génération...' : 'Generating...') : t('generateTokenBtn')}
             colors={['#1D4ED8', '#3B82F6']}
             icon={
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -260,16 +278,16 @@ export default function ShiftSwapScreen({ navigation }: Props) {
           <View style={[styles.circleIcon, { backgroundColor: 'rgba(34,197,94,0.15)' }]}>
             <IncomingIcon color="#22C55E" />
           </View>
-          <AppText style={resolvedStyles.cardHeader}>Starting Shift? (Incoming Driver)</AppText>
+          <AppText style={resolvedStyles.cardHeader}>{t('incomingDriverTitle')}</AppText>
         </View>
 
         <AppText style={resolvedStyles.cardMuted}>
-          Enter the outgoing driver's secure handover token to immediately assume their route queue and end their active shift timer.
+          {t('incomingDriverDesc')}
         </AppText>
 
         <View style={resolvedStyles.inputContainer}>
           <TextInput
-            placeholder="Enter secure key here..."
+            placeholder={t('pasteKeyPlaceholder')}
             placeholderTextColor={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(15,20,30,0.4)'}
             value={scanInput}
             onChangeText={setScanInput}
@@ -287,7 +305,7 @@ export default function ShiftSwapScreen({ navigation }: Props) {
           <GradientButton
             disabled={isLoading}
             onPress={processHandover}
-            text="Accept Shift & Routes"
+            text={t('acceptShiftBtn')}
             colors={['#10B981', '#22C55E']}
             icon={
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -300,7 +318,7 @@ export default function ShiftSwapScreen({ navigation }: Props) {
         {/* Warning strip */}
         <View style={resolvedStyles.warningStrip}>
           <AppText style={resolvedStyles.warningStripText}>
-            ⚠ This will immediately end the outgoing driver's active shift timer.
+            {t('warningShiftText')}
           </AppText>
         </View>
       </View>

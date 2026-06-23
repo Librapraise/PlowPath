@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useStormsStore, type StormEvent } from '../store/stormsStore';
 import { Plus, CloudSnow, Play, CheckCircle2, XCircle, Calendar, Snowflake, BarChart3 } from 'lucide-react';
+import { useTranslation } from '../services/i18n';
 
 export default function StormsPage() {
+  const { t } = useTranslation();
   const { storms, isLoading, fetchStorms, createStorm, updateStorm, deleteStorm } = useStormsStore();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,25 +102,25 @@ export default function StormsPage() {
       case 'active':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-black rounded-full shadow-glow-red animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span> ACTIVE STORM
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span> {t('ACTIVE STORM')}
           </span>
         );
       case 'planned':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[11px] font-black rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span> PLANNED
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span> {t('PLANNED')}
           </span>
         );
       case 'completed':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-black rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ARCHIVED
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {t('ARCHIVED')}
           </span>
         );
       case 'cancelled':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800/60 border border-slate-700/50 text-slate-500 text-[11px] font-black rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> CANCELLED
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> {t('CANCELLED')}
           </span>
         );
     }
@@ -139,15 +141,15 @@ export default function StormsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-up">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Storm Operations Control</h2>
-          <p className="text-sm text-slate-400 mt-1 font-medium">Register storm accumulation forecasts, trigger active dispatching, and record actual event totals</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">{t('Storm Operations Control')}</h2>
+          <p className="text-sm text-slate-400 mt-1 font-medium">{t('Register storm accumulation forecasts, trigger active dispatching, and record actual event totals')}</p>
         </div>
         <button
           onClick={openAddModal}
           className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
         >
           <Plus className="w-5 h-5" />
-          Plan Storm Event
+          {t('Plan Storm Event')}
         </button>
       </div>
 
@@ -159,7 +161,7 @@ export default function StormsPage() {
         </div>
       ) : storms.length === 0 ? (
         <div className="text-center py-20 glass-card rounded-2xl text-slate-500 font-medium">
-          No storm events listed. Click "Plan Storm Event" to initialize.
+          {t('No storm events listed. Click "Plan Storm Event" to initialize.')}
         </div>
       ) : (
         <div className="space-y-6">
@@ -190,12 +192,12 @@ export default function StormsPage() {
               {/* Accumulation & Actions */}
               <div className="relative flex flex-wrap items-center gap-4">
                 <div className="text-center stat-glass px-5 py-2.5 rounded-xl font-mono">
-                  <div className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">Forecast</div>
+                  <div className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">{t('Forecast')}</div>
                   <div className="text-lg font-black text-slate-200">{activeStorm.forecasted_accumulation || '—'} in</div>
                 </div>
 
                 <div className="text-center stat-glass px-5 py-2.5 rounded-xl font-mono">
-                  <div className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">Passes</div>
+                  <div className="text-[10px] font-bold text-slate-550 uppercase tracking-widest">{t('Passes')}</div>
                   <div className="text-lg font-black text-slate-200">{activeStorm.passes_count || 1}</div>
                 </div>
 
@@ -205,14 +207,14 @@ export default function StormsPage() {
                     className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/15 cursor-pointer transition-all btn-press ring-1 ring-white/10"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Complete Storm
+                    {t('Complete Storm')}
                   </button>
                   <button
                     onClick={() => handleCancel(activeStorm)}
                     className="flex items-center gap-1 px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-400 hover:text-slate-200 text-xs font-bold rounded-xl border border-slate-700/40 cursor-pointer transition-all"
                   >
                     <XCircle className="w-4 h-4" />
-                    Cancel
+                    {t('Cancel')}
                   </button>
                 </div>
               </div>
@@ -223,7 +225,7 @@ export default function StormsPage() {
           <div className="glass-card rounded-2xl overflow-hidden shadow-xl animate-slide-up animate-plow-sweep" style={{ animationDelay: '100ms' }}>
             <div className="p-5 border-b border-slate-800/40 flex items-center justify-between">
               <span className="text-sm font-extrabold text-white flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-brand-400" /> Planned & Archived Events
+                <BarChart3 className="w-5 h-5 text-brand-400" /> {t('Planned & Archived Events')}
               </span>
             </div>
 
@@ -232,13 +234,13 @@ export default function StormsPage() {
 
                 <thead>
                   <tr className="border-b border-slate-800/50 text-slate-450 text-[11px] font-bold uppercase tracking-wider bg-slate-900/20">
-                    <th className="px-6 py-4">Event details</th>
-                    <th className="px-6 py-4">Expected time frame</th>
-                    <th className="px-6 py-4">Forecast</th>
-                    <th className="px-6 py-4">Plow Passes</th>
-                    <th className="px-6 py-4">Actual accumulation</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-6 py-4">{t('Event details')}</th>
+                    <th className="px-6 py-4">{t('Expected time frame')}</th>
+                    <th className="px-6 py-4">{t('Forecast')}</th>
+                    <th className="px-6 py-4">{t('Plow Passes')}</th>
+                    <th className="px-6 py-4">{t('Actual accumulation')}</th>
+                    <th className="px-6 py-4">{t('Status')}</th>
+                    <th className="px-6 py-4 text-right">{t('Actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/30 text-sm">
@@ -312,13 +314,13 @@ export default function StormsPage() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setModalOpen(false)}></div>
           <div className="relative glass-card rounded-2xl max-w-md w-full shadow-2xl p-6 sm:p-8 animate-scale-up space-y-6 gradient-border">
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <CloudSnow className="w-6 h-6 text-brand-400" /> Plan Storm Event
+              <CloudSnow className="w-6 h-6 text-brand-400" /> {t('Plan Storm Event')}
             </h3>
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Storm Name / Code
+                  {t('Storm Name / Code')}
                 </label>
                 <input
                   type="text"
@@ -333,7 +335,7 @@ export default function StormsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Expected Start Time
+                    {t('Expected Start Time')}
                   </label>
                   <input
                     type="datetime-local"
@@ -344,7 +346,7 @@ export default function StormsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Expected End Time
+                    {t('Expected End Time')}
                   </label>
                   <input
                     type="datetime-local"
@@ -358,7 +360,7 @@ export default function StormsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Forecast (inches)
+                    {t('Forecast (inches)')}
                   </label>
                   <div className="relative">
                     <input
@@ -377,7 +379,7 @@ export default function StormsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Storm Passes
+                    {t('Storm Passes')}
                   </label>
                   <input
                     type="number"
@@ -398,14 +400,14 @@ export default function StormsPage() {
                   onClick={() => setModalOpen(false)}
                   className="px-5 py-2.5 bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 font-semibold text-sm rounded-xl transition-all cursor-pointer border border-slate-700/40"
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
-                  {isLoading ? 'Saving...' : 'Plan Event'}
+                  {isLoading ? t('loading') : t('Plan Storm Event')}
                 </button>
               </div>
             </form>
@@ -419,7 +421,7 @@ export default function StormsPage() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCompleteModalId(null)}></div>
           <div className="relative glass-card rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-6 animate-scale-up gradient-border">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Snowflake className="w-5 h-5 text-emerald-400 animate-spin-slow" /> Archive Storm Event
+              <Snowflake className="w-5 h-5 text-emerald-400 animate-spin-slow" /> {t('Archive Storm Event')}
             </h3>
 
             <form onSubmit={handleComplete} className="space-y-4">
@@ -449,13 +451,13 @@ export default function StormsPage() {
                   onClick={() => setCompleteModalId(null)}
                   className="px-4 py-2.5 bg-slate-800/60 hover:bg-slate-700/60 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer border border-slate-700/40"
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-semibold text-xs rounded-xl shadow-md shadow-emerald-500/15 cursor-pointer transition-all btn-press ring-1 ring-white/10"
                 >
-                  Record & Close Storm
+                  {t('Record & Close Storm')}
                 </button>
               </div>
             </form>

@@ -27,6 +27,7 @@ import Svg, {
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore, type DriverSettings } from '../store/settingsStore';
+import { useTranslation } from '../services/i18n';
 import { flushAllQueues, getQueueDepths } from '../services/offline.service';
 import { api } from '../services/api';
 
@@ -267,9 +268,10 @@ const FloatingLabelInput = ({
   );
 };
 
-type SubScreen = 'menu' | 'visual' | 'navigation' | 'gps' | 'queue' | 'security';
+type SubScreen = 'menu' | 'visual' | 'navigation' | 'gps' | 'queue' | 'security' | 'language';
 
 export default function SettingsScreen() {
+  const { t, locale } = useTranslation();
   const navigation = useNavigation<any>();
   const user = useAuthStore((s) => s.user);
   const { settings, loading, error, fetchSettings, updateSettings } = useSettingsStore();
@@ -356,26 +358,46 @@ export default function SettingsScreen() {
       const routeKeys = allKeys.filter((key) => key.startsWith('plowpath.route.'));
       if (routeKeys.length > 0) {
         await AsyncStorage.multiRemove(routeKeys);
-        Alert.alert('Cache Cleared', `Successfully removed ${routeKeys.length} cached route(s).`);
+        Alert.alert(
+          locale === 'fr-QC' ? 'Cache vidée' : 'Cache Cleared',
+          locale === 'fr-QC'
+            ? `Réussite de la suppression de ${routeKeys.length} trajet(s) en cache.`
+            : `Successfully removed ${routeKeys.length} cached route(s).`
+        );
       } else {
-        Alert.alert('Cache Clean', 'No cached routes found.');
+        Alert.alert(
+          locale === 'fr-QC' ? 'Nettoyage de cache' : 'Cache Clean',
+          locale === 'fr-QC' ? 'Aucun trajet en cache trouvé.' : 'No cached routes found.'
+        );
       }
     } catch (err: any) {
-      Alert.alert('Error', 'Failed to clear cache: ' + err?.message);
+      Alert.alert(
+        locale === 'fr-QC' ? 'Erreur' : 'Error',
+        (locale === 'fr-QC' ? 'Échec du vidage de cache : ' : 'Failed to clear cache: ') + err?.message
+      );
     }
   };
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Validation Error', 'All password fields are required.');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Erreur de validation' : 'Validation Error',
+        locale === 'fr-QC' ? 'Tous les champs de mot de passe sont requis.' : 'All password fields are required.'
+      );
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Validation Error', 'New password must be at least 6 characters.');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Erreur de validation' : 'Validation Error',
+        locale === 'fr-QC' ? 'Le nouveau mot de passe doit faire au moins 6 caractères.' : 'New password must be at least 6 characters.'
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Validation Error', 'Confirm password does not match new password.');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Erreur de validation' : 'Validation Error',
+        locale === 'fr-QC' ? 'Le mot de passe de confirmation correspond pas, t\'sais.' : 'Confirm password does not match new password.'
+      );
       return;
     }
 
@@ -385,14 +407,20 @@ export default function SettingsScreen() {
         currentPassword,
         newPassword,
       });
-      Alert.alert('Success', 'Password updated successfully!');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Succès' : 'Success',
+        locale === 'fr-QC' ? 'Mot de passe mis à jour avec succès!' : 'Password updated successfully!'
+      );
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setActiveScreen('menu');
     } catch (err: any) {
-      const msg = err?.response?.data?.error?.message ?? 'Failed to update password. Please check your current password and try again.';
-      Alert.alert('Error', msg);
+      const defaultMsg = locale === 'fr-QC'
+        ? 'Échec de la modification du mot de passe. Réessaie, t\'sais.'
+        : 'Failed to update password. Please check your current password and try again.';
+      const msg = err?.response?.data?.error?.message ?? defaultMsg;
+      Alert.alert(locale === 'fr-QC' ? 'Erreur' : 'Error', msg);
     } finally {
       setUpdatingPassword(false);
     }
@@ -419,16 +447,27 @@ export default function SettingsScreen() {
 
   const handleForceSync = async () => {
     if (!user?.driver_id) {
-      Alert.alert('Error', 'No driver ID associated with this account.');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Erreur' : 'Error',
+        locale === 'fr-QC' ? 'Aucun identifiant de chauffeur associé.' : 'No driver ID associated with this account.'
+      );
       return;
     }
     setSyncing(true);
     try {
       await flushAllQueues(user.driver_id);
       await updateQueueDepths();
-      Alert.alert('Sync Complete', 'Offline database queues have been flushed successfully.');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Synchro terminée' : 'Sync Complete',
+        locale === 'fr-QC'
+          ? 'Les files d\'attente locales ont été synchronisées avec succès.'
+          : 'Offline database queues have been flushed successfully.'
+      );
     } catch (err: any) {
-      Alert.alert('Sync Failed', err?.message || 'Failed to sync. Are you still offline?');
+      Alert.alert(
+        locale === 'fr-QC' ? 'Synchro échouée' : 'Sync Failed',
+        err?.message || (locale === 'fr-QC' ? 'Échec de la synchro. Es-tu hors ligne?' : 'Failed to sync. Are you still offline?')
+      );
     } finally {
       setSyncing(false);
     }
@@ -497,7 +536,7 @@ export default function SettingsScreen() {
                 <Path d="M19 12H5M12 5l-7 7 7 7" />
               </Svg>
             </TouchableOpacity>
-            <Text style={resolvedStyles.headerTitle}>Settings</Text>
+             <Text style={resolvedStyles.headerTitle}>{t('settingsTitle')}</Text>
             {/* Driver initials avatar top-right */}
             <View style={[styles.avatarCircle, { backgroundColor: '#1D4ED8' }]}>
               <Text style={styles.avatarText}>{getInitials(user?.name || '')}</Text>
@@ -506,14 +545,16 @@ export default function SettingsScreen() {
         ) : (
           renderSubHeader(
             activeScreen === 'visual'
-              ? 'Display & Appearance'
+              ? t('displayAppearance')
               : activeScreen === 'navigation'
-                ? 'Default Navigation'
+                ? t('defaultNav')
                 : activeScreen === 'gps'
-                  ? 'GPS & Battery'
+                  ? t('gpsBattery')
                   : activeScreen === 'queue'
-                    ? 'Sync & Cache'
-                    : 'Account Security'
+                    ? t('syncCache')
+                    : activeScreen === 'language'
+                      ? t('languageLabel')
+                      : t('accountSecurity')
           )
         )}
 
@@ -527,8 +568,8 @@ export default function SettingsScreen() {
                 <VisualIcon color="#F59E0B" />
               </View>
               <View style={styles.menuItemTextContainer}>
-                <Text style={resolvedStyles.menuItemTitle}>Display &amp; Appearance</Text>
-                <Text style={resolvedStyles.menuItemSubtitle}>Choose display theme &amp; map contrast</Text>
+                <Text style={resolvedStyles.menuItemTitle}>{t('displayAppearance')}</Text>
+                <Text style={resolvedStyles.menuItemSubtitle}>{t('displayAppearanceDesc')}</Text>
               </View>
               <ChevronRight color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,20,30,0.25)'} />
             </TouchableOpacity>
@@ -539,8 +580,8 @@ export default function SettingsScreen() {
                 <NavIcon color="#3B82F6" />
               </View>
               <View style={styles.menuItemTextContainer}>
-                <Text style={resolvedStyles.menuItemTitle}>Default Navigation App</Text>
-                <Text style={resolvedStyles.menuItemSubtitle}>Preferred turn-by-turn navigation app</Text>
+                <Text style={resolvedStyles.menuItemTitle}>{t('defaultNav')}</Text>
+                <Text style={resolvedStyles.menuItemSubtitle}>{t('defaultNavDesc')}</Text>
               </View>
               <ChevronRight color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,20,30,0.25)'} />
             </TouchableOpacity>
@@ -551,8 +592,8 @@ export default function SettingsScreen() {
                 <GpsIcon color="#22C55E" />
               </View>
               <View style={styles.menuItemTextContainer}>
-                <Text style={resolvedStyles.menuItemTitle}>GPS &amp; Battery</Text>
-                <Text style={resolvedStyles.menuItemSubtitle}>Accuracy and telemetry frequencies</Text>
+                <Text style={resolvedStyles.menuItemTitle}>{t('gpsBattery')}</Text>
+                <Text style={resolvedStyles.menuItemSubtitle}>{t('gpsBatteryDesc')}</Text>
               </View>
               <ChevronRight color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,20,30,0.25)'} />
             </TouchableOpacity>
@@ -563,8 +604,23 @@ export default function SettingsScreen() {
                 <QueueIcon color="#8B5CF6" />
               </View>
               <View style={styles.menuItemTextContainer}>
-                <Text style={resolvedStyles.menuItemTitle}>Sync &amp; Cache</Text>
-                <Text style={resolvedStyles.menuItemSubtitle}>Offline queue synchronization &amp; storage</Text>
+                <Text style={resolvedStyles.menuItemTitle}>{t('syncCache')}</Text>
+                <Text style={resolvedStyles.menuItemSubtitle}>{t('syncCacheDesc')}</Text>
+              </View>
+              <ChevronRight color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,20,30,0.25)'} />
+            </TouchableOpacity>
+            <View style={resolvedStyles.menuDivider} />
+
+            <TouchableOpacity style={resolvedStyles.menuItem} onPress={() => setActiveScreen('language')}>
+              <View style={[styles.menuIconWrapper, { backgroundColor: 'rgba(59,130,246,0.15)' }]}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <Circle cx="12" cy="12" r="10" />
+                  <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </Svg>
+              </View>
+              <View style={styles.menuItemTextContainer}>
+                <Text style={resolvedStyles.menuItemTitle}>{t('languageLabel')}</Text>
+                <Text style={resolvedStyles.menuItemSubtitle}>{t('languageDesc')}</Text>
               </View>
               <ChevronRight color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,20,30,0.25)'} />
             </TouchableOpacity>
@@ -575,8 +631,8 @@ export default function SettingsScreen() {
                 <SecurityIcon color="#EF4444" />
               </View>
               <View style={styles.menuItemTextContainer}>
-                <Text style={resolvedStyles.menuItemTitle}>Account Security</Text>
-                <Text style={resolvedStyles.menuItemSubtitle}>Manage and update account password</Text>
+                <Text style={resolvedStyles.menuItemTitle}>{t('accountSecurity')}</Text>
+                <Text style={resolvedStyles.menuItemSubtitle}>{t('accountSecurityDesc')}</Text>
               </View>
               <ChevronRight color={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,20,30,0.25)'} />
             </TouchableOpacity>
@@ -585,12 +641,12 @@ export default function SettingsScreen() {
               style={resolvedStyles.logoutBtn}
               onPress={() => {
                 Alert.alert(
-                  'Log Out',
-                  'Are you sure you want to log out?',
+                  t('logoutConfirmTitle'),
+                  t('logoutConfirmDesc'),
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: t('cancel'), style: 'cancel' },
                     {
-                      text: 'Log Out',
+                      text: t('signOut'),
                       style: 'destructive',
                       onPress: () => useAuthStore.getState().logout(),
                     },
@@ -602,10 +658,10 @@ export default function SettingsScreen() {
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
                 <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
               </Svg>
-              <Text style={resolvedStyles.logoutBtnText}>Log Out</Text>
+              <Text style={resolvedStyles.logoutBtnText}>{t('signOut')}</Text>
             </TouchableOpacity>
 
-            <Text style={resolvedStyles.versionText}>Version 0.1.0</Text>
+            <Text style={resolvedStyles.versionText}>{t('version')} 0.1.0</Text>
           </View>
         )}
 
@@ -615,8 +671,8 @@ export default function SettingsScreen() {
             <View style={resolvedStyles.card}>
               {/* Theme Selector */}
               <View style={styles.marginBottom20}>
-                <Text style={resolvedStyles.label}>Theme</Text>
-                <Text style={resolvedStyles.sublabel}>Choose your preferred display mode</Text>
+                <Text style={resolvedStyles.label}>{t('themeLabel')}</Text>
+                <Text style={resolvedStyles.sublabel}>{t('themeDesc')}</Text>
                 <View style={[styles.pillSegmentTrack, { backgroundColor: isDark ? '#0F141E' : '#E2E8F0' }]}>
                   {(['light', 'dark', 'auto'] as const).map((m) => {
                     const active = currentThemeMode === m;
@@ -642,8 +698,8 @@ export default function SettingsScreen() {
               {/* Night Mode Glare Toggle */}
               <View style={[resolvedStyles.row, styles.paddingVertical12]}>
                 <View style={styles.flex1}>
-                  <Text style={resolvedStyles.label}>Night Mode / Dark Glare</Text>
-                  <Text style={resolvedStyles.sublabel}>High-contrast dark mode for night ops</Text>
+                  <Text style={resolvedStyles.label}>{t('nightMode')}</Text>
+                  <Text style={resolvedStyles.sublabel}>{t('nightModeDesc')}</Text>
                 </View>
                 <Switch
                   value={isDark}
@@ -656,8 +712,8 @@ export default function SettingsScreen() {
               {/* Map Contrast Toggle */}
               <View style={[resolvedStyles.row, styles.paddingVertical12]}>
                 <View style={styles.flex1}>
-                  <Text style={resolvedStyles.label}>High Contrast Map</Text>
-                  <Text style={resolvedStyles.sublabel}>Boosts map line visibility in low-light conditions</Text>
+                  <Text style={resolvedStyles.label}>{t('highContrast')}</Text>
+                  <Text style={resolvedStyles.sublabel}>{t('highContrastDesc')}</Text>
                 </View>
                 <Switch
                   value={settings.high_contrast_map || false}
@@ -670,14 +726,14 @@ export default function SettingsScreen() {
 
             {/* Live Preview Swatch */}
             <View style={resolvedStyles.card}>
-              <Text style={resolvedStyles.labelCaps}>Live Preview</Text>
+              <Text style={resolvedStyles.labelCaps}>{t('livePreview')}</Text>
               <View style={[styles.previewSwatch, { backgroundColor: isDark ? '#0F141E' : '#F4F6FA' }]}>
                 <View style={[styles.previewMockCard, { backgroundColor: isDark ? '#161C29' : '#FFFFFF' }]}>
                   <Text style={[styles.previewText, { color: isDark ? '#FFFFFF' : '#0F141E', fontSize: 15, fontWeight: '700' }]}>
-                    Route #42 — Active Stop
+                    {locale === 'fr-QC' ? 'Trajet #42 — Arrêt actif' : 'Route #42 — Active Stop'}
                   </Text>
                   <Text style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(15,20,30,0.5)', fontSize: 12, marginTop: 4 }}>
-                    42 Plowman Way (Pending)
+                    {locale === 'fr-QC' ? '42 ch. Plowman (En attente)' : '42 Plowman Way (Pending)'}
                   </Text>
                 </View>
               </View>
@@ -688,14 +744,19 @@ export default function SettingsScreen() {
         {/* --- SCREEN 3: Default Navigation App --- */}
         {activeScreen === 'navigation' && (
           <View style={resolvedStyles.card}>
-            <Text style={resolvedStyles.label}>Preferred Navigation Tool</Text>
-            <Text style={resolvedStyles.sublabel}>Select your default application for turn-by-turn routing:</Text>
+            <Text style={resolvedStyles.label}>{t('navToolLabel')}</Text>
+            <Text style={resolvedStyles.sublabel}>{t('navToolDesc')}</Text>
 
             <View style={styles.gap12}>
               {(['google_maps', 'apple_maps', 'waze'] as const).map((app) => {
                 const selected = settings.navigation_app === app;
                 const appName = app === 'google_maps' ? 'Google Maps' : app === 'apple_maps' ? 'Apple Maps' : 'Waze';
-                const appSub = app === 'google_maps' ? 'Best for live traffic' : app === 'apple_maps' ? 'Best for Apple devices' : 'Best for hazard alerts';
+                const appSub =
+                  app === 'google_maps'
+                    ? (locale === 'fr-QC' ? 'Recommandé pour le trafic en direct' : 'Best for live traffic')
+                    : app === 'apple_maps'
+                    ? (locale === 'fr-QC' ? 'Recommandé pour les appareils Apple' : 'Best for Apple devices')
+                    : (locale === 'fr-QC' ? 'Recommandé pour les alertes de danger' : 'Best for hazard alerts');
 
                 return (
                   <TouchableOpacity
@@ -746,7 +807,7 @@ export default function SettingsScreen() {
 
             <View style={resolvedStyles.infoStrip}>
               <Text style={resolvedStyles.infoStripText}>
-                ℹ This app will launch automatically when you tap Navigate on any stop.
+                ℹ {t('navToolInfo')}
               </Text>
             </View>
           </View>
@@ -757,9 +818,9 @@ export default function SettingsScreen() {
           <View style={styles.gap16}>
             {/* Accuracy Modes */}
             <View style={resolvedStyles.card}>
-              <Text style={resolvedStyles.label}>Location Accuracy</Text>
+              <Text style={resolvedStyles.label}>{t('locationAccuracy')}</Text>
               <Text style={resolvedStyles.sublabel}>
-                High Precision runs the GPS continuously; Power Saver reduces background updates.
+                {t('locationAccuracyDesc')}
               </Text>
 
               <View style={resolvedStyles.accuracyRow}>
@@ -779,8 +840,8 @@ export default function SettingsScreen() {
                     </Svg>
                     <View style={[styles.dotIndicator, { backgroundColor: '#3B82F6' }]} />
                   </View>
-                  <Text style={resolvedStyles.accuracyTitle}>High Precision</Text>
-                  <Text style={resolvedStyles.accuracySub}>Continuous satellite GPS tracking</Text>
+                  <Text style={resolvedStyles.accuracyTitle}>{t('highPrecision')}</Text>
+                  <Text style={resolvedStyles.accuracySub}>{t('highPrecisionDesc')}</Text>
                 </TouchableOpacity>
 
                 {/* Power Saver Card */}
@@ -799,19 +860,19 @@ export default function SettingsScreen() {
                     </Svg>
                     <View style={[styles.dotIndicator, { backgroundColor: '#22C55E' }]} />
                   </View>
-                  <Text style={resolvedStyles.accuracyTitle}>Power Saver</Text>
-                  <Text style={resolvedStyles.accuracySub}>Reduced background update rate</Text>
+                  <Text style={resolvedStyles.accuracyTitle}>{t('powerSaver')}</Text>
+                  <Text style={resolvedStyles.accuracySub}>{t('powerSaverDesc')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Upload Frequency Slider */}
             <View style={resolvedStyles.card}>
-              <Text style={resolvedStyles.label}>Coordinate Upload Frequency</Text>
-              <Text style={resolvedStyles.sublabel}>Seconds between route tracking updates to the server</Text>
+              <Text style={resolvedStyles.label}>{t('telemetryLabel')}</Text>
+              <Text style={resolvedStyles.sublabel}>{t('uploadFreq', { seconds: settings.upload_frequency_seconds })}</Text>
 
               <View style={styles.center}>
-                <Text style={resolvedStyles.labelCaps}>UPDATE EVERY</Text>
+                <Text style={resolvedStyles.labelCaps}>{locale === 'fr-QC' ? 'INTERVALLE' : 'UPDATE EVERY'}</Text>
                 <Text style={resolvedStyles.statNumber}>{settings.upload_frequency_seconds}s</Text>
               </View>
 
@@ -846,7 +907,7 @@ export default function SettingsScreen() {
           <View style={styles.gap16}>
             <View style={resolvedStyles.card}>
               <View style={resolvedStyles.row}>
-                <Text style={resolvedStyles.label}>Pending Offline Cache</Text>
+                <Text style={resolvedStyles.label}>{t('syncStatus')}</Text>
                 <View style={[
                   styles.syncBadge,
                   { backgroundColor: (gpsCount + stopCount > 0) ? 'rgba(245,158,11,0.15)' : 'rgba(34,197,94,0.15)' }
@@ -856,12 +917,14 @@ export default function SettingsScreen() {
                     fontWeight: '900',
                     color: (gpsCount + stopCount > 0) ? '#F59E0B' : '#22C55E',
                   }}>
-                    {(gpsCount + stopCount > 0) ? '● PENDING' : '● SYNCED'}
+                    {(gpsCount + stopCount > 0)
+                      ? ('● ' + (locale === 'fr-QC' ? 'EN ATTENTE' : 'PENDING'))
+                      : ('● ' + (locale === 'fr-QC' ? 'SYNCHRONISÉ' : 'SYNCED'))}
                   </Text>
                 </View>
               </View>
               <Text style={resolvedStyles.sublabel}>
-                Unsynchronized route updates and telemetry samples currently queued locally
+                {t('syncCacheDesc')}
               </Text>
 
               {/* GPS and Stop Update stats as chips - premium icons updated */}
@@ -872,7 +935,7 @@ export default function SettingsScreen() {
                   </Svg>
                   <View style={styles.statChipCol}>
                     <Text style={resolvedStyles.statChipVal}>{gpsCount}</Text>
-                    <Text style={resolvedStyles.statChipLabel}>GPS Samples</Text>
+                    <Text style={resolvedStyles.statChipLabel}>{t('queuedGps')}</Text>
                   </View>
                 </View>
 
@@ -883,14 +946,14 @@ export default function SettingsScreen() {
                   </Svg>
                   <View style={styles.statChipCol}>
                     <Text style={resolvedStyles.statChipVal}>{stopCount}</Text>
-                    <Text style={resolvedStyles.statChipLabel}>Stop Updates</Text>
+                    <Text style={resolvedStyles.statChipLabel}>{t('queuedStops')}</Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.marginTop16}>
                 <GradientButton
-                  text={syncing ? 'Syncing...' : 'Force Sync Queues'}
+                  text={syncing ? (locale === 'fr-QC' ? 'Synchro...' : 'Syncing...') : t('syncNow')}
                   onPress={handleForceSync}
                   disabled={syncing || (gpsCount + stopCount === 0)}
                   colors={['#10B981', '#22C55E']}
@@ -905,15 +968,15 @@ export default function SettingsScreen() {
 
             {/* Local Route Storage */}
             <View style={resolvedStyles.card}>
-              <Text style={resolvedStyles.label}>Route Local Storage</Text>
+              <Text style={resolvedStyles.label}>{t('clearCache')}</Text>
               <Text style={resolvedStyles.sublabel}>
-                Clearing the cache deletes stored map data. A network connection will be required to fetch them again.
+                {t('clearCacheDesc')}
               </Text>
 
               {/* Progress Storage Bar */}
               <View style={styles.marginBottom20}>
                 <View style={[resolvedStyles.row, styles.marginBottom6]}>
-                  <Text style={resolvedStyles.labelCaps}>STORAGE USED</Text>
+                  <Text style={resolvedStyles.labelCaps}>{locale === 'fr-QC' ? 'ESPACE UTILISÉ' : 'STORAGE USED'}</Text>
                   <Text style={resolvedStyles.appNavSub}>4.2 MB / 50.0 MB</Text>
                 </View>
                 <View style={[styles.progressBarTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,20,30,0.06)' }]}>
@@ -922,18 +985,18 @@ export default function SettingsScreen() {
               </View>
 
               {/* Outlined Danger Button with 3s Countdown Confirm */}
-              <TouchableOpacity
-                style={[
-                  resolvedStyles.clearCacheBtn,
-                  confirmClear && { backgroundColor: 'rgba(239,68,68,0.1)' },
-                ]}
-                onPress={handleClearCacheCountdown}
-                activeOpacity={0.7}
-              >
-                <Text style={resolvedStyles.clearCacheBtnText}>
-                  {confirmClear ? `Tap again to confirm (${clearCountdown}s)` : 'Clear Cached Routes'}
-                </Text>
-              </TouchableOpacity>
+               <TouchableOpacity
+                 style={[
+                   resolvedStyles.clearCacheBtn,
+                   confirmClear && { backgroundColor: 'rgba(239,68,68,0.1)' },
+                 ]}
+                 onPress={handleClearCacheCountdown}
+                 activeOpacity={0.7}
+               >
+                 <Text style={resolvedStyles.clearCacheBtnText}>
+                   {confirmClear ? t('confirmClearCacheBtn', { count: clearCountdown }) : t('clearCacheBtn')}
+                 </Text>
+               </TouchableOpacity>
             </View>
           </View>
         )}
@@ -954,12 +1017,12 @@ export default function SettingsScreen() {
 
             {/* Password Update Form Card */}
             <View style={resolvedStyles.card}>
-              <Text style={resolvedStyles.label}>Update Password</Text>
-              <Text style={resolvedStyles.sublabel}>Change your password to keep your account secure</Text>
+              <Text style={resolvedStyles.label}>{t('securityLabel')}</Text>
+              <Text style={resolvedStyles.sublabel}>{t('accountSecurityDesc')}</Text>
 
               <View style={styles.formContainer}>
                 <FloatingLabelInput
-                  label="Current Password"
+                  label={t('currentPassword')}
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
                   secureTextEntry={true}
@@ -967,7 +1030,7 @@ export default function SettingsScreen() {
                 />
 
                 <FloatingLabelInput
-                  label="New Password"
+                  label={t('newPassword')}
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry={true}
@@ -990,16 +1053,16 @@ export default function SettingsScreen() {
                       })}
                     </View>
                     <Text style={[resolvedStyles.appNavSub, { marginTop: 4, fontWeight: '700' }]}>
-                      {getPasswordStrength(newPassword) === 1 && 'Weak password'}
-                      {getPasswordStrength(newPassword) === 2 && 'Medium strength'}
-                      {getPasswordStrength(newPassword) === 3 && 'Strong password'}
-                      {getPasswordStrength(newPassword) === 4 && 'Very secure!'}
+                      {getPasswordStrength(newPassword) === 1 && (locale === 'fr-QC' ? 'Mot de passe faible' : 'Weak password')}
+                      {getPasswordStrength(newPassword) === 2 && (locale === 'fr-QC' ? 'Force moyenne' : 'Medium strength')}
+                      {getPasswordStrength(newPassword) === 3 && (locale === 'fr-QC' ? 'Mot de passe fort' : 'Strong password')}
+                      {getPasswordStrength(newPassword) === 4 && (locale === 'fr-QC' ? 'Très sécuritaire!' : 'Very secure!')}
                     </Text>
                   </View>
                 )}
 
                 <FloatingLabelInput
-                  label="Confirm New Password"
+                  label={t('confirmPassword')}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={true}
@@ -1009,7 +1072,7 @@ export default function SettingsScreen() {
 
               <View style={styles.marginTop20}>
                 <GradientButton
-                  text={updatingPassword ? 'Updating...' : 'Change Password'}
+                  text={updatingPassword ? t('updatingPassword') : t('changePasswordBtn')}
                   onPress={handleChangePassword}
                   disabled={updatingPassword}
                   icon={
@@ -1024,20 +1087,24 @@ export default function SettingsScreen() {
 
             {/* DANGER ZONE Card */}
             <View style={resolvedStyles.dangerCard}>
-              <Text style={resolvedStyles.dangerLabel}>⚠ DANGER ZONE</Text>
+              <Text style={resolvedStyles.dangerLabel}>{locale === 'fr-QC' ? '⚠ ZONE DE DANGER' : '⚠ DANGER ZONE'}</Text>
               <Text style={resolvedStyles.dangerSub}>
-                Deleting your account will purge all active route assignments and historical telemetry logs permanently. This cannot be undone.
+                {locale === 'fr-QC'
+                  ? 'Supprimer ton compte va effacer définitivement tous tes trajets assignés et tes journaux de télémétrie. Cette action est irréversible.'
+                  : 'Deleting your account will purge all active route assignments and historical telemetry logs permanently. This cannot be undone.'}
               </Text>
               <TouchableOpacity
                 style={resolvedStyles.deleteBtn}
                 onPress={() => {
                   Alert.alert(
-                    'Delete Account & Data',
-                    'To delete your account and all telemetry data, send an email request to our support team.',
+                    locale === 'fr-QC' ? 'Supprimer le compte et les données' : 'Delete Account & Data',
+                    locale === 'fr-QC'
+                      ? 'Pour supprimer ton compte et toutes tes données de télémétrie, envoie une demande par courriel à notre équipe de soutien.'
+                      : 'To delete your account and all telemetry data, send an email request to our support team.',
                     [
-                      { text: 'Cancel', style: 'cancel' },
+                      { text: t('cancel'), style: 'cancel' },
                       {
-                        text: 'Email Support',
+                        text: locale === 'fr-QC' ? 'Envoyer un courriel au soutien' : 'Email Support',
                         onPress: () => {
                           Linking.openURL(
                             'mailto:support@plowpath.ca?subject=PlowPath%20Data%2520Deletion%2520Request&body=Please%2520delete%2520my%2520PlowPath%2520account%2520and%2520all%2520associated%2520data.%250A%250ARegistered%2520Email%253A%2520' + encodeURIComponent(user?.email || '')
@@ -1049,8 +1116,68 @@ export default function SettingsScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={resolvedStyles.deleteBtnText}>Delete Account &amp; Data</Text>
+                <Text style={resolvedStyles.deleteBtnText}>{locale === 'fr-QC' ? 'Supprimer le compte et les données' : 'Delete Account & Data'}</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* --- SCREEN 7: Language Selection --- */}
+        {activeScreen === 'language' && (
+          <View style={resolvedStyles.card}>
+            <Text style={resolvedStyles.label}>{t('languageLabel')}</Text>
+            <Text style={resolvedStyles.sublabel}>{t('languageDesc')}</Text>
+
+            <View style={styles.gap12}>
+              {(['fr-QC', 'en-CA', 'en-US', 'en-GB'] as const).map((lang) => {
+                const selected = settings.language === lang;
+                const langName =
+                  lang === 'fr-QC'
+                    ? 'Français (Québec)'
+                    : lang === 'en-CA'
+                    ? 'English (Canada)'
+                    : lang === 'en-US'
+                    ? 'English (United States)'
+                    : 'English (United Kingdom)';
+                const langRegion =
+                  lang === 'fr-QC'
+                    ? 'Par défaut'
+                    : lang === 'en-CA'
+                    ? 'Canadian spelling'
+                    : lang === 'en-US'
+                    ? 'US spelling'
+                    : 'UK spelling';
+
+                return (
+                  <TouchableOpacity
+                    key={lang}
+                    style={[
+                      resolvedStyles.appNavCard,
+                      selected && resolvedStyles.appNavCardSelected,
+                    ]}
+                    onPress={() => updateSettings({ language: lang })}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.appIconContainer}>
+                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={isDark ? '#FFF' : '#0F141E'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <Circle cx="12" cy="12" r="10" />
+                        <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </Svg>
+                    </View>
+
+                    <View style={styles.flex1}>
+                      <Text style={resolvedStyles.appNavTitle}>{langName}</Text>
+                      <Text style={resolvedStyles.appNavSub}>{langRegion}</Text>
+                    </View>
+
+                    <View style={styles.radioContainer}>
+                      <View style={[styles.radioButton, selected && styles.radioButtonSelected]}>
+                        {selected && <View style={styles.radioDot} />}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         )}

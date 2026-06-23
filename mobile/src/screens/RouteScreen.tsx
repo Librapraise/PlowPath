@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import OfflineStatusBar from '../components/OfflineStatusBar';
 import { subscribeToConnectivity, flushAllQueues } from '../services/offline.service';
+import { useTranslation } from '../services/i18n';
 
 interface RouteSummary {
   route_id: string;
@@ -70,6 +71,7 @@ const RouteCard = ({
   isDark: boolean;
   styles: any;
 }) => {
+  const { t } = useTranslation();
   const isCompleted = item.status === 'completed';
   const isInProgress = item.status === 'in_progress';
 
@@ -175,7 +177,11 @@ const RouteCard = ({
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusBg, borderColor: statusBorder }]}>
             <AppText style={[styles.statusBadgeText, { color: statusColor }]}>
-              {item.status.replace('_', ' ').toUpperCase()}
+              {item.status === 'assigned'
+                ? t('assignedFilter').toUpperCase()
+                : item.status === 'in_progress'
+                ? t('inProgressFilter').toUpperCase()
+                : t('completedFilter').toUpperCase()}
             </AppText>
           </View>
         </View>
@@ -187,7 +193,7 @@ const RouteCard = ({
               <PinIcon color={statusColor} size={16} />
               <AppText style={styles.statNumber}>{stopsVal}</AppText>
             </View>
-            <AppText style={styles.statLabel}>Stops</AppText>
+            <AppText style={styles.statLabel}>{t('stops')}</AppText>
           </View>
           <View style={styles.divider} />
           <View style={styles.statCell}>
@@ -195,7 +201,7 @@ const RouteCard = ({
               <DistanceIcon color={statusColor} size={16} />
               <AppText style={styles.statNumber}>{milesVal}</AppText>
             </View>
-            <AppText style={styles.statLabel}>Miles</AppText>
+            <AppText style={styles.statLabel}>{t('miles')}</AppText>
           </View>
           <View style={styles.divider} />
           <View style={styles.statCell}>
@@ -203,7 +209,7 @@ const RouteCard = ({
               <ClockIcon color={statusColor} size={16} />
               <AppText style={styles.statNumber}>{estVal}m</AppText>
             </View>
-            <AppText style={styles.statLabel}>Est. Time</AppText>
+            <AppText style={styles.statLabel}>{t('estTime')}</AppText>
           </View>
         </View>
 
@@ -212,13 +218,13 @@ const RouteCard = ({
           <View style={styles.completedStrip}>
             <View style={styles.completedLeft}>
               <CheckIcon color="#22C55E" size={18} />
-              <AppText style={styles.completedText}>Completed</AppText>
+              <AppText style={styles.completedText}>{t('completed')}</AppText>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('Navigation', { routeId: item.route_id })}
               accessibilityRole="button"
             >
-              <AppText style={styles.viewSummaryLink}>View Summary →</AppText>
+              <AppText style={styles.viewSummaryLink}>{t('viewSummary')}</AppText>
             </TouchableOpacity>
           </View>
         ) : (
@@ -240,7 +246,7 @@ const RouteCard = ({
             </View>
             <View style={styles.buttonContent}>
               <AppText style={styles.primaryText}>
-                {isInProgress ? 'RESUME ROUTE' : 'START ROUTE'}
+                {isInProgress ? t('resumeRoute') : t('startRoute')}
               </AppText>
               <Animated.View style={{ transform: [{ translateX: arrowAnim }] }}>
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={styles.arrowIcon}>
@@ -256,6 +262,7 @@ const RouteCard = ({
 };
 
 export default function RouteScreen({ navigation }: Props) {
+  const { t, locale } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const theme = useSettingsStore((s) => s.settings.theme);
@@ -302,7 +309,7 @@ export default function RouteScreen({ navigation }: Props) {
         setRoutes(data.data);
         setError(null);
       })
-      .catch(() => setError('Could not load routes. Working offline?'))
+      .catch(() => setError(locale === 'fr-QC' ? 'Impossible de charger les trajets. Es-tu hors ligne?' : 'Could not load routes. Working offline?'))
       .finally(() => setLoading(false));
   };
 
@@ -361,9 +368,9 @@ export default function RouteScreen({ navigation }: Props) {
   if (!user?.driver_id) {
     return (
       <View style={[styles.center, { backgroundColor: isDark ? '#0F141E' : '#F4F6FA' }]}>
-        <AppText style={[styles.heading, { color: isDark ? '#FFF' : '#0F172A' }]}>You are not assigned as a driver.</AppText>
+        <AppText style={[styles.heading, { color: isDark ? '#FFF' : '#0F172A' }]}>{t('notAssignedDriver')}</AppText>
         <TouchableOpacity onPress={handleEndShift} style={styles.secondaryBtn}>
-          <AppText style={styles.secondaryText}>Sign out</AppText>
+          <AppText style={styles.secondaryText}>{t('signOut')}</AppText>
         </TouchableOpacity>
       </View>
     );
@@ -382,7 +389,11 @@ export default function RouteScreen({ navigation }: Props) {
   };
 
   const activeCount = routes ? routes.filter((r) => r.status === 'in_progress').length : 0;
-  const routeCountText = routes ? `${routes.length} route${routes.length === 1 ? '' : 's'} today` : '0 routes today';
+  const routeCountText = routes
+    ? routes.length === 1
+      ? t('routesTodaySingle', { count: routes.length })
+      : t('routesToday', { count: routes.length })
+    : t('routesToday', { count: 0 });
 
   return (
     <View style={styles.container}>
@@ -392,17 +403,17 @@ export default function RouteScreen({ navigation }: Props) {
       <View style={styles.headerArea}>
         <View style={styles.headerTopRow}>
           <View>
-            <AppText style={styles.welcomeText}>WELCOME BACK,</AppText>
+            <AppText style={styles.welcomeText}>{t('welcomeBack')}</AppText>
             <AppText style={styles.driverName}>{user?.name || 'Mike Plowman'}</AppText>
           </View>
           <View style={styles.activeIndicatorBox}>
             <Animated.View style={[styles.greenPulseDot, { opacity: pulseAnim }]} />
-            <AppText style={styles.activeText}>Active Shift</AppText>
+            <AppText style={styles.activeText}>{t('activeShift')}</AppText>
           </View>
         </View>
 
         <AppText style={[styles.summaryStrip, { marginTop: 12 }]}>
-          {routeCountText} · {activeCount} active
+          {routeCountText} · {t('activeRoutes', { count: activeCount })}
         </AppText>
 
         <View style={styles.headerActionsRow}>
@@ -415,7 +426,7 @@ export default function RouteScreen({ navigation }: Props) {
               <Path d="M17 1l4 4-4 4M3 23l-4-4 4-4" />
               <Path d="M21 5H9a5 5 0 0 0-5 5v3M3 19h12a5 5 0 0 0 5-5v-3" />
             </Svg>
-            <AppText style={styles.headerActionBtnText}>Shift Handover</AppText>
+            <AppText style={styles.headerActionBtnText}>{t('shiftHandover')}</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -426,7 +437,7 @@ export default function RouteScreen({ navigation }: Props) {
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
               <Path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
             </Svg>
-            <AppText style={[styles.headerActionBtnText, { color: '#FCA5A5' }]}>End Shift</AppText>
+            <AppText style={[styles.headerActionBtnText, { color: '#FCA5A5' }]}>{t('endShift')}</AppText>
           </TouchableOpacity>
         </View>
       </View>
@@ -443,10 +454,10 @@ export default function RouteScreen({ navigation }: Props) {
             {(['all', 'in_progress', 'assigned', 'completed'] as const).map((filterType) => {
               const isActive = filter === filterType;
               let displayLabel = '';
-              if (filterType === 'all') displayLabel = 'All';
-              else if (filterType === 'in_progress') displayLabel = 'In Progress';
-              else if (filterType === 'assigned') displayLabel = 'Assigned';
-              else if (filterType === 'completed') displayLabel = 'Completed';
+              if (filterType === 'all') displayLabel = t('allFilter');
+              else if (filterType === 'in_progress') displayLabel = t('inProgressFilter');
+              else if (filterType === 'assigned') displayLabel = t('assignedFilter');
+              else if (filterType === 'completed') displayLabel = t('completedFilter');
 
               return (
                 <TouchableOpacity
@@ -489,7 +500,7 @@ export default function RouteScreen({ navigation }: Props) {
                   <Path d="M9 20L3 17V4L9 7M9 20L15 17M9 20V7M15 17L21 20V7L15 4M15 17V4M9 7L15 4" />
                 </Svg>
                 <AppText style={styles.muted}>
-                  {routes && routes.length > 0 ? 'No routes match this filter.' : 'No routes assigned to you today.'}
+                  {routes && routes.length > 0 ? t('noRoutesMatch') : t('noRoutesAssigned')}
                 </AppText>
               </View>
             )

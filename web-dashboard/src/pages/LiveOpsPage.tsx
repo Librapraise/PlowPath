@@ -9,6 +9,7 @@ import LeafletMap from '../components/Map/LeafletMap';
 import CustomSelect from '../components/CustomSelect';
 import SubcontractConsole from '../components/SubcontractConsole';
 import { useToastStore } from '../store/toastStore';
+import { useTranslation } from '../services/i18n';
 import {
   Search, ShieldAlert, Clock, Compass, Truck, Phone, Navigation,
   ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, CheckCircle2,
@@ -28,6 +29,7 @@ export interface DriverPosition {
 }
 
 export default function LiveOpsPage() {
+  const { t, formatCurrency } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
@@ -222,7 +224,7 @@ export default function LiveOpsPage() {
         })
         .catch(() => {
           setHistoricalData([]);
-          useToastStore.getState().addToast('Failed to retrieve historical telemetry logs', 'error');
+          useToastStore.getState().addToast(t('Failed to retrieve historical telemetry logs'), 'error');
         })
         .finally(() => {
           // Handled
@@ -264,10 +266,10 @@ export default function LiveOpsPage() {
     setIsSendingAlert(true);
     try {
       await api.post(`/drivers/${selectedDriverId}/alert`, { message: alertMessage });
-      useToastStore.getState().addToast('Audio dispatch alert transmitted successfully!', 'success');
+      useToastStore.getState().addToast(t('Audio dispatch alert transmitted successfully!'), 'success');
       setAlertMessage('');
     } catch {
-      useToastStore.getState().addToast('Failed to dispatch alert', 'error');
+      useToastStore.getState().addToast(t('Failed to dispatch alert'), 'error');
     } finally {
       setIsSendingAlert(false);
     }
@@ -341,18 +343,18 @@ export default function LiveOpsPage() {
     <div className="flex flex-col h-[calc(100vh-69px)] bg-[#0a0f1a] text-slate-100 overflow-hidden font-sans relative">
       
       {/* Dynamic Telemetry Info Header Ribbon */}
-      <div className="flex flex-wrap items-center justify-between px-6 py-2.5 glass-panel border-t-0 border-l-0 border-r-0 gap-4 text-xs font-semibold select-none z-10">
+      <div className="flex flex-wrap items-center justify-between px-6 py-2.5 glass-panel border-t-0 border-b-0 border-l-0 gap-4 text-xs font-semibold select-none z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-slate-400">
             <Activity className="w-4 h-4 text-emerald-400" />
-            <span>Operational Roster:</span>
-            <strong className="text-slate-200">{enrichedDrivers.filter(d => d.isOnline).length} / {drivers.length} Online</strong>
+            <span>{t('Operational Roster')}:</span>
+            <strong className="text-slate-200">{enrichedDrivers.filter(d => d.isOnline).length} / {drivers.length} {t('Online')}</strong>
           </div>
           <span className="text-slate-700">|</span>
           <div className="flex items-center gap-1.5 text-slate-400">
             <Compass className="w-4 h-4 text-brand-400" />
-            <span>Active Runs:</span>
-            <strong className="text-slate-200">{activeRoutesCount} Active</strong>
+            <span>{t('Active Runs')}:</span>
+            <strong className="text-slate-200">{activeRoutesCount} {t('Active')}</strong>
           </div>
         </div>
 
@@ -360,12 +362,12 @@ export default function LiveOpsPage() {
           {activeStorm ? (
             <div className="flex items-center gap-2 px-3 py-1 frost-glow-card text-emerald-400 rounded-full animate-pulse">
               <span className="w-2 h-2 rounded-full bg-emerald-500 telemetry-ping"></span>
-              <span>Storm Event: <strong>{activeStorm.name}</strong></span>
+              <span>{t('Storm Event')}: <strong>{activeStorm.name}</strong></span>
             </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700/30">
               <span className="w-2 h-2 rounded-full bg-slate-600"></span>
-              <span>No Active Storm Event</span>
+              <span>{t('No Active Storm Event')}</span>
             </div>
           )}
 
@@ -374,7 +376,7 @@ export default function LiveOpsPage() {
             className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all btn-press ring-1 ring-white/10"
           >
             <Briefcase className="w-3.5 h-3.5" />
-            B2B Subcontract Exchange
+            {t('B2B Subcontract Exchange')}
           </button>
         </div>
       </div>
@@ -385,13 +387,13 @@ export default function LiveOpsPage() {
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shrink-0"></span>
             <span className="tracking-wide">
-              🚨 ACTIVE EMERGENCY PLOWING REQUEST: Notifying nearest driver "{urgentRequest.driverName || 'crew'}"...
-              Distance: {urgentRequest.distanceMeters ? (urgentRequest.distanceMeters / 1609.34).toFixed(2) : '0.00'} miles away. 
-              (Attempt {urgentRequest.attempt} / {urgentRequest.maxAttempts})
+              🚨 {t('Active Emergency Plowing Request')}: {t('Notifying nearest driver')} "{urgentRequest.driverName || t('crew')}"...
+              {t('Distance')}: {urgentRequest.distanceMeters ? (urgentRequest.distanceMeters / 1609.34).toFixed(2) : '0.00'} {t('miles away')}. 
+              ({t('Attempt')} {urgentRequest.attempt} / {urgentRequest.maxAttempts})
             </span>
           </div>
           <div className="px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <span>Escalation Timer Active: 5 Minutes</span>
+            <span>{t('Escalation Timer Active')}: 5 {t('Minutes')}</span>
           </div>
         </div>
       )}
@@ -404,7 +406,7 @@ export default function LiveOpsPage() {
 
             <div className="p-4 border-b border-slate-900 space-y-3.5">
               <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-white text-base">Fleet Operations</h3>
+                <h3 className="font-extrabold text-white text-base">{t('Fleet Operations')}</h3>
                 <button
                   onClick={() => {
                     fetchDrivers();
@@ -412,7 +414,7 @@ export default function LiveOpsPage() {
                     fetchActiveShifts();
                   }}
                   className="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-all cursor-pointer"
-                  title="Refreshes fleet connections"
+                  title={t('Refreshes fleet connections')}
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
@@ -423,7 +425,7 @@ export default function LiveOpsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Search fleet, vehicles..."
+                  placeholder={t('Search fleet, vehicles...')}
                   value={driverSearch}
                   onChange={(e) => setDriverSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-brand-500/40 placeholder:text-slate-600 font-medium transition-all"
@@ -438,7 +440,7 @@ export default function LiveOpsPage() {
                     filterType === 'all' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-350'
                   }`}
                 >
-                  All ({enrichedDrivers.length})
+                  {t('All')} ({enrichedDrivers.length})
                 </button>
                 <button
                   onClick={() => setFilterType('active')}
@@ -446,7 +448,7 @@ export default function LiveOpsPage() {
                     filterType === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-500 hover:text-slate-350'
                   }`}
                 >
-                  Active ({enrichedDrivers.filter((d) => d.isOnline).length})
+                  {t('Active')} ({enrichedDrivers.filter((d) => d.isOnline).length})
                 </button>
                 <button
                   onClick={() => setFilterType('offline')}
@@ -454,7 +456,7 @@ export default function LiveOpsPage() {
                     filterType === 'offline' ? 'bg-slate-900 text-slate-400' : 'text-slate-500 hover:text-slate-350'
                   }`}
                 >
-                  Idle ({enrichedDrivers.filter((d) => !d.isOnline).length})
+                  {t('Idle')} ({enrichedDrivers.filter((d) => !d.isOnline).length})
                 </button>
               </div>
             </div>
@@ -463,21 +465,21 @@ export default function LiveOpsPage() {
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {filteredDrivers.length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-xs font-semibold">
-                  No matches found in operational database.
+                  {t('No matches found in operational database.')}
                 </div>
               ) : (
                 filteredDrivers.map((d) => {
                   const isSelected = selectedDriverId === d.driver_id;
                   
                   // Compute stops completed
-                  let stopRatioString = 'No Active Route';
+                  let stopRatioString = t('No Active Route');
                   let progressPercent = 0;
                   if (d.route) {
                     const matchedDetailed = routes.find((r) => r.route_id === d.route?.route_id);
                     const completedCount = matchedDetailed?.stops?.filter((s) => s.status === 'completed').length ?? 0;
                     // stop_count from SQL COUNT() returns a string — coerce to int
                     const total = parseInt(String(matchedDetailed?.stop_count ?? d.route.stop_count ?? 0), 10);
-                    stopRatioString = total > 0 ? `${completedCount}/${total} stops complete` : 'Stops progress…';
+                    stopRatioString = total > 0 ? `${completedCount}/${total} ${t('stops complete')}` : t('Stops progress…');
                     progressPercent = total > 0 ? (completedCount / total) * 100 : 0;
                   }
 
@@ -490,13 +492,13 @@ export default function LiveOpsPage() {
                   if (dShift && dShift.status === 'active') {
                     const elapsedMs = Date.now() - new Date(dShift.started_at).getTime();
                     const elapsedHrs = elapsedMs / (1000 * 60 * 60);
-                    shiftDurationString = `${elapsedHrs.toFixed(1)}h shift`;
+                    shiftDurationString = `${elapsedHrs.toFixed(1)}h ${t('shift')}`;
                     
                     if (elapsedHrs >= 12) {
-                      fatigueLabel = '12h+ Red Fatigue Alert';
+                      fatigueLabel = t('Red Fatigue Alert');
                       fatigueBadgeClass = 'bg-red-500/10 text-red-400 border border-red-500/25 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider animate-pulse';
                     } else if (elapsedHrs >= 8) {
-                      fatigueLabel = '8h+ Amber Fatigue Warning';
+                      fatigueLabel = t('Amber Fatigue Warning');
                       fatigueBadgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider animate-pulse';
                     } else {
                       fatigueBadgeClass = 'bg-slate-800/80 text-slate-450 border border-slate-700/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider';
@@ -547,7 +549,7 @@ export default function LiveOpsPage() {
                           
                           <div className="flex items-center gap-1.5 mt-1">
                             <span className="text-[10px] text-slate-450 font-semibold uppercase tracking-wider">
-                              {d.vehicle_type || 'Commercial Plow'}
+                              {t(d.vehicle_type || 'Commercial Plow')}
                             </span>
                             {shiftDurationString && (
                               <span className={fatigueBadgeClass} title={fatigueLabel}>
@@ -609,7 +611,7 @@ export default function LiveOpsPage() {
             <div className="absolute top-4 right-4 z-[99] max-w-xs glass-panel rounded-2xl p-3.5 shadow-2xl border border-slate-800/50 flex flex-col space-y-2 select-none pointer-events-auto">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <CloudSnow className="w-3.5 h-3.5 text-sky-400 animate-bounce" /> Meteorology Live Alert
+                  <CloudSnow className="w-3.5 h-3.5 text-sky-400 animate-bounce" /> {t('Meteorology Live Alert')}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
               </div>
@@ -619,8 +621,8 @@ export default function LiveOpsPage() {
                   <span className="text-xs font-bold text-slate-200">{weather.condition}</span>
                 </div>
                 <div className="text-[10px] font-semibold text-slate-450 space-y-0.5 text-right shrink-0">
-                  <div>Wind: {weather.wind}</div>
-                  <div>Vis: {weather.visibility}</div>
+                  <div>{t('Wind')}: {weather.wind}</div>
+                  <div>{t('Vis')}: {weather.visibility}</div>
                 </div>
               </div>
               {weather.alert && (
@@ -652,7 +654,7 @@ export default function LiveOpsPage() {
                   </div>
                   <div>
                     <h4 className="font-extrabold text-white text-sm leading-snug">{currentSelectedDriver.name}</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold">{currentSelectedDriver.vehicle_type || 'Plow Vehicle'}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">{t(currentSelectedDriver.vehicle_type || 'Plow Vehicle')}</p>
                   </div>
                 </div>
                 <button
@@ -670,24 +672,24 @@ export default function LiveOpsPage() {
                 <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-850/60 grid grid-cols-2 gap-3 text-[10px] text-slate-400 font-semibold">
                   <div className="flex items-center gap-2">
                     <Phone className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                    <span className="truncate">{currentSelectedDriver.phone || 'No phone'}</span>
+                    <span className="truncate">{currentSelectedDriver.phone || t('No phone')}</span>
                   </div>
                   <div className="flex items-center gap-1.5 justify-end">
                     <DollarSign className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>${currentSelectedDriver.hourly_rate ?? 35}/hr rate</span>
+                    <span>{formatCurrency(currentSelectedDriver.hourly_rate ?? 35)}/{t('hr rate')}</span>
                   </div>
                 </div>
 
                 {/* Telemetry Live Feed details panel */}
                 <div className="bg-slate-950/40 rounded-xl border border-slate-850 p-3.5 space-y-2">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    Telemetry Stream
+                    {t('Telemetry Stream')}
                   </div>
                   
                   {currentSelectedDriver.tracking ? (
                     <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 text-[10px] font-semibold text-slate-350">
                       <div className="flex flex-col">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">Latest Coordinates</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">{t('Latest Coordinates')}</span>
                         <span className="font-mono text-slate-200 mt-0.5">
                           {isPlaybackMode && historicalData[playbackIndex] 
                             ? `${historicalData[playbackIndex].lat.toFixed(5)}, ${historicalData[playbackIndex].lon.toFixed(5)}`
@@ -696,18 +698,18 @@ export default function LiveOpsPage() {
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">Current Speed</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">{t('Current Speed')}</span>
                         <span className="text-slate-200 mt-0.5">
                           {isPlaybackMode && historicalData[playbackIndex]
                             ? `${(Number(historicalData[playbackIndex].speed_mps ?? 0) * 2.23694).toFixed(1)} mph`
                             : currentSelectedDriver.tracking.speed_mps != null 
                             ? `${(currentSelectedDriver.tracking.speed_mps * 2.23694).toFixed(1)} mph` 
-                            : '0.0 mph (Stationary)'}
+                            : `0.0 mph (${t('Stationary')})`}
                         </span>
                       </div>
 
                       <div className="flex flex-col col-span-2 pt-1 border-t border-slate-850/40">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">Last Active Connection</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">{t('Last Active Connection')}</span>
                         <span className="font-mono text-slate-200 mt-0.5">
                           {isPlaybackMode && historicalData[playbackIndex]
                             ? new Date(historicalData[playbackIndex].recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -717,7 +719,7 @@ export default function LiveOpsPage() {
                     </div>
                   ) : (
                     <div className="text-slate-500 text-xs py-2 italic font-semibold">
-                      Offline. Listening for GPS signals...
+                      {t('Offline. Listening for GPS signals...')}
                     </div>
                   )}
                 </div>
@@ -725,12 +727,12 @@ export default function LiveOpsPage() {
                 {/* High-Priority Dispatch alert Board */}
                 <div className="bg-slate-950/40 rounded-xl border border-slate-850 p-3.5 space-y-3">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <Volume2 className="w-4 h-4 text-red-400" /> High-Priority Dispatch alert
+                    <Volume2 className="w-4 h-4 text-red-400" /> {t('High-Priority Dispatch alert')}
                   </div>
                   <form onSubmit={handleSendDispatchAlert} className="space-y-2">
                     <input
                       type="text"
-                      placeholder="Blocked exit, divert to Stop #4..."
+                      placeholder={t('Blocked exit, divert to Stop #4...')}
                       value={alertMessage}
                       onChange={(e) => setAlertMessage(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none placeholder:text-slate-600 font-semibold"
@@ -741,7 +743,7 @@ export default function LiveOpsPage() {
                       disabled={isSendingAlert || !alertMessage.trim()}
                       className="w-full py-2 bg-red-650/10 border border-red-500/25 hover:bg-red-650/20 text-red-400 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all shadow btn-press flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      {isSendingAlert ? 'Dispatched...' : 'Send Urgent audio alert'}
+                      {isSendingAlert ? t('Dispatched...') : t('Send Urgent audio alert')}
                     </button>
                   </form>
                 </div>
@@ -750,8 +752,8 @@ export default function LiveOpsPage() {
                 <div className="bg-slate-950/40 rounded-xl border border-slate-850 p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-white leading-normal">Render Historical Trail</span>
-                      <span className="text-[9px] text-slate-500 font-semibold">Overlays previous driven points on the map</span>
+                      <span className="text-[10px] font-bold text-white leading-normal">{t('Render Historical Trail')}</span>
+                      <span className="text-[9px] text-slate-500 font-semibold">{t('Overlays previous driven points on the map')}</span>
                     </div>
                     <button
                       onClick={() => setShowBreadcrumbs((prev) => !prev)}
@@ -763,11 +765,11 @@ export default function LiveOpsPage() {
                     >
                       {showBreadcrumbs ? (
                         <>
-                          <Eye className="w-3.5 h-3.5" /> Show Trail
+                          <Eye className="w-3.5 h-3.5" /> {t('Show Trail')}
                         </>
                       ) : (
                         <>
-                          <EyeOff className="w-3.5 h-3.5" /> Hide Trail
+                          <EyeOff className="w-3.5 h-3.5" /> {t('Hide Trail')}
                         </>
                       )}
                     </button>
@@ -775,8 +777,8 @@ export default function LiveOpsPage() {
 
                   <div className="flex items-center justify-between pt-2.5 border-t border-slate-850/45">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-white">Route Playback Mode</span>
-                      <span className="text-[9px] text-slate-500 font-semibold">Animate history breadcrumbs sequentially</span>
+                      <span className="text-[10px] font-bold text-white">{t('Route Playback Mode')}</span>
+                      <span className="text-[9px] text-slate-500 font-semibold">{t('Animate history breadcrumbs sequentially')}</span>
                     </div>
                     <button
                       onClick={() => {
@@ -789,7 +791,7 @@ export default function LiveOpsPage() {
                           : 'bg-slate-950 text-slate-400 border-slate-800'
                       }`}
                     >
-                      {isPlaybackMode ? 'Deactivate' : 'Activate'}
+                      {isPlaybackMode ? t('Deactivate') : t('Activate')}
                     </button>
                   </div>
 
@@ -798,7 +800,7 @@ export default function LiveOpsPage() {
                       {/* Scrubber slider */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-[9px] font-mono text-slate-450">
-                          <span>Frame {playbackIndex + 1} / {historicalData.length}</span>
+                          <span>{t('Frame')} {playbackIndex + 1} / {historicalData.length}</span>
                           <span>
                             {historicalData[playbackIndex]
                               ? new Date(historicalData[playbackIndex].recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -827,11 +829,11 @@ export default function LiveOpsPage() {
                         >
                           {isPlaying ? (
                             <>
-                              <Pause className="w-3.5 h-3.5" /> Pause
+                              <Pause className="w-3.5 h-3.5" /> {t('Pause')}
                             </>
                           ) : (
                             <>
-                              <Play className="w-3.5 h-3.5" /> Play
+                              <Play className="w-3.5 h-3.5" /> {t('Play')}
                             </>
                           )}
                         </button>
@@ -856,7 +858,7 @@ export default function LiveOpsPage() {
                   )}
                   {isPlaybackMode && historicalData.length === 0 && (
                     <div className="text-[10px] text-slate-500 text-center italic py-2 font-medium">
-                      Retrieving tracking logs from telemetry base...
+                      {t('Retrieving tracking logs from telemetry base...')}
                     </div>
                   )}
                 </div>
@@ -865,10 +867,10 @@ export default function LiveOpsPage() {
                 {selectedDriverRoute ? (
                   <div className="space-y-2 pt-2 border-t border-slate-800">
                     <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      <span>Stops List: {selectedDriverRoute.route_name}</span>
+                      <span>{t('Stops List')}: {selectedDriverRoute.route_name}</span>
                     </div>
 
-                    <div className="divide-y divide-slate-850 max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                    <div className="divide-y divide-slate-855 max-h-56 overflow-y-auto space-y-1.5 pr-1">
                       {selectedDriverRoute.stops?.map((stop) => (
                         <div
                           key={stop.stop_id}
@@ -882,7 +884,7 @@ export default function LiveOpsPage() {
                                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
                                 : stop.status === 'skipped'
                                 ? 'bg-slate-800 text-slate-500 border border-slate-700'
-                                : 'bg-slate-850 text-slate-350 border border-slate-800'
+                                : 'bg-slate-855 text-slate-350 border border-slate-800'
                             }`}>
                               {stop.sequence_number}
                             </span>
@@ -904,7 +906,7 @@ export default function LiveOpsPage() {
                                       }}
                                       className="px-1.5 py-0.5 mt-0.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[8px] font-bold cursor-pointer transition-colors"
                                     >
-                                      📷 View Proof Photo
+                                      📷 {t('View Proof Photo')}
                                     </button>
                                   )}
                                 </div>
@@ -915,10 +917,10 @@ export default function LiveOpsPage() {
                           {/* Quick stop status override dropdown */}
                           <CustomSelect
                             options={[
-                              { value: 'pending', label: 'Pending', colorDot: '#ef4444' },
-                              { value: 'in_progress', label: 'In Progress', colorDot: '#f97316' },
-                              { value: 'completed', label: 'Completed', colorDot: '#10b981' },
-                              { value: 'skipped', label: 'Skipped', colorDot: '#64748b' },
+                              { value: 'pending', label: t('Pending'), colorDot: '#ef4444' },
+                              { value: 'in_progress', label: t('In Progress'), colorDot: '#f97316' },
+                              { value: 'completed', label: t('Completed'), colorDot: '#10b981' },
+                              { value: 'skipped', label: t('Skipped'), colorDot: '#64748b' },
                             ]}
                             value={stop.status}
                             onChange={(val) => updateStopStatus(selectedDriverRoute.route_id, stop.stop_id, val as any)}
@@ -931,7 +933,7 @@ export default function LiveOpsPage() {
                 ) : (
                   <div className="py-8 text-center text-slate-550 border-t border-slate-850 text-xs font-semibold flex flex-col items-center justify-center gap-2">
                     <Navigation className="w-6 h-6 text-slate-700" />
-                    <span>No active route assigned to driver</span>
+                    <span>{t('No active route assigned to driver')}</span>
                   </div>
                 )}
               </div>
@@ -951,15 +953,15 @@ export default function LiveOpsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-white">No active storm telemetry</h3>
+                  <h3 className="text-xl font-bold text-white">{t('No active storm telemetry')}</h3>
                   <p className="text-sm text-slate-400 font-semibold leading-relaxed">
-                    No drivers are active in the current storm event. Once vehicles start their routes and broadcast GPS updates, they will appear on the live tracking console.
+                    {t('No drivers are active in the current storm event. Once vehicles start their routes and broadcast GPS updates, they will appear on the live tracking console.')}
                   </p>
                 </div>
 
                 <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-950/50 border border-slate-850 rounded-xl text-[10px] font-mono text-slate-500">
                   <span className="w-2 h-2 rounded-full bg-slate-700 animate-ping"></span>
-                  Listening for GPS broadcasts...
+                  {t('Listening for GPS broadcasts...')}
                 </div>
               </div>
             </div>
@@ -975,12 +977,12 @@ export default function LiveOpsPage() {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
           <div className="relative max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-bold text-white">Proof of Service Photo Verification</span>
+              <span className="text-sm font-bold text-white">{t('Proof of Service Photo Verification')}</span>
               <button
                 onClick={() => setPreviewImage(null)}
                 className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer"
               >
-                Close ✕
+                {t('Close')} ✕
               </button>
             </div>
             <img
@@ -989,7 +991,7 @@ export default function LiveOpsPage() {
               className="w-full max-h-[70vh] object-contain rounded-lg border border-slate-850"
             />
             <div className="mt-3 text-xs text-slate-450 font-semibold text-center">
-              Liability protection proof of service escrow photo · Verified Clear
+              {t('Liability protection proof of service escrow photo · Verified Clear')}
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import RouteScreen from '../screens/RouteScreen';
 import SignRouteScreen from '../screens/SignRouteScreen';
 import InAppHistoryScreen from '../screens/InAppHistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import { useTranslation } from '../services/i18n';
 
 // Custom high-contrast premium 2px stroke weight SVG icons
 const RouteIcon = ({ color, size }: { color: string; size: number }) => (
@@ -42,6 +43,7 @@ const SettingsIcon = ({ color, size }: { color: string; size: number }) => (
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
+  const { t } = useTranslation();
   // Hardcoded premium dark color scheme for the bottom bar as requested
   const bgColor = '#0F141E';
   const borderTopColor = 'rgba(255, 255, 255, 0.08)';
@@ -79,7 +81,7 @@ export default function TabNavigator() {
         name="Route"
         component={RouteScreen}
         options={{
-          tabBarLabel: "Today's Route",
+          tabBarLabel: t('tabRoute'),
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
               {focused && (
@@ -103,7 +105,7 @@ export default function TabNavigator() {
         name="SignRoute"
         component={SignRouteScreen}
         options={{
-          tabBarLabel: 'Sign Operations',
+          tabBarLabel: t('tabSign'),
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
               {focused && (
@@ -127,7 +129,7 @@ export default function TabNavigator() {
         name="History"
         component={InAppHistoryScreen}
         options={{
-          tabBarLabel: 'Notifications',
+          tabBarLabel: t('tabHistory'),
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
               {focused && (
@@ -151,7 +153,7 @@ export default function TabNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: 'Settings',
+          tabBarLabel: t('tabSettings'),
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
               {focused && (

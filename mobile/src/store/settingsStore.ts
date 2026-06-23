@@ -11,6 +11,7 @@ export interface DriverSettings {
   tracking_accuracy: 'high' | 'power_saver';
   upload_frequency_seconds: number;
   high_contrast_map?: boolean;
+  language?: 'fr-QC' | 'en-CA' | 'en-US' | 'en-GB';
 }
 
 interface SettingsState {
@@ -29,6 +30,7 @@ const defaultSettings: DriverSettings = {
   tracking_accuracy: 'high',
   upload_frequency_seconds: 30,
   high_contrast_map: false,
+  language: 'fr-QC',
 };
 
 const resolveTheme = (themeMode: 'light' | 'dark' | 'auto'): 'light' | 'dark' => {

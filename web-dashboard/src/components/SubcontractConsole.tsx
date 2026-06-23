@@ -7,6 +7,7 @@ import {
   Briefcase, Send, Users, Shield, Globe, DollarSign, List, 
   MapPin, CheckCircle, ArrowRight, Eye, ShieldAlert, X
 } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 
 interface SubcontractConsoleProps {
   isOpen: boolean;
@@ -273,19 +274,17 @@ export default function SubcontractConsole({ isOpen, onClose }: SubcontractConso
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     1. Select Source Route
                   </label>
-                  <select
+                  <CustomSelect
+                    options={[
+                      { value: '', label: '-- Choose Route containing stops to subcontract --' },
+                      ...routes.filter(r => r.status !== 'completed').map(r => ({
+                        value: r.route_id,
+                        label: `${r.route_name} (${r.stop_count} stops, status: ${r.status})`
+                      }))
+                    ]}
                     value={selectedRouteId}
-                    onChange={(e) => setSelectedRouteId(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs font-semibold focus:outline-none"
-                    required
-                  >
-                    <option value="">-- Choose Route containing stops to subcontract --</option>
-                    {routes.filter(r => r.status !== 'completed').map(r => (
-                      <option key={r.route_id} value={r.route_id}>
-                        {r.route_name} ({r.stop_count} stops, status: {r.status})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedRouteId(val)}
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -311,18 +310,17 @@ export default function SubcontractConsole({ isOpen, onClose }: SubcontractConso
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     3. Target Competitor Organization (Optional)
                   </label>
-                  <select
+                  <CustomSelect
+                    options={[
+                      { value: '', label: 'Public Broadcast (All verified local subcontractors can accept)' },
+                      ...organizations.map(org => ({
+                        value: org.settings_id,
+                        label: `Private Deal: ${org.company_name}`
+                      }))
+                    ]}
                     value={targetOrgId}
-                    onChange={(e) => setTargetOrgId(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs font-semibold focus:outline-none"
-                  >
-                    <option value="">Public Broadcast (All verified local subcontractors can accept)</option>
-                    {organizations.map(org => (
-                      <option key={org.settings_id} value={org.settings_id}>
-                        Private Deal: {org.company_name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setTargetOrgId(val)}
+                  />
                   <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
                     Public deals are searchable on the B2B exchange. Private deals are only visible to the specified enterprise rival.
                   </p>
@@ -523,32 +521,32 @@ export default function SubcontractConsole({ isOpen, onClose }: SubcontractConso
                         <div className="grid grid-cols-2 gap-2.5">
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold text-slate-400 uppercase">Target Crew Driver</label>
-                            <select
+                            <CustomSelect
+                              options={[
+                                { value: '', label: '-- Choose --' },
+                                ...drivers.filter(d => d.status === 'active').map(d => ({
+                                  value: d.driver_id,
+                                  label: d.name
+                                }))
+                              ]}
                               value={acceptDriverId}
-                              onChange={(e) => setAcceptDriverId(e.target.value)}
-                              className="w-full px-2.5 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs font-semibold focus:outline-none"
-                              required
-                            >
-                              <option value="">-- Choose --</option>
-                              {drivers.filter(d => d.status === 'active').map(d => (
-                                <option key={d.driver_id} value={d.driver_id}>{d.name}</option>
-                              ))}
-                            </select>
+                              onChange={(val) => setAcceptDriverId(val)}
+                            />
                           </div>
                           
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold text-slate-400 uppercase">Target active Route</label>
-                            <select
+                            <CustomSelect
+                              options={[
+                                { value: '', label: '-- Choose --' },
+                                ...routes.filter(r => r.status !== 'completed' && (!acceptDriverId || r.driver_id === acceptDriverId)).map(r => ({
+                                  value: r.route_id,
+                                  label: r.route_name
+                                }))
+                              ]}
                               value={acceptRouteId}
-                              onChange={(e) => setAcceptRouteId(e.target.value)}
-                              className="w-full px-2.5 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs font-semibold focus:outline-none"
-                              required
-                            >
-                              <option value="">-- Choose --</option>
-                              {routes.filter(r => r.status !== 'completed' && (!acceptDriverId || r.driver_id === acceptDriverId)).map(r => (
-                                <option key={r.route_id} value={r.route_id}>{r.route_name}</option>
-                              ))}
-                            </select>
+                              onChange={(val) => setAcceptRouteId(val)}
+                            />
                           </div>
                         </div>
 

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { useToastStore } from '../store/toastStore';
+import { useTranslation } from '../services/i18n';
+import { useSettingsStore } from '../store/settingsStore';
 import { Settings, Shield, Bell, CloudSnow, Globe, User, Lock, Sparkles, Phone, Mail, Coins } from 'lucide-react';
+import CustomSelect from '../components/CustomSelect';
 
 interface OrgSettings {
   settings_id: string;
@@ -47,7 +50,10 @@ interface UserProfile {
 
 export default function SettingsPage() {
   const addToast = useToastStore((s) => s.addToast);
-  const [activeTab, setActiveTab] = useState<'org' | 'account' | 'pricing' | 'notifications' | 'geocoding'>('org');
+  const { t, locale } = useTranslation();
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
+
+  const [activeTab, setActiveTab] = useState<'org' | 'account' | 'pricing' | 'notifications' | 'geocoding' | 'language'>('org');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -131,7 +137,7 @@ export default function SettingsPage() {
         setProfileEmail(user.email || '');
         setProfilePhone(user.phone || '');
       } catch {
-        addToast('Failed to load settings data', 'error');
+        addToast(t('failedToLoadSettings'), 'error');
       } finally {
         setLoading(false);
       }
@@ -179,9 +185,9 @@ export default function SettingsPage() {
       };
 
       await api.put('/settings', updatedSettings);
-      addToast('Organization settings updated successfully', 'success');
+      addToast(t('orgSettingsUpdated'), 'success');
     } catch (err: any) {
-      const errMsg = err?.response?.data?.error?.message ?? 'Failed to save settings';
+      const errMsg = err?.response?.data?.error?.message ?? t('failedToSaveSettings');
       addToast(errMsg, 'error');
     } finally {
       setSaving(false);
@@ -201,9 +207,9 @@ export default function SettingsPage() {
 
       const { data } = await api.put<UserProfile>('/users/me', updatedProfile);
       setProfile(data);
-      addToast('Account profile updated successfully', 'success');
+      addToast(t('profileUpdated'), 'success');
     } catch (err: any) {
-      addToast(err?.response?.data?.error?.message ?? 'Failed to update profile', 'error');
+      addToast(err?.response?.data?.error?.message ?? t('failedToUpdateProfile'), 'error');
     } finally {
       setSaving(false);
     }
@@ -213,7 +219,7 @@ export default function SettingsPage() {
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      addToast('Confirm password does not match new password', 'error');
+      addToast(t('passwordMismatch'), 'error');
       return;
     }
     try {
@@ -222,9 +228,9 @@ export default function SettingsPage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      addToast('Password updated successfully', 'success');
+      addToast(t('passwordUpdated'), 'success');
     } catch (err: any) {
-      addToast(err?.response?.data?.error?.message ?? 'Password update failed', 'error');
+      addToast(err?.response?.data?.error?.message ?? t('passwordUpdateFailed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -256,11 +262,12 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { id: 'org', label: 'Company Profile', icon: Shield },
-    { id: 'account', label: 'My Account', icon: User },
-    { id: 'pricing', label: 'Financial Billing Rates', icon: Coins },
-    { id: 'notifications', label: 'Alert Layouts & Quiet Hours', icon: Bell },
-    { id: 'geocoding', label: 'Geocoding Bounding Boxes', icon: Globe },
+    { id: 'org', label: t('tabOrgProfile'), icon: Shield },
+    { id: 'account', label: t('tabMyAccount'), icon: User },
+    { id: 'pricing', label: t('tabPricingRates'), icon: Coins },
+    { id: 'notifications', label: t('tabAlertTemplates'), icon: Bell },
+    { id: 'geocoding', label: t('tabGeocoding'), icon: Globe },
+    { id: 'language', label: t('languageLabel'), icon: Globe },
   ] as const;
 
   if (loading) {
@@ -280,8 +287,8 @@ export default function SettingsPage() {
           <Settings className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight">System Configuration Center</h2>
-          <p className="text-sm text-slate-400 mt-1 font-medium">Fine-tune system thresholds, SMS templates, quiet hours, and regional limits</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">{t('systemConfigCenter')}</h2>
+          <p className="text-sm text-slate-400 mt-1 font-medium">{t('systemConfigDesc')}</p>
         </div>
       </div>
 
@@ -309,21 +316,21 @@ export default function SettingsPage() {
         </div>
 
         {/* Content Box */}
-        <div className="flex-1 w-full glass-card rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden animate-slide-up border border-slate-850">
+        <div className="flex-1 w-full glass-card rounded-2xl p-6 sm:p-8 shadow-2xl relative animate-slide-up border border-slate-850">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand-500/15 to-transparent"></div>
 
           {/* TAB 1: Company Profile */}
           {activeTab === 'org' && (
             <form onSubmit={handleSaveOrgSettings} className="space-y-6">
               <div className="border-b border-slate-800/40 pb-4">
-                <h3 className="text-base font-extrabold text-white">Company Profile Settings</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Define system branding and centralized operational limits</p>
+                <h3 className="text-base font-extrabold text-white">{t('companyProfileSettings')}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{t('companyProfileDesc')}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Company Name
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('companyName')}
                   </label>
                   <input
                     type="text"
@@ -336,8 +343,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Accumulation Dispatch Trigger (Inches)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('accumulationThreshold')}
                   </label>
                   <div className="relative">
                     <input
@@ -357,8 +364,8 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Centralized Support Phone
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('supportPhone')}
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -373,8 +380,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Centralized Support Email
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('supportEmail')}
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -395,7 +402,7 @@ export default function SettingsPage() {
                   disabled={saving}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
-                  {saving ? 'Saving changes...' : 'Save Company Profile'}
+                  {saving ? t('loading') : t('saveCompanyProfile')}
                 </button>
               </div>
             </form>
@@ -406,15 +413,15 @@ export default function SettingsPage() {
             <form onSubmit={handleSaveOrgSettings} className="space-y-6">
               <div className="border-b border-slate-800/40 pb-4">
                 <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-brand-400" /> Financial Billing Rates & Estimates
+                  <Coins className="w-5 h-5 text-brand-400" /> {t('billingRatesHeader')}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Customize default customer pricing, fuel parameters, and overhead ratios to run automatic storm calculations</p>
+                <p className="text-xs text-slate-400 mt-0.5">{t('billingRatesDesc')}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Residential Plow Rate ($ per Stop)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('residentialRate')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
@@ -432,8 +439,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Commercial Plow Rate ($ per Stop)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('commercialRate')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
@@ -453,8 +460,8 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Fuel Cost ($ per Gallon)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('fuelCost')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
@@ -472,8 +479,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Truck Fuel Economy (MPG)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('fuelEconomy')}
                   </label>
                   <div className="relative">
                     <input
@@ -491,8 +498,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Overhead Allocation (%)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('overheadAllocation')}
                   </label>
                   <div className="relative">
                     <input
@@ -517,7 +524,7 @@ export default function SettingsPage() {
                   disabled={saving}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
-                  {saving ? 'Saving changes...' : 'Save Billing Rates'}
+                  {saving ? t('loading') : t('saveBillingRates')}
                 </button>
               </div>
             </form>
@@ -530,29 +537,29 @@ export default function SettingsPage() {
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="pb-4">
                   <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                    <User className="w-5 h-5 text-brand-400" /> Personal Account Roster Details
+                    <User className="w-5 h-5 text-brand-400" /> {t('personalAccountDetails')}
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Manage your personal credentials, support contact, and access roles</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{t('personalAccountDesc')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      Your Name
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('yourName')}
                     </label>
                     <input
                       type="text"
                       required
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Your full name"
+                      placeholder={t('yourName')}
                       className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-semibold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      Operational Access Role
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('operationalAccessRole')}
                     </label>
                     <input
                       type="text"
@@ -565,8 +572,8 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      Email Address
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('emailAddress')}
                     </label>
                     <input
                       type="email"
@@ -578,8 +585,8 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      Phone Number
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('phoneNumber')}
                     </label>
                     <input
                       type="text"
@@ -597,7 +604,7 @@ export default function SettingsPage() {
                     disabled={saving}
                     className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-750 font-semibold text-xs rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
                   >
-                    {saving ? 'Saving...' : 'Update Details'}
+                    {saving ? t('loading') : t('updateDetails')}
                   </button>
                 </div>
               </form>
@@ -606,15 +613,15 @@ export default function SettingsPage() {
               <form onSubmit={handleSavePassword} className="space-y-4 pt-6">
                 <div>
                   <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                    <Lock className="w-5 h-5 text-indigo-400" /> Reset Operational Password
+                    <Lock className="w-5 h-5 text-indigo-400" /> {t('resetPasswordHeader')}
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Securely rotate your access credentials to prevent unauthorized account logins</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{t('resetPasswordDesc')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      Current Password
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('currentPassword')}
                     </label>
                     <input
                       type="password"
@@ -627,29 +634,29 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      New Password
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('newPassword')}
                     </label>
                     <input
                       type="password"
                       required
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Min. 6 chars"
+                      placeholder={t('min6Chars')}
                       className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                      Confirm New Password
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                      {t('confirmPassword')}
                     </label>
                     <input
                       type="password"
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm password"
+                      placeholder={t('confirmPassword')}
                       className="w-full px-4 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all"
                     />
                   </div>
@@ -661,7 +668,7 @@ export default function SettingsPage() {
                     disabled={saving}
                     className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-indigo-650 hover:from-indigo-400 hover:to-indigo-550 text-white font-semibold text-xs rounded-xl shadow-md cursor-pointer transition-all btn-press ring-1 ring-white/10"
                   >
-                    {saving ? 'Updating...' : 'Change Password'}
+                    {saving ? t('updatingPassword') : t('changePasswordBtn')}
                   </button>
                 </div>
               </form>
@@ -673,9 +680,9 @@ export default function SettingsPage() {
             <form onSubmit={handleSaveOrgSettings} className="space-y-6">
               <div className="border-b border-slate-800/40 pb-4">
                 <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-brand-400" /> Dispatch SMS Templates & Quiet Hours
+                  <Bell className="w-5 h-5 text-brand-400" /> {t('alertTemplatesHeader')}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Customize default text copy sent to customers and configure communication blackout periods</p>
+                <p className="text-xs text-slate-400 mt-0.5">{t('alertTemplatesDesc')}</p>
               </div>
 
               {/* Template Editor Cards */}
@@ -683,9 +690,9 @@ export default function SettingsPage() {
                 {/* PRE STORM */}
                 <div className="glass-card p-4 rounded-xl space-y-3 border border-slate-850">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">1. Pre-Storm Warning Template</span>
+                    <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">{t('preStormHeader')}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Inject Tags:</span>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('injectTagsLabel')}</span>
                       <button type="button" onClick={() => injectTag('pre', '{{customer}}')} className="tag-chip">customer</button>
                       <button type="button" onClick={() => injectTag('pre', '{{address}}')} className="tag-chip">address</button>
                     </div>
@@ -702,9 +709,9 @@ export default function SettingsPage() {
                 {/* EN ROUTE */}
                 <div className="glass-card p-4 rounded-xl space-y-3 border border-slate-850">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">2. Crew En-Route Template</span>
+                    <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">{t('enRouteHeader')}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Inject Tags:</span>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('injectTagsLabel')}</span>
                       <button type="button" onClick={() => injectTag('route', '{{customer}}')} className="tag-chip">customer</button>
                       <button type="button" onClick={() => injectTag('route', '{{address}}')} className="tag-chip">address</button>
                       <button type="button" onClick={() => injectTag('route', '{{eta}}')} className="tag-chip">eta</button>
@@ -722,9 +729,9 @@ export default function SettingsPage() {
                 {/* COMPLETED */}
                 <div className="glass-card p-4 rounded-xl space-y-3 border border-slate-850">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">3. Completion Proof Template</span>
+                    <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">{t('completedHeader')}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Inject Tags:</span>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('injectTagsLabel')}</span>
                       <button type="button" onClick={() => injectTag('completed', '{{customer}}')} className="tag-chip">customer</button>
                       <button type="button" onClick={() => injectTag('completed', '{{address}}')} className="tag-chip">address</button>
                     </div>
@@ -743,10 +750,10 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-brand-400" />
-                      <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">4. Overdue Account Invoice Email Template</span>
+                      <span className="text-[11px] font-extrabold text-slate-300 uppercase tracking-wider">{t('overdueEmailHeader')}</span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Inject Tags:</span>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('injectTagsLabel')}</span>
                       <button type="button" onClick={() => injectEmailTag('{{customer_name}}')} className="tag-chip">customer_name</button>
                       <button type="button" onClick={() => injectEmailTag('{{customer_address}}')} className="tag-chip">customer_address</button>
                       <button type="button" onClick={() => injectEmailTag('{{date}}')} className="tag-chip">date</button>
@@ -755,8 +762,8 @@ export default function SettingsPage() {
                       <button type="button" onClick={() => injectEmailTag('{{outstanding_balance}}')} className="tag-chip">outstanding_balance</button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-450 leading-relaxed font-medium">
-                    Design a premium, responsive HTML email notice to alert clients with overdue balances. Double-bracket tags will be dynamically replaced when reminding customers.
+                  <p className="text-[10px] text-slate-455 leading-relaxed font-medium">
+                    {t('overdueEmailDesc')}
                   </p>
                   <div className="flex flex-col gap-3">
                     <textarea
@@ -770,13 +777,13 @@ export default function SettingsPage() {
                     
                     {/* HTML Preview Trigger */}
                     <div className="flex items-center justify-between bg-slate-900/40 px-4 py-2.5 rounded-xl border border-slate-800/60">
-                      <span className="text-[11px] font-bold text-slate-400">Live Render HTML Sandbox Preview</span>
+                      <span className="text-[11px] font-bold text-slate-400">{t('livePreviewLabel')}</span>
                       <button
                         type="button"
                         onClick={() => setShowEmailPreview(!showEmailPreview)}
                         className="px-3 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-[10px] rounded-lg transition-all cursor-pointer"
                       >
-                        {showEmailPreview ? 'Collapse Preview' : 'Expand Live Preview'}
+                        {showEmailPreview ? t('collapsePreviewBtn') : t('expandPreviewBtn')}
                       </button>
                     </div>
                     
@@ -797,7 +804,7 @@ export default function SettingsPage() {
               <div className="glass-card p-5 rounded-xl border border-slate-850 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-brand-400" /> Quiet Hours Message Buffer
+                    <Sparkles className="w-4 h-4 text-brand-400" /> {t('quietHoursBufferHeader')}
                   </span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -809,13 +816,13 @@ export default function SettingsPage() {
                     <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
                   </label>
                 </div>
-                <p className="text-[11px] text-slate-450 leading-relaxed font-medium">When active, all automated pre-storm and completion SMS notifications generated inside the quiet hour window are held in a postponed Bull queue and dispatched automatically at the end of quiet hours.</p>
+                <p className="text-[11px] text-slate-455 leading-relaxed font-medium">{t('quietHoursBufferDesc')}</p>
 
                 {quietHoursEnabled && (
                   <div className="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">
-                        Quiet Period Begins
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1">
+                        {t('quietHoursStartLabel')}
                       </label>
                       <input
                         type="time"
@@ -826,8 +833,8 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1">
-                        Quiet Period Concludes
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1">
+                        {t('quietHoursEndLabel')}
                       </label>
                       <input
                         type="time"
@@ -847,7 +854,7 @@ export default function SettingsPage() {
                   disabled={saving}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
-                  {saving ? 'Saving changes...' : 'Save Alerts & Quiet Hours'}
+                  {saving ? t('savingAlerts') : t('saveAlertsBtn')}
                 </button>
               </div>
             </form>
@@ -858,17 +865,17 @@ export default function SettingsPage() {
             <form onSubmit={handleSaveOrgSettings} className="space-y-6">
               <div className="border-b border-slate-800/40 pb-4">
                 <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-brand-400" /> Geocoding Bounding Limits
+                  <Globe className="w-5 h-5 text-brand-400" /> {t('geocodingBoundsHeader')}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Restrict Nominatim address searches strictly to your local county or state to prevent global coordinate conflicts</p>
+                <p className="text-xs text-slate-400 mt-0.5">{t('geocodingBoundsDesc')}</p>
               </div>
 
-              <p className="text-xs text-slate-450 leading-relaxed font-medium">Entering geocoding bounds locks Nominatim search queries to the specified lat/lon boundary coordinates. Addresses found outside these bounds will be filtered to avoid accidental lookups in another state.</p>
+              <p className="text-xs text-slate-455 leading-relaxed font-medium">{t('geocodingBoundsExplanation')}</p>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Minimum Latitude (South Limit)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('minLatLabel')}
                   </label>
                   <input
                     type="number"
@@ -882,8 +889,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Maximum Latitude (North Limit)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('maxLatLabel')}
                   </label>
                   <input
                     type="number"
@@ -899,8 +906,8 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Minimum Longitude (West Limit)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('minLonLabel')}
                   </label>
                   <input
                     type="number"
@@ -914,8 +921,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-450 mb-1.5">
-                    Maximum Longitude (East Limit)
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                    {t('maxLonLabel')}
                   </label>
                   <input
                     type="number"
@@ -935,10 +942,39 @@ export default function SettingsPage() {
                   disabled={saving}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
-                  {saving ? 'Saving bounds...' : 'Save Geocoding Bounds'}
+                  {saving ? t('savingBounds') : t('saveGeocodingBounds')}
                 </button>
               </div>
             </form>
+          )}
+
+          {/* TAB 5: Language & Locale Preference */}
+          {activeTab === 'language' && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-800/40 pb-4">
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-brand-400" /> {t('languageLabel')}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">{t('languageDesc')}</p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-455 mb-1.5">
+                  {t('languageLabel')}
+                </label>
+                <CustomSelect
+                  options={[
+                    { value: 'fr-QC', label: 'Français (Québec)' },
+                    { value: 'en-CA', label: 'English (Canada)' },
+                    { value: 'en-US', label: 'English (United States)' },
+                    { value: 'en-GB', label: 'English (United Kingdom)' },
+                  ]}
+                  value={locale}
+                  onChange={(val) => setLanguage(val as any)}
+                  className="w-full sm:w-72"
+                />
+              </div>
+            </div>
           )}
 
         </div>
