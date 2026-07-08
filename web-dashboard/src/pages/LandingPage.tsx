@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
+import { useTranslation } from '../services/i18n';
+import { useSettingsStore } from '../store/settingsStore';
+import CustomSelect from '../components/CustomSelect';
 import {
   Truck,
   CloudSnow,
@@ -14,12 +17,13 @@ import {
   Smartphone,
   Shield,
   HelpCircle,
-  FileText,
   Mail,
   Snowflake,
-  ExternalLink,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  DollarSign,
+  Calculator,
+  Info
 } from 'lucide-react';
 
 // Floating snowflake particle component
@@ -68,6 +72,9 @@ function FAQItem({ question, answer }: FAQItemProps) {
 }
 
 export default function LandingPage() {
+  const { t, locale } = useTranslation();
+  const setLanguage = useSettingsStore((s) => s.setLanguage);
+
   const snowflakes = useRef(
     Array.from({ length: 15 }, (_, i) => ({
       delay: Math.random() * 5,
@@ -76,6 +83,34 @@ export default function LandingPage() {
       key: i,
     }))
   ).current;
+
+  // ROI Calculator States
+  const [clients, setClients] = useState(100);
+  const [drivers, setDrivers] = useState(1);
+  const [storms, setStorms] = useState(4);
+  const [smsRatio, setSmsRatio] = useState(90);
+  const [voiceRatio, setVoiceRatio] = useState(10);
+  const [isProduction, setIsProduction] = useState(true);
+  const [avgRevenue, setAvgRevenue] = useState(400);
+
+  // Calculations from generate_sheets.py
+  const fixedIdle = isProduction ? 41.14 : 8.25;
+  const twilioSms = clients * (smsRatio / 100) * (storms * 3) * 0.012;
+  const twilioVoice = clients * (voiceRatio / 100) * (storms * 1.5) * 0.014;
+  const upstashRedis = ((clients * 10 + drivers * 50) * storms * 0.20) / 100000;
+  
+  const monthlyCost = fixedIdle + twilioSms + twilioVoice + upstashRedis;
+  
+  // Seasonal ROI & Capacity Expansion Calculations
+  const seasonalRevenue = clients * avgRevenue;
+  // 4 months of active winter use, plus 8 months off-season at $25/mo for retaining data
+  const seasonalCost = (monthlyCost * 4) + (25 * 8);
+  const costPercentage = seasonalRevenue > 0 ? (seasonalCost / seasonalRevenue) * 100 : 0;
+  
+  // Capacity expansion value prop: By increasing efficiency by 15% (e.g. adding 15 more clients per driver)
+  const extraClients = 15;
+  const capacityRevenue = extraClients * drivers * avgRevenue;
+  const netRoi = capacityRevenue - seasonalCost;
 
   return (
     <div className="min-h-screen bg-[#0a0f1a] text-slate-100 font-sans relative overflow-x-hidden">
@@ -98,16 +133,27 @@ export default function LandingPage() {
           <img src={logo} alt="PlowPath Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-brand-500/25 ring-1 ring-white/10 object-cover" />
           <div>
             <h1 className="text-xl font-black tracking-tight text-gradient">PlowPath</h1>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Smart Dispatch Platform</p>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{t('Smart Dispatch Platform')}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
+          <CustomSelect
+            options={[
+              { value: 'fr-QC', label: 'Français (Québec)' },
+              { value: 'en-CA', label: 'English (Canada)' },
+              { value: 'en-US', label: 'English (United States)' },
+              { value: 'en-GB', label: 'English (United Kingdom)' },
+            ]}
+            value={locale}
+            onChange={(val) => setLanguage(val as any)}
+            className="w-44 text-xs"
+          />
           <Link
             to="/login"
             className="px-5 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-500/15 transition-all btn-press ring-1 ring-white/10 flex items-center gap-1.5"
           >
-            Access Console
+            {t('Access Console')}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -117,16 +163,16 @@ export default function LandingPage() {
       <section className="relative max-w-7xl mx-auto px-6 pt-16 pb-20 z-10 flex flex-col items-center text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-900/80 border border-slate-800 rounded-full text-xs font-semibold text-brand-400 mb-8 animate-fade-in shadow-sm">
           <CloudSnow className="w-4 h-4 text-brand-400 animate-pulse" />
-          <span>Next-Generation Snow Operations for Winter 2026</span>
+          <span>{t('Next-Generation Snow Operations for Winter 2026')}</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight max-w-4xl leading-[1.15] mb-6">
-          Commercial Snow Plow <br />
-          <span className="text-gradient">Dispatch & Live Tracking</span>
+          {t('Commercial Snow Plow')} <br />
+          <span className="text-gradient">{t('Dispatch & Live Tracking')}</span>
         </h1>
 
         <p className="text-slate-400 text-base sm:text-lg max-w-2xl leading-relaxed mb-10">
-          Optimize route dispatches, track plow fleets in real time with high-precision telemetry, and provide homeowners with instant SMS updates and photo proof of service.
+          {t('Optimize route dispatches, track plow fleets in real time with high-precision telemetry, and provide homeowners with instant SMS updates and photo proof of service.')}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
@@ -134,14 +180,14 @@ export default function LandingPage() {
             to="/login"
             className="px-8 py-4 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-bold text-sm rounded-xl shadow-xl shadow-brand-500/20 transition-all btn-press ring-1 ring-white/10 flex items-center justify-center gap-2"
           >
-            Access Dispatch Console
+            {t('Access Dispatch Console')}
           </Link>
           <a
             href="#driver-app"
             className="px-8 py-4 bg-slate-900 border border-slate-800 hover:bg-slate-850 hover:border-slate-750 text-slate-200 hover:text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2"
           >
             <Smartphone className="w-4 h-4" />
-            Get Driver App
+            {t('Get Driver App')}
           </a>
         </div>
 
@@ -156,7 +202,7 @@ export default function LandingPage() {
                 <span className="w-3 h-3 rounded-full bg-yellow-500/40"></span>
                 <span className="w-3 h-3 rounded-full bg-green-500/40"></span>
               </div>
-              <span className="text-[10px] font-mono tracking-widest text-slate-500 select-none uppercase">PlowPath Operations Control</span>
+              <span className="text-[10px] font-mono tracking-widest text-slate-500 select-none uppercase">{t('PlowPath Operations Control')}</span>
               <div className="w-12"></div>
             </div>
             
@@ -166,27 +212,27 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-xl flex items-center justify-center">
                   <Activity className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-100">Live Ops Geolocation Map</h3>
+                <h3 className="text-lg font-bold text-slate-100">{t('Live Ops Geolocation Map')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Interactive real-time map plotting active plow trucks, path trails, status markers, and current weather layers across service zones.
+                  {t('Interactive real-time map plotting active plow trucks, path trails, status markers, and current weather layers across service zones.')}
                 </p>
               </div>
               <div className="space-y-4">
                 <div className="w-10 h-10 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center">
                   <Navigation className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-100">Smart Route Optimization</h3>
+                <h3 className="text-lg font-bold text-slate-100">{t('Smart Route Optimization')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Automatically sequence and group client properties into logical dispatch routes. Minimize deadhead transit time during blizzards.
+                  {t('Automatically sequence and group client properties into logical dispatch routes. Minimize deadhead transit time during blizzards.')}
                 </p>
               </div>
               <div className="space-y-4">
                 <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5" />
+                  <Mail className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-100">Proof of Service Photos</h3>
+                <h3 className="text-lg font-bold text-slate-100">{t('Automated Client Alerts')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Verify clearance quality with high-res before/after pictures taken directly by drivers, automatically archived under customer history logs.
+                  {t('Keep homeowners informed by sending automatic SMS updates with ETA predictions, en-route status, and clearance completion notices.')}
                 </p>
               </div>
             </div>
@@ -197,9 +243,9 @@ export default function LandingPage() {
       {/* Main Features Grid */}
       <section className="relative max-w-7xl mx-auto px-6 py-20 z-10 border-t border-slate-900">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">Full Suite of Winter Management Tools</h2>
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">{t('Full Suite of Winter Management Tools')}</h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Everything your operations team needs to run heavy-duty dispatching, monitor driver telemetry, and keep clients satisfied.
+            {t('Everything your operations team needs to run heavy-duty dispatching, monitor driver telemetry, and keep clients satisfied.')}
           </p>
         </div>
 
@@ -209,9 +255,9 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-brand-500/10 rounded-lg flex items-center justify-center text-brand-400">
               <CloudSnow className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-200">Storm Management</h3>
+            <h3 className="text-lg font-bold text-slate-200">{t('Storm Management')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Define active snowstorms, spin up dispatch cycles, and track the progress percentage of clearing properties throughout the event.
+              {t('Define active snowstorms, spin up dispatch cycles, and track the progress percentage of clearing properties throughout the event.')}
             </p>
           </div>
 
@@ -220,9 +266,9 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center text-indigo-400">
               <Users className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-200">Driver & Customer Portals</h3>
+            <h3 className="text-lg font-bold text-slate-200">{t('Driver & Customer Portals')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Unified database managing driver credentials, payroll metrics, client subscription profiles, and specific driveway clear instructions.
+              {t('Unified database managing driver credentials, payroll metrics, client subscription profiles, and specific driveway clear instructions.')}
             </p>
           </div>
 
@@ -231,9 +277,9 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center text-purple-400">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-200">Analytics & Business Intelligence</h3>
+            <h3 className="text-lg font-bold text-slate-200">{t('Analytics & Business Intelligence')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Review driver speeds, time spent per clear site, weather duration logs, and customer billing statements under a single window.
+              {t('Review driver speeds, time spent per clear site, weather duration logs, and customer billing statements under a single window.')}
             </p>
           </div>
 
@@ -242,9 +288,9 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-400">
               <MapPin className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-200">Homeowner Tracking</h3>
+            <h3 className="text-lg font-bold text-slate-200">{t('Homeowner Tracking')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Send secure tracking links to homeowners showing their assigned plow's ETA, live progress map, and clearance completion report.
+              {t('Send secure tracking links to homeowners showing their assigned plow\'s ETA, live progress map, and clearance completion report.')}
             </p>
           </div>
 
@@ -253,9 +299,9 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-400">
               <Smartphone className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-200">Background Geolocation</h3>
+            <h3 className="text-lg font-bold text-slate-200">{t('Background Geolocation')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Driver telemetry uploads in the background via robust native service modules. No lost location data when driver screens are locked.
+              {t('Driver telemetry uploads in the background via robust native service modules. No lost location data when driver screens are locked.')}
             </p>
           </div>
 
@@ -264,10 +310,241 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-pink-500/10 rounded-lg flex items-center justify-center text-pink-400">
               <Shield className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-slate-200">Enterprise Grade Security</h3>
+            <h3 className="text-lg font-bold text-slate-200">{t('Enterprise Grade Security')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Secure database logs, dispatch roles, encrypted password hashing, and tokenized session APIs keep corporate telemetry secure.
+              {t('Secure database logs, dispatch roles, encrypted password hashing, and tokenized session APIs keep corporate telemetry secure.')}
             </p>
+          </div>
+        </div>
+      </section>      {/* Interactive Cost & ROI Calculator Section */}
+      <section className="relative max-w-7xl mx-auto px-6 py-20 z-10 border-t border-slate-900 bg-gradient-to-b from-[#0e1626]/20 to-transparent">
+        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full text-xs font-semibold">
+            <Calculator className="w-4 h-4 text-brand-400" />
+            <span>{t('Interactive Profitability Simulator')}</span>
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">{t('Calculate Your Cost & Return on Investment')}</h2>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            {t('See exactly how our serverless, pay-as-you-go infrastructure performs under heavy winter workloads, and verify the ROI for your business.')}
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Sliders */}
+          <div className="lg:col-span-6 glass-card rounded-2xl p-6 sm:p-8 space-y-6">
+            <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 border-b border-slate-800/60 pb-3">
+              <Info className="w-5 h-5 text-brand-400" />
+              {t('Interactive Parameters')}
+            </h3>
+
+            {/* Active Clients */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-350">{t('Number of Active Clients')}</span>
+                <span className="text-brand-400 font-bold text-sm">{clients} {t('properties')}</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="1000"
+                step="10"
+                value={clients}
+                onChange={(e) => setClients(Number(e.target.value))}
+                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              />
+              <p className="text-[10px] text-slate-500 italic">{t('Count of driveways, lanes, and commercial lots serviced.')}</p>
+            </div>
+
+            {/* Active Drivers */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-350">{t('Active Drivers / Tractors')}</span>
+                <span className="text-brand-400 font-bold text-sm">{drivers} {t('drivers')}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="20"
+                step="1"
+                value={drivers}
+                onChange={(e) => setDrivers(Number(e.target.value))}
+                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              />
+              <p className="text-[10px] text-slate-500 italic">{t('Drivers running the PlowPath mobile app in their cabs.')}</p>
+            </div>
+
+            {/* Storms per Month */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-350">{t('Average Storms per Month')}</span>
+                <span className="text-brand-400 font-bold text-sm">{storms} {t('winter events')}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="12"
+                step="1"
+                value={storms}
+                onChange={(e) => setStorms(Number(e.target.value))}
+                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              />
+              <p className="text-[10px] text-slate-500 italic">{t('Weather events prompting client alert dispatches and tracking.')}</p>
+            </div>
+
+            {/* Average Seasonal Revenue per Client */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-350">{t('Avg. Seasonal Contract Value')}</span>
+                <span className="text-brand-400 font-bold text-sm">${avgRevenue} / {t('season')}</span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="1500"
+                step="50"
+                value={avgRevenue}
+                onChange={(e) => setAvgRevenue(Number(e.target.value))}
+                className="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-brand-500"
+              />
+              <p className="text-[10px] text-slate-500 italic">{t('Average amount billed to each client property per season.')}</p>
+            </div>
+
+            {/* Notification Preferences */}
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('SMS Preference')}</span>
+                <div className="flex items-center justify-between bg-slate-950/60 border border-slate-855 p-2.5 rounded-xl text-xs">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={smsRatio}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                      setSmsRatio(val);
+                      setVoiceRatio(100 - val);
+                    }}
+                    className="w-12 bg-transparent text-slate-200 focus:outline-none font-bold text-right pr-1"
+                  />
+                  <span className="text-slate-550 font-semibold">%</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('Voice Preference')}</span>
+                <div className="flex items-center justify-between bg-slate-950/60 border border-slate-855 p-2.5 rounded-xl text-xs">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={voiceRatio}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(0, Number(e.target.value)));
+                      setVoiceRatio(val);
+                      setSmsRatio(100 - val);
+                    }}
+                    className="w-12 bg-transparent text-slate-200 focus:outline-none font-bold text-right pr-1"
+                  />
+                  <span className="text-slate-550 font-semibold">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mode Switcher */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800/40">
+              <div>
+                <span className="text-xs font-semibold text-slate-300 block">{t('Production Hosting Tier')}</span>
+                <span className="text-[10px] text-slate-500 italic">{t('Toggle Staging ($8.25 fixed) vs Production ($41.14 fixed)')}</span>
+              </div>
+              <button
+                onClick={() => setIsProduction(!isProduction)}
+                className={`px-4 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer border ${
+                  isProduction
+                    ? 'bg-brand-500/10 border-brand-500/30 text-brand-400'
+                    : 'bg-slate-900 border-slate-800 text-slate-400'
+                }`}
+              >
+                {isProduction ? t('Production Mode') : t('Staging Mode')}
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column: Calculations & ROI */}
+          <div className="lg:col-span-6 space-y-6">
+            {/* Costs Breakdown */}
+            <div className="glass-card rounded-2xl p-6 sm:p-8 space-y-4">
+              <h3 className="text-base font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800/60 pb-3">
+                <DollarSign className="w-5 h-5 text-emerald-400" />
+                {t('Calculated Monthly Expenses')}
+              </h3>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="flex justify-between items-center py-1 border-b border-slate-900/60">
+                  <span className="text-slate-400">{t('Platform Idle Fixed Cost')}</span>
+                  <span className="font-semibold text-slate-200">${fixedIdle.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-900/60">
+                  <span className="text-slate-400">{t('Twilio SMS Alerts (3 msg/storm)')}</span>
+                  <span className="font-semibold text-slate-200">${twilioSms.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-900/60">
+                  <span className="text-slate-400">{t('Twilio Voice Confirmations (1.5 min/storm)')}</span>
+                  <span className="font-semibold text-slate-200">${twilioVoice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-900/60">
+                  <span className="text-slate-400">{t('Upstash Redis Database (Pay-as-you-go)')}</span>
+                  <span className="font-semibold text-slate-200">${upstashRedis.toFixed(4)}</span>
+                </div>
+
+                {/* Total Monthly */}
+                <div className="flex justify-between items-center pt-3 mt-4 border-t border-slate-800 text-sm font-extrabold text-white">
+                  <span>{t('ESTIMATED HEAVY WINTER MONTH BILL')}</span>
+                  <span className="text-emerald-400 text-lg font-black">${monthlyCost.toFixed(2)} / {t('mo')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ROI Proposition Card */}
+            <div className="bg-gradient-to-r from-brand-950/40 to-indigo-950/40 border border-brand-500/20 rounded-2xl p-6 sm:p-8 space-y-4">
+              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-400" />
+                {t('Small Operator Seasonal Value Pitch')}
+              </h3>
+
+              <div className="space-y-4 text-xs leading-relaxed text-slate-350">
+                <p>
+                  {t('PlowPath isn\'t a luxury—it\'s an operational necessity designed to expand contract capacity for small operators running **1 to 5 tractors**.')}
+                </p>
+
+                <div className="grid grid-cols-2 gap-4 bg-slate-950/40 border border-slate-900/60 p-4 rounded-xl text-center">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">{t('Estimated App Cost')}</span>
+                    <span className="text-sm font-extrabold text-slate-200">${seasonalCost.toFixed(2)} / {t('yr')}</span>
+                    <span className="text-[9px] text-slate-500 block">{t('(4 months use + 8 months retention @ $25/mo)')}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">{t('App Cost % of Revenue')}</span>
+                    <span className="text-sm font-extrabold text-emerald-400">{costPercentage.toFixed(2)}%</span>
+                    <span className="text-[9px] text-slate-500 block">{t('ofSeasonalContract')} ${seasonalRevenue.toLocaleString()} {t('seasonal revenue')}</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl">
+                  <h4 className="font-bold text-emerald-400 mb-1">{t('Capacity Expansion Return (15% Efficiency Increase)')}</h4>
+                  <p className="text-[11px] text-slate-300">
+                    {t('By saving time on route dispatching and using live GPS tracking, you can comfortably clear **15 more properties per driver** this season:')}
+                  </p>
+                  <div className="flex justify-between items-center mt-2.5 pt-2 border-t border-emerald-500/20 text-xs font-bold text-white">
+                    <span>{t('Additional Contract Revenue:')}</span>
+                    <span className="text-emerald-400 font-extrabold">+{locale === 'fr-QC' ? `${capacityRevenue.toLocaleString().replace(',', ' ')} $` : `$${capacityRevenue.toLocaleString()}`}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1 text-xs font-bold text-white">
+                    <span>{t('NET GAIN (Additional Rev - App Cost):')}</span>
+                    <span className="text-emerald-400 font-black">+{locale === 'fr-QC' ? `${netRoi.toFixed(2).replace('.', ',')} $` : `$${netRoi.toFixed(2)}`}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -277,42 +554,45 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 border border-brand-500/20 text-brand-400 rounded-full text-xs font-semibold">
-              <span>Driver Companion Mobile App</span>
+              <span>{t('Driver Companion Mobile App')}</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Built for Heavy-Duty Drivers</h2>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">{t('Built for Heavy-Duty Drivers')}</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Snow plowing requires focus and speed. The PlowPath Driver mobile app provides a high-contrast, simple interface optimized for cold steering wheels.
+              {t('Snow plowing requires focus and speed. The PlowPath Driver mobile app provides a high-contrast, simple interface optimized for cold steering wheels.')}
             </p>
             <ul className="space-y-3.5 text-xs sm:text-sm text-slate-300">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Sequenced route list with integrated tap-to-navigate.</span>
+                <span>{t('Sequenced route list with integrated tap-to-navigate.')}</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Fast before/after photo uploads to provide verification.</span>
+                <span>{t('Full offline caching support for route lists and GPS queues.')}</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Stops telemetry collection automatically when off duty.</span>
+                <span>{t('Stops telemetry collection automatically when off duty.')}</span>
               </li>
             </ul>
+            <p className="text-[11px] text-slate-500 italic mt-2">
+              {t('* Proof of service photo validation is available as an Enterprise-tier feature for municipal and corporate contracts.')}
+            </p>
 
             <div className="pt-4 space-y-4">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Available Platforms</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{t('Available Platforms')}</p>
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-left">
                   <div className="text-slate-400"><Smartphone className="w-6 h-6" /></div>
                   <div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Download For</div>
-                    <div className="text-xs font-extrabold text-slate-200">Android (Google Play)</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('Download For')}</div>
+                    <div className="text-xs font-extrabold text-slate-200">{t('Android (Google Play)')}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-left">
                   <div className="text-slate-400"><Smartphone className="w-6 h-6" /></div>
                   <div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Download For</div>
-                    <div className="text-xs font-extrabold text-slate-200">iOS (App Store)</div>
+                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('Download For')}</div>
+                    <div className="text-xs font-extrabold text-slate-200">{t('iOS (App Store)')}</div>
                   </div>
                 </div>
               </div>
@@ -329,31 +609,31 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
                   <div className="flex items-center gap-2">
                     <Truck className="w-4 h-4 text-brand-400" />
-                    <span className="text-[10px] font-bold text-slate-200 uppercase">Route Active</span>
+                    <span className="text-[10px] font-bold text-slate-200 uppercase">{t('Route Active')}</span>
                   </div>
-                  <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-bold">Duty On</span>
+                  <span className="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-bold">{t('Duty On')}</span>
                 </div>
 
                 <div className="my-auto space-y-4 py-4">
-                  <div className="bg-slate-950/60 border border-slate-850 p-3.5 rounded-xl space-y-2">
-                    <div className="text-[9px] font-bold text-brand-400 uppercase">Next Stop</div>
+                  <div className="bg-slate-950/60 border border-slate-855 p-3.5 rounded-xl space-y-2">
+                    <div className="text-[9px] font-bold text-brand-400 uppercase">{t('Next Stop')}</div>
                     <h4 className="text-xs font-extrabold text-slate-200">142 Oakridge Crescent</h4>
-                    <p className="text-[10px] text-slate-400">Instructions: Clean driveway fully. Pile snow on left lawn side.</p>
+                    <p className="text-[10px] text-slate-400">{t('Instructions: Clean driveway fully. Pile snow on left lawn side.')}</p>
                   </div>
 
                   <div className="bg-slate-950/40 border border-slate-900 p-3.5 rounded-xl flex items-center justify-between">
                     <div>
-                      <span className="text-[8px] text-slate-500 uppercase font-bold block">Status</span>
-                      <span className="text-[10px] text-slate-300 font-semibold">Ready to begin</span>
+                      <span className="text-[8px] text-slate-500 uppercase font-bold block">{t('Status')}</span>
+                      <span className="text-[10px] text-slate-300 font-semibold">{t('Ready to begin')}</span>
                     </div>
                     <button className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-[10px] text-white font-bold rounded-lg transition-colors shadow-sm">
-                      Start Clear
+                      {t('Start Clear')}
                     </button>
                   </div>
                 </div>
 
                 <div className="border-t border-slate-800/40 pt-3 flex justify-between items-center text-slate-500 text-[9px] font-semibold uppercase">
-                  <span>PlowPath Driver</span>
+                  <span>{t('PlowPath Driver')}</span>
                   <span>v2.4</span>
                 </div>
               </div>
@@ -370,26 +650,26 @@ export default function LandingPage() {
           <div className="inline-flex items-center justify-center p-2 bg-slate-900 rounded-xl border border-slate-800 text-slate-400">
             <HelpCircle className="w-5 h-5" />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Frequently Asked Questions</h2>
-          <p className="text-slate-400 text-xs sm:text-sm">Quick answers to standard operational questions.</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{t('Frequently Asked Questions')}</h2>
+          <p className="text-slate-400 text-xs sm:text-sm">{t('Quick answers to standard operational questions.')}</p>
         </div>
 
         <div className="space-y-4">
           <FAQItem
-            question="How does PlowPath track snowplow trucks?"
-            answer="PlowPath uses a native background telemetry module on the driver's phone. This tracking records GPS location update points and velocity details even when the application is minimized or screens are locked. This data compiles straight into the dispatcher's Live Ops Dashboard."
+            question={t('How does PlowPath track snowplow trucks?')}
+            answer={t('PlowPath uses a native background telemetry module on the driver\'s phone. This tracking records GPS location update points and velocity details even when the application is minimized or screens are locked. This data compiles straight into the dispatcher\'s Live Ops Dashboard.')}
           />
           <FAQItem
-            question="Can homeowners track progress without an account?"
-            answer="Yes. When a route begins, dispatchers can set PlowPath to dispatch secure, encrypted tracking portal links via SMS. Homeowners click these links to view active plow locations, ETA predictions, and proof of clearance photos."
+            question={t('Can homeowners track progress without an account?')}
+            answer={t('Yes. When a route begins, dispatchers can set PlowPath to dispatch secure, encrypted tracking portal links via SMS. Homeowners click these links to view active plow locations, ETA predictions, and proof of clearance photos.')}
           />
           <FAQItem
-            question="Is location telemetry tracked outside of active shifts?"
-            answer="Absolutely not. Telemetry logs only upload when a driver explicitly taps 'Go On Duty' and ends immediately when they log out or switch off-duty. We maintain strict compliance with mobile application store privacy guidelines."
+            question={t('Is location telemetry tracked outside of active shifts?')}
+            answer={t('Absolutely not. Telemetry logs only upload when a driver explicitly taps \'Go On Duty\' and ends immediately when they log out or switch off-duty. We maintain strict compliance with mobile application store privacy guidelines.')}
           />
           <FAQItem
-            question="How is my profile data stored and can I request deletion?"
-            answer="All driver profiles and associated GPS telemetry coordinates are stored on secure cloud databases. You can submit a deletion request at any time using our data deletion request form to permanently purge all data associated with your driver account."
+            question={t('How is my profile data stored and can I request deletion?')}
+            answer={t('All driver profiles and associated GPS telemetry coordinates are stored on secure cloud databases. You can submit a deletion request at any time using our data deletion request form to permanently purge all data associated with your driver account.')}
           />
         </div>
       </section>
@@ -403,42 +683,42 @@ export default function LandingPage() {
               <span className="font-extrabold text-slate-200">PlowPath</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Enterprise dispatch and telemetry platforms for commercial winter operations.
+              {t('Enterprise dispatch and telemetry platforms for commercial winter operations.')}
             </p>
           </div>
 
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Operations Console</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{t('Operations Console')}</h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link to="/login" className="text-slate-500 hover:text-slate-300 transition-colors">Dispatcher Login</Link>
+                <Link to="/login" className="text-slate-500 hover:text-slate-300 transition-colors">{t('Dispatcher Login')}</Link>
               </li>
               <li>
-                <a href="#driver-app" className="text-slate-500 hover:text-slate-300 transition-colors">Driver Downloads</a>
+                <a href="#driver-app" className="text-slate-500 hover:text-slate-300 transition-colors">{t('Driver Downloads')}</a>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Support & Privacy</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{t('Support & Privacy')}</h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link to="/privacy-policy" className="text-slate-500 hover:text-slate-300 transition-colors">Privacy Policy</Link>
+                <Link to="/privacy-policy" className="text-slate-500 hover:text-slate-300 transition-colors">{t('Privacy Policy')}</Link>
               </li>
               <li>
-                <Link to="/terms-and-conditions" className="text-slate-500 hover:text-slate-300 transition-colors">Terms of Service</Link>
+                <Link to="/terms-and-conditions" className="text-slate-500 hover:text-slate-300 transition-colors">{t('Terms of Service')}</Link>
               </li>
               <li>
                 <Link to="/delete-data" className="text-slate-500 hover:text-slate-350 transition-colors flex items-center gap-1 text-red-500/80 hover:text-red-400">
                   <ShieldAlert className="w-3.5 h-3.5" />
-                  Request Data Deletion
+                  {t('Request Data Deletion')}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Contact</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{t('Contact')}</h4>
             <p className="text-xs text-slate-500 flex items-center gap-2">
               <Mail className="w-4 h-4" />
               support@plowpath.ca
@@ -447,7 +727,7 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 pt-8 mt-8 border-t border-slate-900 text-center text-[10px] text-slate-600 font-semibold uppercase tracking-[0.1em]">
-          © {new Date().getFullYear()} PlowPath Operations Inc. All Rights Reserved.
+          {t('© {{year}} PlowPath Operations Inc. All Rights Reserved.', { year: new Date().getFullYear() })}
         </div>
       </footer>
     </div>

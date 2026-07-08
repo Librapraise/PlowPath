@@ -12,6 +12,33 @@ import { useDriversStore } from '../../store/driversStore';
 import { useCustomersStore } from '../../store/customersStore';
 import { useStormsStore } from '../../store/stormsStore';
 import { useRoutesStore } from '../../store/routesStore';
+import { useSettingsStore } from '../../store/settingsStore';
+
+// Mock i18n translation service
+vi.mock('../../services/i18n', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const mockDict: Record<string, string> = {
+        'Fleet Drivers': 'Fleet Drivers',
+        'Storm Operations Control': 'Storm Operations Control',
+        'Customer Accounts': 'Customer Accounts',
+        'Storm Routes': 'Storm Routes',
+        'Fleet Operations': 'Fleet Operations',
+        'No Active Route': 'No Active Route',
+        'driver': 'driver',
+        'ACTIVE STORM': 'ACTIVE STORM',
+        'PLANNED': 'PLANNED',
+        'ARCHIVED': 'ARCHIVED',
+        'CANCELLED': 'CANCELLED',
+        'operationsConsole': 'Operations Control Console',
+      };
+      return mockDict[key] || key;
+    },
+    locale: 'en-US',
+    formatDate: (d: any) => 'Jul 8, 01:34 PM',
+    formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
+  }),
+}));
 
 // Mock API calls
 vi.mock('../../services/api', () => ({
@@ -159,6 +186,8 @@ vi.mock('../../services/api', () => ({
 describe('PlowPath Dashboard Smoke Tests', () => {
   // Pre-seed stores before tests
   beforeEach(() => {
+    useSettingsStore.setState({ language: 'en-US' });
+
     useAuthStore.setState({
       user: { user_id: 'u-owner', name: 'John Dispatcher', role: 'owner', email: 'john@plowpath.com', phone: '123', driver_id: null },
       token: 'fake-token',
@@ -281,7 +310,7 @@ describe('PlowPath Dashboard Smoke Tests', () => {
 
   it('renders DriversPage successfully', () => {
     render(<DriversPage />);
-    expect(screen.getByText('Active Crew Directory')).toBeInTheDocument();
+    expect(screen.getByText('Fleet Drivers')).toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('F-350 Plow')).toBeInTheDocument();
   });

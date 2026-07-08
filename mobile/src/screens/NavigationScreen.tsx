@@ -953,28 +953,61 @@ export default function NavigationScreen({ route, navigation }: Props) {
     if (!currentStop) return;
     const { lat, lon } = currentStop;
 
-    let url = '';
+    let primaryUrl = '';
+    let fallbackUrl = '';
+
     if (service === 'apple') {
-      url = `maps://?q=${lat},${lon}`;
+      primaryUrl = `maps://?q=${lat},${lon}`;
+      fallbackUrl = `https://maps.apple.com/?q=${lat},${lon}`;
     } else if (service === 'google') {
-      url = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+      if (Platform.OS === 'android') {
+        primaryUrl = `geo:${lat},${lon}?q=${lat},${lon}`;
+        fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+      } else {
+        primaryUrl = `comgooglemaps://?q=${lat},${lon}`;
+        fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+      }
     } else if (service === 'waze') {
-      url = `waze://?ll=${lat},${lon}&navigate=yes`;
+      primaryUrl = `waze://?ll=${lat},${lon}&navigate=yes`;
+      fallbackUrl = `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
     }
 
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          Linking.openURL(url);
-        } else {
-          Alert.alert(
-            locale === 'fr-QC' ? 'Erreur de navigation' : 'Navigation Error',
-            locale === 'fr-QC' ? 'L\'application de guidage sélectionnée n\'est pas installée sur cet appareil.' : 'The selected map launcher is not installed on this device.',
-            [{ text: 'OK' }]
-          );
-        }
-      })
-      .catch((err) => captureException(err, { context: 'nav_launch_failed' }));
+    const tryOpen = (url: string, fallback: string | null) => {
+      Linking.canOpenURL(url)
+        .then((supported) => {
+          if (supported) {
+            Linking.openURL(url);
+          } else if (fallback) {
+            // Attempt to open fallback URL (web browser or alternative application)
+            Linking.canOpenURL(fallback)
+              .then((fallbackSupported) => {
+                if (fallbackSupported) {
+                  Linking.openURL(fallback);
+                } else {
+                  Alert.alert(
+                    locale === 'fr-QC' ? 'Erreur de navigation' : 'Navigation Error',
+                    locale === 'fr-QC'
+                      ? 'L\'application de guidage sélectionnée et ses liens de secours ne sont pas pris en charge.'
+                      : 'The selected navigation app and its fallback links are not supported on this device.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              })
+              .catch((err) => captureException(err, { context: 'nav_fallback_launch_failed' }));
+          } else {
+            Alert.alert(
+              locale === 'fr-QC' ? 'Erreur de navigation' : 'Navigation Error',
+              locale === 'fr-QC'
+                ? 'L\'application de guidage sélectionnée n\'est pas installée sur cet appareil.'
+                : 'The selected map launcher is not installed on this device.',
+              [{ text: 'OK' }]
+            );
+          }
+        })
+        .catch((err) => captureException(err, { context: 'nav_launch_failed' }));
+    };
+
+    tryOpen(primaryUrl, fallbackUrl);
   };
 
   // Simulated Speech-to-Text Glove Trigger Commands

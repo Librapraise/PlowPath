@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCustomersStore, type Customer } from '../store/customersStore';
+import * as XLSX from 'xlsx';
 import { customerSchema, type CustomerInput } from '../schemas/customer.schema';
 import { api } from '../services/api';
 import { useToastStore } from '../store/toastStore';
@@ -64,6 +65,21 @@ export default function CustomersPage() {
   const [importCsvText, setImportCsvText] = useState('');
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+
+  // Smart Import Wizard states
+  const [importStep, setImportStep] = useState<'upload' | 'map' | 'validate'>('upload');
+  const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
+  const [parsedRows, setParsedRows] = useState<any[][]>([]);
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    property_type: '',
+    outstanding_balance: '',
+    sign_status: '',
+  });
+  const [validatedRecords, setValidatedRecords] = useState<any[]>([]);
 
   const blankCustomer: CustomerInput = {
     name: '',
@@ -256,19 +272,182 @@ export default function CustomersPage() {
     }
   };
 
-  // Handle Import CSV
-  const handleImportCsvSubmit = async (e: React.FormEvent) => {
+  // Smart Guess Mapping helper
+  const guessMapping = (headers: string[]) => {
+    const mapping: Record<string, string> = {
+      name: '',
+      address: '',
+      phone: '',
+      email: '',
+      property_type: '',
+      outstanding_balance: '',
+      sign_status: '',
+    };
+    const lowercaseHeaders = headers.map(h => String(h || '').trim().toLowerCase());
+    const lookup = (guesses: string[]) => {
+      const idx = lowercaseHeaders.findIndex(h => guesses.some(g => h.includes(g) || g.includes(h)));
+      return idx !== -1 ? headers[idx] : '';
+    };
+
+    mapping.name = lookup(['name', 'client', 'customer', 'full name', 'company', 'nom', 'nom complet']);
+    mapping.address = lookup(['address', 'street', 'location', 'property', 'site', 'adresse']);
+    mapping.phone = lookup(['phone', 'telephone', 'mobile', 'tel', 'cell']);
+    mapping.email = lookup(['email', 'mail', 'courriel']);
+    mapping.property_type = lookup(['type', 'property type', 'residential', 'commercial', 'class', 'catégorie']);
+    mapping.outstanding_balance = lookup(['balance', 'outstanding', 'due', 'amount', 'solde', 'facture', 'solde dû']);
+    mapping.sign_status = lookup(['sign', 'sign status', 'marker', 'panneau']);
+    return mapping;
+  };
+
+  // Handle file select & parsing
+  const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Parse sheet to JSON array of arrays
+        const data = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+        if (data.length <= 1) {
+          useToastStore.getState().addToast(t('File is empty or lacks headers'), 'error');
+          setIsImporting(false);
+          return;
+        }
+
+        const headers = data[0].map(h => String(h || '').trim());
+        const rows = data.slice(1).filter(row => row.some(cell => cell !== null && cell !== undefined && cell !== ''));
+
+        setParsedHeaders(headers);
+        setParsedRows(rows);
+        setColumnMapping(guessMapping(headers));
+        setImportStep('map');
+      } catch (err) {
+        useToastStore.getState().addToast(t('Failed to parse spreadsheet file'), 'error');
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Process column mapping and transition to validation screen
+  const handleProcessMapping = () => {
+    const records = parsedRows.map((row, index) => {
+      const getVal = (field: string) => {
+        const colName = columnMapping[field];
+        if (!colName) return '';
+        const colIdx = parsedHeaders.indexOf(colName);
+        if (colIdx === -1) return '';
+        return String(row[colIdx] ?? '').trim();
+      };
+
+      const name = getVal('name');
+      const address = getVal('address');
+      const phone = getVal('phone');
+      const email = getVal('email');
+      const propertyTypeVal = getVal('property_type').toLowerCase();
+      const property_type = propertyTypeVal.includes('commercial') ? 'commercial' : 'residential';
+      
+      const rawBalance = getVal('outstanding_balance').replace(/[^0-9.-]/g, '');
+      const outstanding_balance = rawBalance ? (isNaN(Number(rawBalance)) ? 0 : Number(rawBalance)) : 0;
+      
+      const signVal = getVal('sign_status').toLowerCase();
+      const sign_status = ['installed', 'removed', 'needs_service'].includes(signVal) ? signVal : 'removed';
+
+      const recordErrors: string[] = [];
+      if (!name) recordErrors.push(t('Name is required'));
+      if (!address) recordErrors.push(t('Address is required'));
+
+      return {
+        id: index,
+        name,
+        address,
+        phone,
+        email,
+        property_type,
+        outstanding_balance,
+        sign_status,
+        errors: recordErrors,
+        isValid: recordErrors.length === 0,
+      };
+    });
+
+    setValidatedRecords(records);
+    setImportStep('validate');
+  };
+
+  // Update a validation row value inline
+  const handleUpdateRecordField = (id: number, field: string, value: any) => {
+    setValidatedRecords(prev => prev.map(rec => {
+      if (rec.id === id) {
+        const updated = { ...rec, [field]: value };
+        // Re-validate
+        const recordErrors: string[] = [];
+        if (!updated.name) recordErrors.push(t('Name is required'));
+        if (!updated.address) recordErrors.push(t('Address is required'));
+        updated.errors = recordErrors;
+        updated.isValid = recordErrors.length === 0;
+        return updated;
+      }
+      return rec;
+    }));
+  };
+
+  // Submit the mapped and validated list to backend
+  const handleImportSubmitMapped = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!importCsvText.trim()) return;
+    const invalidRecords = validatedRecords.filter(r => !r.isValid);
+    if (invalidRecords.length > 0) {
+      useToastStore.getState().addToast(t('Please resolve all validation errors before submitting'), 'error');
+      return;
+    }
+
     setIsImporting(true);
     try {
-      const { data } = await api.post('/customers/import', { csv: importCsvText });
-      useToastStore.getState().addToast(t('Successfully imported {{count}} customers! Errors: {{errors}}', { count: data.imported_count, errors: data.errors_count }), 'success');
+      // Format mapped objects to standard CSV string
+      const headers = ['Name', 'Address', 'Phone', 'Email', 'Property Type', 'Outstanding Balance', 'Sign Status'];
+      const csvLines = [headers.join(',')];
+
+      validatedRecords.forEach(r => {
+        const line = [
+          `"${r.name.replace(/"/g, '""')}"`,
+          `"${r.address.replace(/"/g, '""')}"`,
+          `"${(r.phone || '').replace(/"/g, '""')}"`,
+          `"${(r.email || '').replace(/"/g, '""')}"`,
+          r.property_type,
+          r.outstanding_balance,
+          r.sign_status,
+        ];
+        csvLines.push(line.join(','));
+      });
+
+      const csvText = csvLines.join('\n');
+      const { data } = await api.post('/customers/import', { csv: csvText });
+      
+      useToastStore.getState().addToast(
+        t('Successfully imported {{count}} customers! Errors: {{errors}}', { 
+          count: data.imported_count, 
+          errors: data.errors_count 
+        }), 
+        'success'
+      );
+      
       if (data.errors && data.errors.length > 0) {
         console.error('Import Warnings:', data.errors);
       }
-      setImportCsvText('');
+
       setImportModalOpen(false);
+      setParsedHeaders([]);
+      setParsedRows([]);
+      setValidatedRecords([]);
+      setImportStep('upload');
       fetchCustomers();
     } catch (err: any) {
       const msg = err.response?.data?.error?.message ?? t('Failed to import CSV');
@@ -1047,45 +1226,185 @@ export default function CustomersPage() {
       {/* Bulk Import CSV Modal */}
       {importModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setImportModalOpen(false)}></div>
-          <div className="relative glass-card rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-scale-up gradient-border">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => {
+            setImportModalOpen(false);
+            setImportStep('upload');
+            setParsedHeaders([]);
+            setParsedRows([]);
+            setValidatedRecords([]);
+          }}></div>
+          
+          <div className="relative glass-card rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 animate-scale-up gradient-border max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <Upload className="w-5 h-5 text-brand-400" />
-              {t('Bulk Import Customer Roster')}
+              {t('Smart Customer Roster Import')}
             </h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-medium">
-              {t('Copy and paste raw comma-separated CSV text directly. Missing coordinates are geocoded automatically with 1.1s sequential query pacing to Nominatim.')}
-            </p>
-            <div className="text-[10px] bg-slate-900/60 border border-slate-800 p-2.5 rounded font-mono text-slate-400">
-              {t('Headers')}: <strong className="text-brand-400">{t('Name, Address, Phone, Email, Property Type, Outstanding Balance, Sign Status')}</strong><br />
-              Example: Acme Towers, 100 Main St Buffalo NY, +17165550001, admin@acme.com, commercial, 250.00, needs_service
-            </div>
-            <form onSubmit={handleImportCsvSubmit} className="space-y-4">
-              <textarea
-                placeholder={t('Name,Address,Phone,Email,Property Type,Outstanding Balance,Sign Status...')}
-                rows={8}
-                required
-                value={importCsvText}
-                onChange={(e) => setImportCsvText(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-xs font-mono focus:outline-none focus:border-brand-500/50 focus:ring-2"
-              />
-              <div className="flex justify-end gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setImportModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer border border-slate-700/40"
-                >
-                  {t('Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isImporting || !importCsvText}
-                  className="px-5 py-2 bg-gradient-to-r from-brand-500 to-indigo-500 text-white font-semibold text-xs rounded-xl shadow cursor-pointer transition-all disabled:opacity-40"
-                >
-                  {isImporting ? t('Importing & Geocoding...') : t('Submit Roster')}
-                </button>
+
+            {importStep === 'upload' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  {t('Upload any standard spreadsheet (Excel, Google Sheets, or CSV). The intelligent parser will automatically scan your columns and let you map the fields.')}
+                </p>
+                <div className="border-2 border-dashed border-slate-800 hover:border-brand-500/40 bg-slate-950/40 rounded-xl p-8 text-center transition-all cursor-pointer relative group">
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleImportFileSelect}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center justify-center space-y-3">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-brand-400 transition-colors">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-300 group-hover:text-white transition-colors">{t('Click or drag spreadsheet file here')}</p>
+                      <p className="text-xs text-slate-500 mt-1">CSV, XLSX, or XLS (max 5MB)</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setImportModalOpen(false)}
+                    className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer border border-slate-700/40"
+                  >
+                    {t('Cancel')}
+                  </button>
+                </div>
               </div>
-            </form>
+            )}
+
+            {importStep === 'map' && (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  {t('We mapped these spreadsheet columns to PlowPath fields. Adjust any fields that mismatch before continuing.')}
+                </p>
+                <div className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-900">
+                  {Object.keys(columnMapping).map((targetField) => {
+                    const isRequired = ['name', 'address'].includes(targetField);
+                    return (
+                      <div key={targetField} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/50 pb-2.5 last:border-b-0 last:pb-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-300 capitalize">{targetField.replace('_', ' ')}</span>
+                          {isRequired && <span className="text-red-400 text-xs">*</span>}
+                        </div>
+                        <div className="w-full sm:w-64">
+                          <CustomSelect
+                            options={[
+                              { value: '', label: t('-- Ignore Column --') },
+                              ...parsedHeaders.map(h => ({ value: h, label: h }))
+                            ]}
+                            value={columnMapping[targetField]}
+                            onChange={(val) => setColumnMapping(prev => ({ ...prev, [targetField]: val }))}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImportStep('upload');
+                      setParsedHeaders([]);
+                      setParsedRows([]);
+                    }}
+                    className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer border border-slate-700/40"
+                  >
+                    {t('Back')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProcessMapping}
+                    className="px-5 py-2 bg-gradient-to-r from-brand-500 to-indigo-500 text-white font-semibold text-xs rounded-xl shadow cursor-pointer transition-all"
+                  >
+                    {t('Validate Roster')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {importStep === 'validate' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-slate-950/60 p-3 rounded-xl border border-slate-900">
+                  <span className="text-xs text-slate-400 font-semibold">
+                    {t('Valid Records')}: <strong className="text-emerald-400">{validatedRecords.filter(r => r.isValid).length}</strong>
+                  </span>
+                  <span className="text-xs text-slate-400 font-semibold">
+                    {t('Validation Warnings')}: <strong className={validatedRecords.filter(r => !r.isValid).length > 0 ? 'text-red-400' : 'text-slate-400'}>{validatedRecords.filter(r => !r.isValid).length}</strong>
+                  </span>
+                </div>
+
+                {validatedRecords.filter(r => !r.isValid).length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-red-400 font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      {t('Some rows are missing required Name or Address fields. Edit them below to continue:')}
+                    </p>
+                    <div className="max-h-[30vh] overflow-y-auto border border-slate-900 rounded-xl divide-y divide-slate-900 bg-slate-950/30">
+                      {validatedRecords.map((r) => {
+                        if (r.isValid) return null;
+                        return (
+                          <div key={r.id} className="p-3 space-y-2.5 bg-red-500/[0.02]">
+                            <div className="text-[10px] text-red-400 font-bold flex items-center gap-1">
+                              <span>⚠️ Row {r.id + 1}:</span>
+                              <span>{r.errors.join(', ')}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] uppercase font-bold text-slate-500 mb-1">{t('Customer Name')}</label>
+                                <input
+                                  type="text"
+                                  value={r.name}
+                                  onChange={(e) => handleUpdateRecordField(r.id, 'name', e.target.value)}
+                                  className="w-full pl-2 pr-2 py-1 bg-slate-950/80 border border-slate-800/80 rounded text-slate-100 text-xs focus:outline-none focus:border-brand-500/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] uppercase font-bold text-slate-500 mb-1">{t('Service Address')}</label>
+                                <input
+                                  type="text"
+                                  value={r.address}
+                                  onChange={(e) => handleUpdateRecordField(r.id, 'address', e.target.value)}
+                                  className="w-full pl-2 pr-2 py-1 bg-slate-950/80 border border-slate-800/80 rounded text-slate-100 text-xs focus:outline-none focus:border-brand-500/50"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-center space-y-2">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+                      <CheckCircle className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-emerald-400">{t('All records validated successfully!')}</p>
+                    <p className="text-[10px] text-slate-500">{t('Your sheet columns are mapped perfectly. Ready to finalize roster import.')}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setImportStep('map')}
+                    className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-355 font-semibold text-xs rounded-xl cursor-pointer border border-slate-700/40"
+                  >
+                    {t('Back')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleImportSubmitMapped}
+                    disabled={isImporting || validatedRecords.filter(r => !r.isValid).length > 0}
+                    className="px-5 py-2 bg-gradient-to-r from-brand-500 to-indigo-500 text-white font-semibold text-xs rounded-xl shadow cursor-pointer transition-all disabled:opacity-40"
+                  >
+                    {isImporting ? t('Importing & Geocoding...') : t('Submit Roster')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -659,6 +659,114 @@ export const generalDynamicTranslations: Record<string, Record<string, string>> 
     'Logged Payment': 'Paiement enregistré',
     'Querying customer logs...': 'Recherche des journaux clients...',
     'No historical service logs found for this customer.': 'Aucun historique de service trouvé pour ce client.',
+
+    // Landing Page
+    'Smart Dispatch Platform': 'Plateforme de répartition intelligente',
+    'Access Console': 'Accéder à la console',
+    'Next-Generation Snow Operations for Winter 2026': 'Opérations de déneigement de nouvelle génération pour l\'hiver 2026',
+    'Commercial Snow Plow': 'Déneigement commercial',
+    'Dispatch & Live Tracking': 'Répartition et suivi en direct',
+    'Optimize route dispatches, track plow fleets in real time with high-precision telemetry, and provide homeowners with instant SMS updates and photo proof of service.': 'Optimisez la répartition des trajets, suivez la flotte de déneigement en temps réel avec une télémétrie de haute précision, et fournissez aux propriétaires des mises à jour SMS instantanées.',
+    'Access Dispatch Console': 'Accéder à la console de répartition',
+    'Get Driver App': 'Télécharger l\'application chauffeur',
+    'PlowPath Operations Control': 'Contrôle des opérations de PlowPath',
+    'Live Ops Geolocation Map': 'Carte de géolocalisation Live Ops',
+    'Interactive real-time map plotting active plow trucks, path trails, status markers, and current weather layers across service zones.': 'Carte interactive en temps réel affichant les camions de déneigement actifs, les trajets parcourus, les marqueurs de statut et les couches météo.',
+    'Smart Route Optimization': 'Optimisation intelligente des trajets',
+    'Automatically sequence and group client properties into logical dispatch routes. Minimize deadhead transit time during blizzards.': 'Séquencez et regroupez automatiquement les propriétés des clients dans des trajets logiques. Minimisez le temps de transit inutile pendant les tempêtes.',
+    'Automated Client Alerts': 'Alertes clients automatisées',
+    'Keep homeowners informed by sending automatic SMS updates with ETA predictions, en-route status, and clearance completion notices.': 'Gardez les propriétaires informés en envoyant des SMS automatiques avec des prévisions d\'ETA, l\'état en route et des avis de complétion.',
+    'Full Suite of Winter Management Tools': 'Gamme complète d\'outils de gestion hivernale',
+    'Everything your operations team needs to run heavy-duty dispatching, monitor driver telemetry, and keep clients satisfied.': 'Tout ce dont votre équipe a besoin pour gérer la répartition, suivre la télémétrie des chauffeurs et satisfaire les clients.',
+    'Storm Management': 'Gestion des tempêtes',
+    'Define active snowstorms, spin up dispatch cycles, and track the progress percentage of clearing properties throughout the event.': 'Définissez les tempêtes actives, lancez des cycles de répartition et suivez le pourcentage de progression du déneigement.',
+    'Driver & Customer Portals': 'Portails des chauffeurs et clients',
+    'Unified database managing driver credentials, payroll metrics, client subscription profiles, and specific driveway clear instructions.': 'Base de données unifiée gérant les informations des chauffeurs, la paie, les profils d\'abonnement des clients et les instructions d\'accès.',
+    'Analytics & Business Intelligence': 'Analyses & intelligence d\'affaires',
+    'Review driver speeds, time spent per clear site, weather duration logs, and customer billing statements under a single window.': 'Analysez la vitesse des chauffeurs, le temps passé par site, les journaux de tempête et la facturation sous une seule fenêtre.',
+    'Homeowner Tracking': 'Suivi pour les propriétaires',
+    'Send secure tracking links to homeowners showing their assigned plow\'s ETA, live progress map, and clearance completion report.': 'Envoyez des liens de suivi sécurisés aux propriétaires indiquant l\'ETA du chasse-neige, la carte de progression en direct et le rapport de complétion.',
+    'Background Geolocation': 'Géolocalisation en arrière-plan',
+    'Driver telemetry uploads in the background via robust native service modules. No lost location data when driver screens are locked.': 'La télémétrie des chauffeurs se télécharge en arrière-plan via des modules natifs robustes. Aucune perte de position lorsque l\'écran est verrouillé.',
+    'Enterprise Grade Security': 'Sécurité de niveau entreprise',
+    'Secure database logs, dispatch roles, encrypted password hashing, and tokenized session APIs keep corporate telemetry secure.': 'Les journaux sécurisés, les rôles de répartition, le hachage des mots de passe et les sessions d\'API protègent votre télémétrie corporative.',
+    'Interactive Profitability Simulator': 'Simulateur interactif de rentabilité',
+    'Calculate Your Cost & Return on Investment': 'Calculez votre coût et retour sur investissement',
+    'See exactly how our serverless, pay-as-you-go infrastructure performs under heavy winter workloads, and verify the ROI for your business.': 'Voyez exactement comment notre infrastructure à la carte réagit sous les lourdes charges hivernales et vérifiez le ROI de votre entreprise.',
+    'Interactive Parameters': 'Paramètres interactifs',
+    'Number of Active Clients': 'Nombre de clients actifs',
+    'Count of driveways, lanes, and commercial lots serviced.': 'Nombre d\'entrées, de chemins et de terrains commerciaux desservis.',
+    'Active Drivers / Tractors': 'Chauffeurs / Tracteurs actifs',
+    'drivers': 'chauffeurs',
+    'Drivers running the PlowPath mobile app in their cabs.': 'Chauffeurs exécutant l\'application PlowPath dans leur cabine.',
+    'Average Storms per Month': 'Moyenne de tempêtes par mois',
+    'winter events': 'événements hivernaux',
+    'Weather events prompting client alert dispatches and tracking.': 'Événements météo déclenchant des dispatches d\'alerte et le suivi.',
+    'Avg. Seasonal Contract Value': 'Valeur contractuelle saisonnière moy.',
+    'season': 'saison',
+    'Average amount billed to each client property per season.': 'Montant moyen facturé par propriété cliente par saison.',
+    'SMS Preference': 'Préférence SMS',
+    'Voice Preference': 'Préférence vocale',
+    'Production Hosting Tier': 'Hébergement en production',
+    'Toggle Staging ($8.25 fixed) vs Production ($41.14 fixed)': 'Basculez entre Staging (8,25 $ fixe) et Production (41,14 $ fixe)',
+    'Production Mode': 'Mode production',
+    'Staging Mode': 'Mode staging',
+    'Calculated Monthly Expenses': 'Frais mensuels calculés',
+    'Platform Idle Fixed Cost': 'Frais fixes de plateforme (inactif)',
+    'Twilio SMS Alerts (3 msg/storm)': 'Alertes SMS Twilio (3 msg/tempête)',
+    'Twilio Voice Confirmations (1.5 min/storm)': 'Confirmations vocales Twilio (1,5 min/tempête)',
+    'Upstash Redis Database (Pay-as-you-go)': 'Base de données Upstash Redis (à la carte)',
+    'ESTIMATED HEAVY WINTER MONTH BILL': 'FACTURE MENSUELLE ESTIMÉE EN TEMPS DE TEMPÊTE',
+    'mo': 'mois',
+    'Small Operator Seasonal Value Pitch': 'Argument de valeur saisonnière pour petit opérateur',
+    'PlowPath isn\'t a luxury—it\'s an operational necessity designed to expand contract capacity for small operators running **1 to 5 tractors**.': 'PlowPath n\'est pas un luxe, c\'est une nécessité opérationnelle pour augmenter la capacité de contrat des petits opérateurs avec **1 à 5 tracteurs**.',
+    'Estimated App Cost': 'Coût estimé de l\'application',
+    'yr': 'an',
+    '(4 months use + 8 months retention @ $25/mo)': '(4 mois d\'utilisation + 8 mois de rétention à 25 $/mois)',
+    'App Cost % of Revenue': 'Coût de l\'application en % du revenu',
+    'ofSeasonalContract': 'de',
+    'seasonal revenue': 'revenu saisonnier',
+    'Capacity Expansion Return (15% Efficiency Increase)': 'Retour d\'expansion de capacité (hausse d\'efficacité de 15 %)',
+    'By saving time on route dispatching and using live GPS tracking, you can comfortably clear **15 more properties per driver** this season:': 'En sauvant du temps sur la répartition des trajets et le suivi GPS, vous pouvez facilement déneiger **15 propriétés de plus par chauffeur** :',
+    'Additional Contract Revenue:': 'Revenu contractuel additionnel :',
+    'NET GAIN (Additional Rev - App Cost):': 'GAIN NET (Revenu additionnel - Coût appli) :',
+    'Driver Companion Mobile App': 'Application mobile compagnon du chauffeur',
+    'Built for Heavy-Duty Drivers': 'Conçue pour les chauffeurs',
+    'Snow plowing requires focus and speed. The PlowPath Driver mobile app provides a high-contrast, simple interface optimized for cold steering wheels.': 'Le déneigement demande de la concentration et de la vitesse. L\'application PlowPath Driver offre une interface simple à haut contraste optimisée pour les mains froides.',
+    'Sequenced route list with integrated tap-to-navigate.': 'Liste de trajets séquencés avec navigation intégrée en un clic.',
+    'Full offline caching support for route lists and GPS queues.': 'Support complet de cache hors ligne pour les trajets et files GPS.',
+    'Stops telemetry collection automatically when off duty.': 'Arrête automatiquement la télémétrie hors service.',
+    '* Proof of service photo validation is available as an Enterprise-tier feature for municipal and corporate contracts.': '* La preuve de service photo est disponible en tant que fonctionnalité entreprise pour les contrats municipaux.',
+    'Available Platforms': 'Plateformes disponibles',
+    'Download For': 'Télécharger pour',
+    'Android (Google Play)': 'Android (Google Play)',
+    'iOS (App Store)': 'iOS (App Store)',
+    'Route Active': 'Trajet actif',
+    'Duty On': 'En service',
+    'Next Stop': 'Prochain arrêt',
+    'Instructions: Clean driveway fully. Pile snow on left lawn side.': 'Instructions : Déneiger l\'entrée au complet. Pile de neige sur le gazon à gauche.',
+    'Ready to begin': 'Prêt à commencer',
+    'Start Clear': 'Débuter',
+    'PlowPath Driver': 'PlowPath Chauffeur',
+    'Frequently Asked Questions': 'Foire aux questions (FAQ)',
+    'Quick answers to standard operational questions.': 'Réponses rapides aux questions opérationnelles courantes.',
+    'How does PlowPath track snowplow trucks?': 'Comment PlowPath suit-il les camions de déneigement?',
+    'PlowPath uses a native background telemetry module on the driver\'s phone. This tracking records GPS location update points and velocity details even when the application is minimized or screens are locked. This data compiles straight into the dispatcher\'s Live Ops Dashboard.': 'PlowPath utilise un module de télémétrie natif en arrière-plan. Il enregistre la position GPS et la vitesse même si l\'application est fermée ou le téléphone verrouillé, envoyée en direct à la console.',
+    'Can homeowners track progress without an account?': 'Les propriétaires peuvent-ils suivre le déneigement sans compte?',
+    'Yes. When a route begins, dispatchers can set PlowPath to dispatch secure, encrypted tracking portal links via SMS. Homeowners click these links to view active plow locations, ETA predictions, and proof of clearance photos.': 'Oui. Au début du trajet, PlowPath peut envoyer un lien de suivi sécurisé par SMS. Les clients cliquent sur ce lien pour voir l\'emplacement en direct du chasse-neige et l\'ETA.',
+    'Is location telemetry tracked outside of active shifts?': 'La télémétrie de localisation est-elle suivie hors service?',
+    'Absolutely not. Telemetry logs only upload when a driver explicitly taps \'Go On Duty\' and ends immediately when they log out or switch off-duty. We maintain strict compliance with mobile application store privacy guidelines.': 'Absolument pas. Les données se transmettent seulement quand le chauffeur appuie sur "En service" et s\'arrêtent immédiatement quand il se déconnecte.',
+    'How is my profile data stored and can I request deletion?': 'Comment mes données sont-elles stockées et puis-je demander leur suppression?',
+    'All driver profiles and associated GPS telemetry coordinates are stored on secure cloud databases. You can submit a deletion request at any time using our data deletion request form to permanently purge all data associated with your driver account.': 'Les données sont stockées sur des bases cloud sécurisées. Vous pouvez demander la suppression complète de vos données à tout moment via notre formulaire en ligne.',
+    'Enterprise dispatch and telemetry platforms for commercial winter operations.': 'Plateforme de répartition et télémétrie d\'entreprise pour opérations hivernales.',
+    'Dispatcher Login': 'Connexion répartiteur',
+    'Driver Downloads': 'Téléchargement chauffeur',
+    'Support & Privacy': 'Support & Confidentialité',
+    'Privacy Policy': 'Politique de confidentialité',
+    'Terms of Service': 'Conditions d\'utilisation',
+    'Request Data Deletion': 'Demande de suppression de données',
+    'Contact': 'Contact',
+    '© {{year}} PlowPath Operations Inc. All Rights Reserved.': '© {{year}} PlowPath Operations Inc. Tous droits réservés.',
   }
 };
 
@@ -743,14 +851,16 @@ export function useTranslation() {
     return `${d}/${m}/${date.getFullYear()}`;
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | string | null | undefined) => {
+    const parsed = typeof amount === 'number' ? amount : parseFloat(String(amount || 0));
+    const num = isNaN(parsed) ? 0 : parsed;
     if (language === 'fr-QC') {
-      return `${amount.toFixed(2).replace('.', ',')} $`;
+      return `${num.toFixed(2).replace('.', ',')} $`;
     }
     if (language === 'en-GB') {
-      return `£${amount.toFixed(2)}`;
+      return `£${num.toFixed(2)}`;
     }
-    return `$${amount.toFixed(2)}`;
+    return `$${num.toFixed(2)}`;
   };
 
   return { t, locale: language, formatDate, formatCurrency };
