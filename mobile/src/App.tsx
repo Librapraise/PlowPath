@@ -6,6 +6,7 @@ import { initSentry, wrapApp } from './services/sentry';
 import { navigationRef } from './services/navigation';
 import SplashScreen from './screens/SplashScreen';
 import { pushService } from './services/push.service';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Initialize Sentry crash reporting
 initSentry();
@@ -21,14 +22,16 @@ const App = function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>
-        <RootNavigator />
-      </NavigationContainer>
-      {isSplashVisible && (
-        <SplashScreen onAnimationComplete={() => setIsSplashVisible(false)} />
-      )}
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer ref={navigationRef}>
+          <RootNavigator />
+        </NavigationContainer>
+        {isSplashVisible && (
+          <SplashScreen onAnimationComplete={() => setIsSplashVisible(false)} />
+        )}
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 };
 
