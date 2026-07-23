@@ -161,6 +161,10 @@ export class PushNotificationService {
    */
   public registerNotificationHandlers(): () => void {
     try {
+      if (!messaging().isDeviceRegisteredForRemoteMessages) {
+        return () => {};
+      }
+
       // 1. Foreground message handler
       const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
         console.log('[PUSH] A new push message arrived in the foreground!', remoteMessage);
@@ -203,8 +207,10 @@ export class PushNotificationService {
 
       // Return an unsubscribe cleanup handler
       return () => {
-        unsubscribeOnMessage();
-        unsubscribeOnTokenRefresh();
+        try {
+          unsubscribeOnMessage();
+          unsubscribeOnTokenRefresh();
+        } catch {}
       };
     } catch (err) {
       console.warn('[PUSH] Firebase messaging init omitted or unavailable:', err);
