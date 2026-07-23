@@ -12,7 +12,5 @@ export default function AppText(props: TextProps) {
 }
 
 const styles = StyleSheet.create({
-  defaultText: {
-    fontFamily: 'Inter-Medium',
-  },
+  defaultText: {},
 });
