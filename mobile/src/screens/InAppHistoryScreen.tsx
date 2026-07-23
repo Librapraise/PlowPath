@@ -16,7 +16,10 @@ export interface NotificationItem {
   receivedAt: string;
 }
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function InAppHistoryScreen() {
+  const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
   const theme = useSettingsStore((s) => s.settings.theme);
   const isDark = theme === 'dark';
@@ -85,7 +88,7 @@ export default function InAppHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <AppText style={styles.header}>{t('tabHistory')}</AppText>
+      <AppText style={[styles.header, { paddingTop: Math.max(insets.top + 12, 24) }]}>{t('tabHistory')}</AppText>
       <FlatList
         data={history}
         keyExtractor={(item) => item.id}

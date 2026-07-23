@@ -73,7 +73,10 @@ const GradientButton = ({
   );
 };
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function SignRouteScreen() {
+  const insets = useSafeAreaInsets();
   const { t, locale, formatDate } = useTranslation();
   const navigation = useNavigation<any>();
   const theme = useSettingsStore((s) => s.settings.theme);
@@ -142,7 +145,7 @@ export default function SignRouteScreen() {
       <OfflineStatusBar />
 
       {/* Sub-page Header Pattern (Inline Back Button + Title + Bottom Divider) */}
-      <View style={resolvedStyles.headerRow}>
+      <View style={[resolvedStyles.headerRow, { paddingTop: Math.max(insets.top + 8, 12) }]}>
         <TouchableOpacity
           style={resolvedStyles.headerBackBtn}
           onPress={() => navigation.navigate('Route')}

@@ -270,7 +270,10 @@ const FloatingLabelInput = ({
 
 type SubScreen = 'menu' | 'visual' | 'navigation' | 'gps' | 'queue' | 'security' | 'language';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
   const navigation = useNavigation<any>();
   const user = useAuthStore((s) => s.user);
@@ -479,7 +482,7 @@ export default function SettingsScreen() {
 
   // Sub-page Back + Title Header Pattern
   const renderSubHeader = (title: string) => (
-    <View style={resolvedStyles.headerRow}>
+    <View style={[resolvedStyles.headerRow, { paddingTop: Math.max(insets.top + 8, 12) }]}>
       <TouchableOpacity
         style={resolvedStyles.headerBackBtn}
         onPress={() => setActiveScreen('menu')}
@@ -519,7 +522,7 @@ export default function SettingsScreen() {
 
       <ScrollView style={resolvedStyles.container} contentContainerStyle={resolvedStyles.contentContainer}>
         {activeScreen === 'menu' ? (
-          <View style={resolvedStyles.headerRow}>
+          <View style={[resolvedStyles.headerRow, { paddingTop: Math.max(insets.top + 8, 12) }]}>
             {/* Added back button for the main Settings screen as requested */}
             <TouchableOpacity
               style={resolvedStyles.headerBackBtn}

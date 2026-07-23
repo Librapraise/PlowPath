@@ -261,7 +261,10 @@ const RouteCard = ({
   );
 };
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function RouteScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const { t, locale } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -400,7 +403,7 @@ export default function RouteScreen({ navigation }: Props) {
       <OfflineStatusBar />
 
       {/* Header Section (Dark Zone — #0F141E) */}
-      <View style={styles.headerArea}>
+      <View style={[styles.headerArea, { paddingTop: Math.max(insets.top + 12, 28) }]}>
         <View style={styles.headerTopRow}>
           <View>
             <AppText style={styles.welcomeText}>{t('welcomeBack')}</AppText>
