@@ -35,7 +35,13 @@ module.exports = {
                 t.isIdentifier(path.node.property)
               ) {
                 const key = path.node.property.name;
-                const value = env[key] ?? process.env[key];
+                let value = env[key] ?? process.env[key];
+                if (key === 'API_URL' && (!value || value.includes('10.0.2.2') || value.includes('localhost'))) {
+                  value = 'https://plowpath-api-staging.fly.dev/api/v1';
+                }
+                if (key === 'WEBSOCKET_URL' && (!value || value.includes('10.0.2.2') || value.includes('localhost'))) {
+                  value = 'https://plowpath-api-staging.fly.dev';
+                }
                 if (value !== undefined) {
                   path.replaceWith(t.valueToNode(value));
                 }

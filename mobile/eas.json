@@ -17,7 +17,9 @@
         "image": "latest"
       },
       "env": {
-        "GOOGLE_SERVICE_INFO_PLIST": "@secret:GOOGLE_SERVICE_INFO_PLIST"
+        "GOOGLE_SERVICE_INFO_PLIST": "@secret:GOOGLE_SERVICE_INFO_PLIST",
+        "API_URL": "https://plowpath-api-staging.fly.dev/api/v1",
+        "WEBSOCKET_URL": "https://plowpath-api-staging.fly.dev"
       }
     },
     "production": {
@@ -26,7 +28,9 @@
         "image": "latest"
       },
       "env": {
-        "GOOGLE_SERVICE_INFO_PLIST": "@secret:GOOGLE_SERVICE_INFO_PLIST"
+        "GOOGLE_SERVICE_INFO_PLIST": "@secret:GOOGLE_SERVICE_INFO_PLIST",
+        "API_URL": "https://plowpath-api-staging.fly.dev/api/v1",
+        "WEBSOCKET_URL": "https://plowpath-api-staging.fly.dev"
       }
     }
   },
