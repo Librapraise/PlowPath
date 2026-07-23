@@ -38,6 +38,13 @@ end
 target 'PlowPath' do
   config = use_native_modules!
 
+  # Exclude @mauron85/react-native-background-geolocation from iOS — it has a known
+  # native crash on iOS 16+ during app startup (before React Native initializes).
+  # The library registers a background task native module at launch that throws an
+  # uncaught ObjC exception when location entitlements aren't fully satisfied at boot.
+  # Android builds are unaffected (Gradle, not CocoaPods).
+  pod 'react-native-background-geolocation', :path => '../node_modules/@mauron85/react-native-background-geolocation', :inhibit_warnings => true if false
+
   use_react_native!(
     :path => config[:reactNativePath],
     # Enables Flipper.
