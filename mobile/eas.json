@@ -5,7 +5,7 @@
   },
   "build": {
     "development": {
-      "developmentClient": true,
+      "developmentClient": false,
       "distribution": "internal",
       "ios": {
         "image": "latest"
@@ -15,12 +15,18 @@
       "distribution": "internal",
       "ios": {
         "image": "latest"
+      },
+      "env": {
+        "GOOGLE_SERVICE_INFO_PLIST": "@secret:GOOGLE_SERVICE_INFO_PLIST"
       }
     },
     "production": {
       "ios": {
         "simulator": false,
         "image": "latest"
+      },
+      "env": {
+        "GOOGLE_SERVICE_INFO_PLIST": "@secret:GOOGLE_SERVICE_INFO_PLIST"
       }
     }
   },

@@ -57,10 +57,8 @@ mobile/ios/.xcode.env.local
 *.keystore
 !debug.keystore
 
-# Mobile Firebase Configurations & Secrets
+# Mobile Firebase Configurations & Secrets (android only - iOS plist committed for EAS builds)
 mobile/android/app/google-services.json
-mobile/ios/GoogleService-Info.plist
-mobile/ios/*/GoogleService-Info.plist
 mobile/fastlane/report.xml
 mobile/fastlane/Preview.html
 mobile/fastlane/screenshots/

@@ -12,7 +12,10 @@
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
 
-  [FIRApp configure];
+  NSString *filePath = [[NSBundle mainBundle] pathForResource:@"GoogleService-Info" ofType:@"plist"];
+  if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+    [FIRApp configure];
+  }
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }

@@ -160,50 +160,56 @@ export class PushNotificationService {
    * and registers token refresh listeners so changing tokens are automatically synced.
    */
   public registerNotificationHandlers(): () => void {
-    // 1. Foreground message handler
-    const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
-      console.log('[PUSH] A new push message arrived in the foreground!', remoteMessage);
-      const title = remoteMessage.notification?.title ?? 'PlowPath Alert';
-      const body = remoteMessage.notification?.body ?? 'A new event has occurred.';
-      const category = (remoteMessage.data?.category as string) || 'alert';
+    try {
+      // 1. Foreground message handler
+      const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+        console.log('[PUSH] A new push message arrived in the foreground!', remoteMessage);
+        const title = remoteMessage.notification?.title ?? 'PlowPath Alert';
+        const body = remoteMessage.notification?.body ?? 'A new event has occurred.';
+        const category = (remoteMessage.data?.category as string) || 'alert';
 
-      // Record in logs history & run customized haptic vibration
-      await this.logToHistory(remoteMessage);
-      this.triggerVibration(category);
-      
-      Alert.alert(title, body, [
-        {
-          text: 'Open',
-          onPress: () => this.handleNotificationTap(remoteMessage),
-        },
-        { text: 'Dismiss', style: 'cancel' }
-      ]);
-    });
-
-    // 2. Tapped from background / closed state
-    messaging().onNotificationOpenedApp((remoteMessage) => {
-      this.handleNotificationTap(remoteMessage);
-    });
-
-    messaging()
-      .getInitialNotification()
-      .then((remoteMessage) => {
-        if (remoteMessage) {
-          this.handleNotificationTap(remoteMessage);
-        }
+        // Record in logs history & run customized haptic vibration
+        await this.logToHistory(remoteMessage);
+        this.triggerVibration(category);
+        
+        Alert.alert(title, body, [
+          {
+            text: 'Open',
+            onPress: () => this.handleNotificationTap(remoteMessage),
+          },
+          { text: 'Dismiss', style: 'cancel' }
+        ]);
       });
 
-    // 3. Token refresh handler
-    const unsubscribeOnTokenRefresh = messaging().onTokenRefresh(async (token) => {
-      console.log('[PUSH] FCM Token refreshed:', token);
-      await this.syncTokenWithBackend(token);
-    });
+      // 2. Tapped from background / closed state
+      messaging().onNotificationOpenedApp((remoteMessage) => {
+        this.handleNotificationTap(remoteMessage);
+      });
 
-    // Return an unsubscribe cleanup handler
-    return () => {
-      unsubscribeOnMessage();
-      unsubscribeOnTokenRefresh();
-    };
+      messaging()
+        .getInitialNotification()
+        .then((remoteMessage) => {
+          if (remoteMessage) {
+            this.handleNotificationTap(remoteMessage);
+          }
+        })
+        .catch((err) => console.warn('[PUSH] getInitialNotification error:', err));
+
+      // 3. Token refresh handler
+      const unsubscribeOnTokenRefresh = messaging().onTokenRefresh(async (token) => {
+        console.log('[PUSH] FCM Token refreshed:', token);
+        await this.syncTokenWithBackend(token);
+      });
+
+      // Return an unsubscribe cleanup handler
+      return () => {
+        unsubscribeOnMessage();
+        unsubscribeOnTokenRefresh();
+      };
+    } catch (err) {
+      console.warn('[PUSH] Firebase messaging init omitted or unavailable:', err);
+      return () => {};
+    }
   }
 }
 

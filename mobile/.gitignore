@@ -38,10 +38,8 @@ sentry.properties
 android/sentry.properties
 ios/sentry.properties
 
-# Firebase Configuration Files (contains API keys/sensitive project details)
+# Firebase Configuration Files (android only - iOS plist committed for EAS builds)
 android/app/google-services.json
-ios/GoogleService-Info.plist
-ios/*/GoogleService-Info.plist
 
 # Fastlane
 fastlane/report.xml

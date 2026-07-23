@@ -25,10 +25,6 @@ export function initSentry(): void {
       enabled: !__DEV__ || !!process.env.SENTRY_FORCE_DEV,
       // Adds more context data to events (IP address, cookies, user, etc.)
       sendDefaultPii: true,
-      // Configure Session Replay
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1,
-      integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
     });
     console.log('[SENTRY] SDK initialized successfully.');
     isSentryEnabled = true;

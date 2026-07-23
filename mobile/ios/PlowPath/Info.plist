@@ -39,6 +39,10 @@
 	<string>PlowPath needs continuous background location access to accurately calculate plowed coverage and verify route completion even when your phone screen is locked or in your pocket.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>PlowPath needs continuous background location access to accurately calculate plowed coverage and verify route completion even when your phone screen is locked or in your pocket.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>PlowPath uses motion detection to accurately track snow plowing activity and movement along assigned routes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PlowPath needs access to your photo library to upload proof-of-work photos.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
