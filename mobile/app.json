@@ -2,6 +2,11 @@
   "name": "PlowPathDriver",
   "displayName": "PlowPath Driver",
   "slug": "plowpath",
+  "version": "1.0.0",
+  "ios": {
+    "bundleIdentifier": "com.plowpath.mobile",
+    "buildNumber": "2"
+  },
   "extra": {
     "eas": {
       "projectId": "cf5edb60-2657-4518-a66f-f506afb454ac"
