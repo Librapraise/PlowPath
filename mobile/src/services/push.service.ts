@@ -1,6 +1,6 @@
 import messaging, { type FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { api } from './api';
-import { Alert, Platform, Vibration } from 'react-native';
+import { Alert, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigate } from './navigation';
 import { useAuthStore } from '../store/authStore';
@@ -210,7 +210,9 @@ export class PushNotificationService {
         try {
           unsubscribeOnMessage();
           unsubscribeOnTokenRefresh();
-        } catch {}
+        } catch {
+          // ignore cleanup errors on unregister
+        }
       };
     } catch (err) {
       console.warn('[PUSH] Firebase messaging init omitted or unavailable:', err);

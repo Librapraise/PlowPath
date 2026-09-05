@@ -117,8 +117,9 @@ export async function flushStopQueue(): Promise<{ flushed: number } | { skipped:
         notes: item.notes,
       });
       flushedCount++;
-    } catch (err: any) {
-      const status = err?.response?.status;
+    } catch (err) {
+      const errorObj = err as { response?: { status?: number } };
+      const status = errorObj?.response?.status;
       const retries = (item.retryCount ?? 0) + 1;
 
       // Drop items that have exceeded max retries or received permanent errors (413, 400)

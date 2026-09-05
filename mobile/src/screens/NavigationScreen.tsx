@@ -793,6 +793,10 @@ export default function NavigationScreen({ route, navigation }: Props) {
   function onTriggerMarkComplete(stop: RouteStop) {
     setCapturedPhotoUrl(null);
     setProofModalOpen(true);
+    // Directly launch system camera permission flow to comply with Apple Guideline 5.1.1(iv)
+    setTimeout(() => {
+      void simulatePhotoCapture();
+    }, 100);
   }
 
   // Opens the device's camera to capture a proof photo, then runs local compression
