@@ -82,8 +82,17 @@ android {
         applicationId "com.plowpath.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "1.0"
+        versionCode 16
+        versionName "1.0.1"
+
+        externalNativeBuild {
+            ndkBuild {
+                arguments "APP_LDFLAGS+=-Wl,-z,max-page-size=16384"
+            }
+            cmake {
+                arguments "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+            }
+        }
     }
     aaptOptions {
         cruncherEnabled = false
