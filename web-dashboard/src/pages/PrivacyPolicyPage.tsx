@@ -82,15 +82,43 @@ export default function PrivacyPolicyPage() {
               </p>
             </section>
 
+            <section className="space-y-3 p-5 bg-slate-950/60 border border-slate-800/80 rounded-2xl">
+              <h3 className="text-base font-bold text-slate-200">
+                4. Chat Assistant / Assistant de clavardage
+              </h3>
+              <p className="text-slate-300">
+                <strong className="text-slate-200">Chat assistant.</strong> Our website includes a chat assistant powered by artificial intelligence (Claude, by Anthropic), operated by Wolff Wisdom AI Solutions. Messages you type are sent to Anthropic to generate replies and are not stored on our servers. If you choose to share your contact details in the chat, they are sent only to our team to follow up on your request. Details:{' '}
+                <a
+                  href="https://wwai.ca/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-400 hover:underline"
+                >
+                  https://wwai.ca/privacy
+                </a>
+              </p>
+              <p className="text-slate-300 pt-3 border-t border-slate-800/60">
+                <strong className="text-slate-200">Assistant de clavardage.</strong> Notre site comprend un assistant de clavardage propulsé par l’intelligence artificielle (Claude, d’Anthropic), exploité par Wolff Wisdom AI Solutions. Les messages que vous écrivez sont envoyés à Anthropic pour générer les réponses et ne sont pas conservés sur nos serveurs. Si vous choisissez de communiquer vos coordonnées dans la discussion, elles sont transmises uniquement à notre équipe pour faire le suivi de votre demande. Détails :{' '}
+                <a
+                  href="https://wwai.ca/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-400 hover:underline"
+                >
+                  https://wwai.ca/privacy
+                </a>
+              </p>
+            </section>
+
             <section className="space-y-2.5">
-              <h3 className="text-base font-bold text-slate-200">4. Data Security &amp; Retention</h3>
+              <h3 className="text-base font-bold text-slate-200">5. Data Security &amp; Retention</h3>
               <p>
                 We use administrative, technical, and physical security measures to protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that no security measures are perfect or impenetrable. We retain personal data only as long as necessary to fulfill service operations and comply with legal requirements.
               </p>
             </section>
 
             <section className="space-y-2.5">
-              <h3 className="text-base font-bold text-slate-200">5. Account and Data Deletion</h3>
+              <h3 className="text-base font-bold text-slate-200">6. Account and Data Deletion</h3>
               <p>
                 If you would like to request the deletion of your account and all associated personal data from our systems, you can submit a request at any time.
               </p>
@@ -100,7 +128,7 @@ export default function PrivacyPolicyPage() {
             </section>
 
             <section className="space-y-2.5">
-              <h3 className="text-base font-bold text-slate-200">6. Contact Us</h3>
+              <h3 className="text-base font-bold text-slate-200">7. Contact Us</h3>
               <p>
                 If you have questions or comments about this Privacy Policy, please contact us at:
               </p>
