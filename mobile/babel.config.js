@@ -37,10 +37,10 @@ module.exports = {
                 const key = path.node.property.name;
                 let value = env[key] ?? process.env[key];
                 if (key === 'API_URL' && (!value || value.includes('10.0.2.2') || value.includes('localhost'))) {
-                  value = 'https://plowpath-api-staging.fly.dev/api/v1';
+                  value = 'https://api.plowpath.ca/api/v1';
                 }
                 if (key === 'WEBSOCKET_URL' && (!value || value.includes('10.0.2.2') || value.includes('localhost'))) {
-                  value = 'https://plowpath-api-staging.fly.dev';
+                  value = 'https://api.plowpath.ca';
                 }
                 if (value !== undefined) {
                   path.replaceWith(t.valueToNode(value));

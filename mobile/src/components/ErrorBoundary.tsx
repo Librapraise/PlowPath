@@ -1,5 +1,12 @@
 import React, { Component, type ReactNode, type ErrorInfo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Clipboard } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Clipboard as RNClipboard } from 'react-native';
+
+// Clipboard was removed from core in React Native 0.73+. Fall back gracefully.
+let Clipboard: { setString: (s: string) => void } = RNClipboard as any;
+if (!Clipboard || typeof Clipboard.setString !== 'function') {
+  Clipboard = { setString: () => {} };
+}
+
 
 interface Props {
   children: ReactNode;
