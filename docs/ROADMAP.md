@@ -252,41 +252,41 @@ Building visual customization dashboards to transition from static config files 
 Elevating the app to production-grade security, enterprise liability standards, and frictionless UX for drivers and property owners.
 
 ### 🖥️ Dispatcher Web Dashboard
-- [ ] **Onboarding CSV Import**: Create a bulk uploader for customers and properties with address validation and Nominatim geocode preview.
-- [ ] **Drag-and-Drop Route Overrides**: Add an interactive reordering interface (e.g., via React-DnD or dnd-kit) to let dispatchers manually shuffle generated route priorities.
-- [ ] **Historical Route Playback**: Implement a Leaflet-based playback dashboard to scrub through past driver breadcrumbs, protecting the company from non-service complaints.
-- [ ] **Driver Heartbeat/Telemetry Monitor**: Display connection warning triggers (e.g. gray out pins after 5 minutes of socket silence).
-- [ ] **Driver Fatigue & Hour Tracker**: Visual shift timer next to each driver on the LiveOps sidebar and map, displaying elapsed hours on the current shift and active status. Automatically triggers amber flags at 8 hours and red alerts at 12 hours of continuous work to manage part-time driver swaps and protect safety (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#21-fatigue-engine-specifications-pm-spec)).
-- [ ] **High-Priority Dispatch Message Board**: Dedicated control interface to push instantaneous, high-priority notifications to specific drivers (e.g. "Emergency pass requested by 5 AM at [Customer Address]"). Shows receipt confirmation once driver acknowledges on mobile (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#part-3-operational-edge-cases--failsafe-architecture)).
-- [ ] **Live Weather Widget**: Auto-refreshing weather alert panel synced every 15 minutes, displaying regional accumulation rates and temperature forecasts to aid in driver staffing decisions (e.g. calling in part-time replacements).
-- [ ] **PlowPath Community Subcontracting Console (P2P Job Sharing Demo)**: An interactive console for dispatchers dealing with fleet/tractor breakdowns. Allows dispatchers to select a route or multi-select stops, set a subcontract rate (e.g. "$40/stop"), and "Broadcast Subcontract Offer" to nearby companies (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#11-product-vision--business-workflows-pm-spec)).
-- [ ] **Subcontract Request Ingest Panel (Competitor View)**: A visual interface showing how another organization's dispatcher receives the subcontract offer, reviews the geocoded stops, and clicks "Accept Offer"—instantly merging the subcontracted stops into their active route queue (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#11-product-vision--business-workflows-pm-spec)).
+- [x] **Onboarding CSV Import**: Create a bulk uploader for customers and properties with address validation and Nominatim geocode preview.
+- [x] **Drag-and-Drop Route Overrides**: Add an interactive reordering interface (e.g., via React-DnD or dnd-kit) to let dispatchers manually shuffle generated route priorities.
+- [x] **Historical Route Playback**: Implement a Leaflet-based playback dashboard to scrub through past driver breadcrumbs, protecting the company from non-service complaints.
+- [x] **Driver Heartbeat/Telemetry Monitor**: Display connection warning triggers (e.g. gray out pins after 5 minutes of socket silence).
+- [x] **Driver Fatigue & Hour Tracker**: Visual shift timer next to each driver on the LiveOps sidebar and map, displaying elapsed hours on the current shift and active status. Automatically triggers amber flags at 8 hours and red alerts at 12 hours of continuous work to manage part-time driver swaps and protect safety (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#21-fatigue-engine-specifications-pm-spec)).
+- [x] **High-Priority Dispatch Message Board**: Dedicated control interface to push instantaneous, high-priority notifications to specific drivers (e.g. "Emergency pass requested by 5 AM at [Customer Address]"). Shows receipt confirmation once driver acknowledges on mobile (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#part-3-operational-edge-cases--failsafe-architecture)).
+- [x] **Live Weather Widget**: Auto-refreshing weather alert panel synced every 15 minutes, displaying regional accumulation rates and temperature forecasts to aid in driver staffing decisions (e.g. calling in part-time replacements).
+- [x] **PlowPath Community Subcontracting Console (P2P Job Sharing Demo)**: An interactive console for dispatchers dealing with fleet/tractor breakdowns. Allows dispatchers to select a route or multi-select stops, set a subcontract rate (e.g. "$40/stop"), and "Broadcast Subcontract Offer" to nearby companies (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#11-product-vision--business-workflows-pm-spec)).
+- [x] **Subcontract Request Ingest Panel (Competitor View)**: A visual interface showing how another organization's dispatcher receives the subcontract offer, reviews the geocoded stops, and clicks "Accept Offer"—instantly merging the subcontracted stops into their active route queue (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#11-product-vision--business-workflows-pm-spec)).
 
 ### 📱 Driver Mobile App
-- [ ] **Extreme-Simplicity "One-Tap" UI Layout**: High-contrast, large-button interface optimized for glove-wearing and low-literacy drivers. Icon-centric navigation, minimal typing requirements, and voice feedback that reads aloud incoming dispatch messages to minimize distraction.
-- [ ] **Part-Time Shift Handover Console**: A super-simple "Shift Swap" screen allowing replacement drivers to take over an active route by scanning a QR code or tapping "Begin Shift". Seamlessly passes active route state, GPS logging history, and pending stop lists (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#23-shift-swap--qr-code-handover-mechanics-engineer-spec)).
-- [ ] **Dynamic Route Auto-Reoptimization**: If a high-priority/emergency customer stop is injected or skipped, automatically recalculate the remaining route stops on the fly (via OSRM) to display the most time-efficient path without manual input (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#part-3-operational-edge-cases--failsafe-architecture)).
-- [ ] **Visual Message Overlays & Audio Alerts**: Flash incoming high-priority dispatch messages full-screen in large fonts with high-priority audio chime so fatigued drivers do not miss urgent route changes.
-- [ ] **Subcontracted Stop Indicator**: Distinctly flags subcontracted stops in the driver's Navigation Screen with a prominent "Partner Job: [Origin Company Name]" badge, proving that cross-company shared routes render in the same offline turn-by-turn list (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#13-real-time-network--offline-first-sync-invariants-engineer-spec)).
-- [ ] **Proof of Service (Photos & Notes)**: Add a camera capture step upon stop completion, compressing photos (<200KB) and saving them to S3/Cloudinary tied to `route_stops`.
-- [ ] **External Navigation Selector**: Create a quick-launcher deep-linking directly into Google Maps, Apple Maps, or Waze based on driver preferences.
-- [ ] **OS Background Kill Resiliency**: Develop native Android sticky services and `BroadcastReceiver` self-healers to automatically resume GPS tracking if the app is killed due to RAM pressure in cold weather.
-- [ ] **Hands-Free Voice Commands**: Wire basic offline speech-to-text triggers (e.g. "Mark Complete", "Skip Stop") to keep driver eyes on the road.
-- [ ] **Geofenced Auto-Completions**: Add automatic status updates to "In Progress" when within 25m of stop coordinates, and prompt auto-completion when leaving the zone.
+- [x] **Extreme-Simplicity "One-Tap" UI Layout**: High-contrast, large-button interface optimized for glove-wearing and low-literacy drivers. Icon-centric navigation, minimal typing requirements, and voice feedback that reads aloud incoming dispatch messages to minimize distraction.
+- [x] **Part-Time Shift Handover Console**: A super-simple "Shift Swap" screen allowing replacement drivers to take over an active route by scanning a QR code or tapping "Begin Shift". Seamlessly passes active route state, GPS logging history, and pending stop lists (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#23-shift-swap--qr-code-handover-mechanics-engineer-spec)).
+- [x] **Dynamic Route Auto-Reoptimization**: If a high-priority/emergency customer stop is injected or skipped, automatically recalculate the remaining route stops on the fly (via OSRM) to display the most time-efficient path without manual input (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#part-3-operational-edge-cases--failsafe-architecture)).
+- [x] **Visual Message Overlays & Audio Alerts**: Flash incoming high-priority dispatch messages full-screen in large fonts with high-priority audio chime so fatigued drivers do not miss urgent route changes.
+- [x] **Subcontracted Stop Indicator**: Distinctly flags subcontracted stops in the driver's Navigation Screen with a prominent "Partner Job: [Origin Company Name]" badge, proving that cross-company shared routes render in the same offline turn-by-turn list (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#13-real-time-network--offline-first-sync-invariants-engineer-spec)).
+- [x] **Proof of Service (Photos & Notes)**: Add a camera capture step upon stop completion, compressing photos (<200KB) and saving them to S3/Cloudinary tied to `route_stops`.
+- [x] **External Navigation Selector**: Create a quick-launcher deep-linking directly into Google Maps, Apple Maps, or Waze based on driver preferences.
+- [x] **OS Background Kill Resiliency**: Develop native Android sticky services and `BroadcastReceiver` self-healers to automatically resume GPS tracking if the app is killed due to RAM pressure in cold weather.
+- [x] **Hands-Free Voice Commands**: Wire basic offline speech-to-text triggers (e.g. "Mark Complete", "Skip Stop") to keep driver eyes on the road.
+- [x] **Geofenced Auto-Completions**: Add automatic status updates to "In Progress" when within 25m of stop coordinates, and prompt auto-completion when leaving the zone.
 
 ### ✉️ Property Owner Experience
-- [ ] **Homeowner "Where's My Plow?" Live Tracking Portal**: Develop a beautiful, lightweight web page linked via secure SMS slugs (e.g., `plowpath.app/track/x9a3f`) showing a visual progress stepper and driver radius geofence.
+- [x] **Homeowner "Where's My Plow?" Live Tracking Portal**: Develop a beautiful, lightweight web page linked via secure SMS slugs (e.g., `plowpath.app/track/x9a3f`) showing a visual progress stepper and driver radius geofence.
 
 ### ⚙️ System Tuning & Telemetry
-- [ ] **15-Min Weather Update Push Worker**: A Bull cron worker running every 15 minutes that fetches regional meteorological feeds (e.g., OpenWeather API) and broadcasts compact weather packets via Socket.io / FCM to all active drivers and refreshes the dispatch weather panel.
-- [ ] **Driver Shift Schema & Logging API**: Database migrations creating `driver_shifts` and endpoints `POST /shifts/start`, `POST /shifts/end` to track active working hours, breaks, and calculate total continuous duty duration (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#22-shift-tracking-database-schemas-architect-spec)).
-- [ ] **Mobile Sync Jitter**: Add randomized backoff retry loops to mobile synchronization flushes to prevent DDOS'ing the database upon signal recovery.
-- [ ] **Database Partitioning**: Configure PG cron partitioning on the `gps_tracking` table to preserve raw logs for 30 days and store only aggregated 1-minute summaries thereafter.
-- [ ] **CSRF protection on dispatcher write endpoints** (PRD Security Hardening §6) — double-submit cookie pattern on all `POST/PUT/DELETE /api/v1/*` from the web dashboard. Mobile uses bearer tokens only, so it's web-specific.
-- [ ] **Web bundle code-splitting + lazy routes** — split RoutesPage's Leaflet import + each CRUD page into separate chunks (`React.lazy` + `Suspense`). Targets the ~622 KB JS bundle the audit flagged.
-- [ ] **Image optimization on mobile photo capture** — compress to <200KB before S3/Cloudinary upload (PRD perf target; already drafted in Phase 6 "Proof of Service" above but the size cap wasn't explicit).
-- [ ] **gzip/brotli response compression on the API** — Express `compression` middleware; reduces dashboard JSON payload by ~70%.
-- [ ] **Mobile orientation support** (NFR-5.5) — verify portrait + landscape layouts on NavigationScreen (drivers often dock the phone landscape on a windshield mount). Currently untested.
+- [x] **15-Min Weather Update Push Worker**: A Bull cron worker running every 15 minutes that fetches regional meteorological feeds (e.g., OpenWeather API) and broadcasts compact weather packets via Socket.io / FCM to all active drivers and refreshes the dispatch weather panel.
+- [x] **Driver Shift Schema & Logging API**: Database migrations creating `driver_shifts` and endpoints `POST /shifts/start`, `POST /shifts/end` to track active working hours, breaks, and calculate total continuous duty duration (See [B2B_SUBCONTRACTING_ARCHITECTURE.md](B2B_SUBCONTRACTING_ARCHITECTURE.md#22-shift-tracking-database-schemas-architect-spec)).
+- [x] **Mobile Sync Jitter**: Add randomized backoff retry loops to mobile synchronization flushes to prevent DDOS'ing the database upon signal recovery.
+- [x] **Database Partitioning**: Configure PG cron partitioning on the `gps_tracking` table to preserve raw logs for 30 days and store only aggregated 1-minute summaries thereafter.
+- [x] **CSRF protection on dispatcher write endpoints** (PRD Security Hardening §6) — double-submit cookie pattern on all `POST/PUT/DELETE /api/v1/*` from the web dashboard. Mobile uses bearer tokens only, so it's web-specific.
+- [x] **Web bundle code-splitting + lazy routes** — split RoutesPage's Leaflet import + each CRUD page into separate chunks (`React.lazy` + `Suspense`). Targets the ~622 KB JS bundle the audit flagged.
+- [x] **Image optimization on mobile photo capture** — compress to <200KB before S3/Cloudinary upload (PRD perf target; already drafted in Phase 6 "Proof of Service" above but the size cap wasn't explicit).
+- [x] **gzip/brotli response compression on the API** — Express `compression` middleware; reduces dashboard JSON payload by ~70%.
+- [x] **Mobile orientation support** (NFR-5.5) — verify portrait + landscape layouts on NavigationScreen (drivers often dock the phone landscape on a windshield mount). Currently untested.
 
 **Exit checklist**: Dispatcher can onboard a customer base of 200 properties in under 5 minutes. Drivers plow routes with zero screen-taps via voice, geofences, and an ultra-simple one-tap UI. Dispatchers can track continuous driver hours and easily message active drivers. Customers view active plow progress without calling the office. Photo proof of service is logged on every completion.
 
@@ -297,29 +297,29 @@ Elevating the app to production-grade security, enterprise liability standards, 
 Adding financial metrics, performance tracking, dynamic line/bar charts, and automated report exports to enable data-driven operations.
 
 ### 🖥️ Dispatcher Analytics Dashboard (Web)
-- [ ] **Key Metric Summary Cards**: Visual dashboard counters displaying gross revenue, direct costs, net margins, and total properties cleared.
-- [ ] **Financial Tracking Calculations**:
+- [x] **Key Metric Summary Cards**: Visual dashboard counters displaying gross revenue, direct costs, net margins, and total properties cleared.
+- [x] **Financial Tracking Calculations**:
   - *Labor Cost calculations*: Calculate active driver labor hours per storm and multiply by their hourly rate (`hours * hourly_rate`).
   - *Fuel Consumption calculations*: Estimate fuel usage based on route distance and vehicle fuel economy (`route_distance * vehicle_mpg`).
   - *Margin calculations*: Compute gross margin (`revenue - direct_costs`) and net margin (`gross_margin - overhead_allocation`).
-- [ ] **Performance Metrics HUD**:
+- [x] **Performance Metrics HUD**:
   - *Efficiency rankings*: Speed indices displaying properties serviced per hour per driver and average route completion times.
   - *Seasonal analytics*: Compare storm-by-storm financial and operational performance.
-- [ ] **Interactive Visualizations**:
-  - *Line Chart*: Render revenue trends over time.
-  - *Bar Chart*: Graph driver efficiency comparisons.
-  - *Breakdown Table*: Detailed storm-by-storm financial rows.
-- [ ] **Date Range Selector**: Filter historical charts by custom dates.
-- [ ] **CSV & PDF Report Export**: Export complete financial spreadsheets and PDF reports for accounting.
+- [x] **Interactive Visualizations**:
+  - [x] *Line Chart*: Render revenue trends over time.
+  - [x] *Bar Chart*: Graph driver efficiency comparisons.
+  - [x] *Breakdown Table*: Detailed storm-by-storm financial rows.
+- [x] **Date Range Selector**: Filter historical charts by custom dates.
+- [x] **CSV & PDF Report Export**: Export complete financial spreadsheets and PDF reports for accounting.
 
 ### 🔮 Forecasting Tools (PRD Module 3.3)
-- [ ] **Seasonal revenue projection** — extrapolate from last 3 winters' storm frequency + average revenue/storm, returned by `GET /api/v1/analytics/forecast/seasonal`.
-- [ ] **Crew-size recommender** — given current customer count and historical properties/hour/driver, compute the minimum crew size that hits "all properties serviced within 8h" at the 90th-percentile storm size.
-- [ ] **Fleet capacity utilization chart** — % of theoretical max throughput used per storm, surfaces over-/under-staffing patterns.
-- [ ] **Pricing-optimization signal** — flag customer cohorts (geographic clusters, property types) whose per-stop profitability is in the bottom decile after fuel + labor allocation; surface as a dispatcher action item.
+- [x] **Seasonal revenue projection** — extrapolate from last 3 winters' storm frequency + average revenue/storm, returned by `GET /api/v1/analytics/forecast/seasonal`.
+- [x] **Crew-size recommender** — given current customer count and historical properties/hour/driver, compute the minimum crew size that hits "all properties serviced within 8h" at the 90th-percentile storm size.
+- [x] **Fleet capacity utilization chart** — % of theoretical max throughput used per storm, surfaces over-/under-staffing patterns.
+- [x] **Pricing-optimization signal** — flag customer cohorts (geographic clusters, property types) whose per-stop profitability is in the bottom decile after fuel + labor allocation; surface as a dispatcher action item.
 
 ### 🗄️ Database & API Persistence
-- [ ] **Analytics API Endpoints**: Expose backend routes:
+- [x] **Analytics API Endpoints**: Expose backend routes:
   - `GET /api/v1/analytics/storm/:stormId`
   - `GET /api/v1/analytics/seasonal`
   - `GET /api/v1/analytics/driver/:driverId`

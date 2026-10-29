@@ -75,7 +75,7 @@ export async function markStopStatus(
   }
 }
 
-export async function markRouteCompleted(routeId: string, status: 'completed'): Promise<void> {
+export async function markRouteCompleted(routeId: string, status: 'in_progress' | 'completed'): Promise<void> {
   const offlineRoute = await loadRouteOffline(routeId);
   if (offlineRoute) {
     offlineRoute.status = status;
@@ -85,7 +85,7 @@ export async function markRouteCompleted(routeId: string, status: 'completed'): 
   try {
     await api.put(`/routes/${routeId}`, { status });
   } catch (err) {
-    // Standard best effort or enqueue (or just update local state)
-    console.error('Failed to mark route completed on server', err);
+    // Standard best effort — status will reflect correctly on next fetch
+    console.error(`Failed to update route status to '${status}' on server`, err);
   }
 }

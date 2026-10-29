@@ -14,6 +14,7 @@ const organizationSettingsSchema = z.object({
       sms_pre_storm: z.string().min(1, 'Pre-storm template is required'),
       sms_en_route: z.string().min(1, 'En-route template is required'),
       sms_completed: z.string().min(1, 'Completed template is required'),
+      email_overdue: z.string().min(1, 'Overdue email template is required').optional(),
     }),
     quiet_hours: z.object({
       enabled: z.boolean(),
@@ -26,15 +27,24 @@ const organizationSettingsSchema = z.object({
       max_lat: z.number(),
       max_lon: z.number(),
     }).nullable().optional(),
+    pricing: z.object({
+      residential_rate: z.number().nonnegative(),
+      commercial_rate: z.number().nonnegative(),
+      fuel_price_per_gallon: z.number().nonnegative(),
+      vehicle_mpg: z.number().positive(),
+      overhead_percentage: z.number().nonnegative(),
+    }).optional(),
   }),
 });
 
 // Zod schema for driver specific device state preferences
 const driverSettingsSchema = z.object({
   theme: z.enum(['light', 'dark']),
+  theme_mode: z.enum(['light', 'dark', 'auto']).optional(),
   navigation_app: z.enum(['google_maps', 'apple_maps', 'waze']),
   tracking_accuracy: z.enum(['high', 'power_saver']),
   upload_frequency_seconds: z.number().int().positive(),
+  high_contrast_map: z.boolean().optional(),
 });
 
 // 🖥️ GET /api/v1/settings
@@ -77,6 +87,23 @@ export async function updateSettings(req: Request, res: Response): Promise<void>
   }
 
   res.json(rows[0]);
+}
+
+// 🖥️ GET /api/v1/settings/organizations
+export async function getOtherOrganizations(req: Request, res: Response): Promise<void> {
+  const user = (req as any).user;
+  if (!user || !user.orgId) {
+    throw HttpError.badRequest('User does not belong to an organization');
+  }
+
+  const { rows } = await query(
+    `SELECT settings_id, company_name
+       FROM organization_settings
+      WHERE settings_id != $1`,
+    [user.orgId]
+  );
+
+  res.json(rows);
 }
 
 // 📱 GET /api/v1/drivers/me/settings

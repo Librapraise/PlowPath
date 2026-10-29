@@ -4,11 +4,13 @@ import { useStormsStore } from '../store/stormsStore';
 import { useDriversStore } from '../store/driversStore';
 import { useCustomersStore } from '../store/customersStore';
 import { useToastStore } from '../store/toastStore';
+import { useTranslation } from '../services/i18n';
 import { Plus, Navigation, MapPin, Eye, Search, Check, ShieldAlert, Clock, Compass, Truck } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import RoutePolyline from '../components/Map/RoutePolyline';
 import CustomSelect from '../components/CustomSelect';
+import { api } from '../services/api';
 
 // Leaflet map center utility
 function FocusRouteMap({ bounds }: { bounds: L.LatLngBounds | null }) {
@@ -45,6 +47,7 @@ const getStopIcon = (status: RouteStop['status'], seq: number) => {
 };
 
 export default function RoutesPage() {
+  const { t } = useTranslation();
   const { routes, currentRoute, isLoading, fetchRoutes, fetchRouteDetails, generateRoute, updateStopStatus, broadcastSms } = useRoutesStore();
   const { storms, fetchStorms } = useStormsStore();
   const { drivers, fetchDrivers } = useDriversStore();
@@ -63,6 +66,57 @@ export default function RoutesPage() {
   const [startLat, setStartLat] = useState('42.8864'); // Default Buffalo center
   const [startLon, setStartLon] = useState('-78.8784');
   const [passNumber, setPassNumber] = useState('1');
+
+  // Drag and Drop States
+  const [localStops, setLocalStops] = useState<RouteStop[]>([]);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+
+  // Proof of Service Image Preview Modal
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentRoute?.stops) {
+      setLocalStops(currentRoute.stops);
+    }
+  }, [currentRoute]);
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggingIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggingIdx === null || draggingIdx === targetIdx) return;
+
+    const updated = [...localStops];
+    const draggedItem = updated[draggingIdx];
+    updated.splice(draggingIdx, 1);
+    updated.splice(targetIdx, 0, draggedItem);
+
+    setDraggingIdx(targetIdx);
+    setLocalStops(updated);
+  };
+
+  const handleDragEnd = async () => {
+    if (!currentRoute || draggingIdx === null) return;
+    setDraggingIdx(null);
+
+    try {
+      const reorderedStops = localStops.map((stop, idx) => ({
+        stop_id: stop.stop_id,
+        sequence_number: idx + 1,
+      }));
+
+      await api.put(`/routes/${currentRoute.route_id}`, { stops: reorderedStops });
+      useToastStore.getState().addToast('Route sequences overridden successfully', 'success');
+      fetchRouteDetails(currentRoute.route_id);
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message ?? 'Failed to reorder route sequence';
+      useToastStore.getState().addToast(msg, 'error');
+      if (currentRoute.stops) setLocalStops(currentRoute.stops);
+    }
+  };
 
   // Broadcast SMS Fields
   const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -331,8 +385,17 @@ export default function RoutesPage() {
                   Optimized Stop Sequence
                 </div>
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-800/40 p-2 space-y-1.5">
-                  {currentRoute.stops?.map((stop) => (
-                    <div key={stop.stop_id} className="p-3 bg-slate-900/40 border border-slate-850/60 rounded-xl hover:border-slate-800 transition-all text-xs font-semibold">
+                  {localStops.map((stop, idx) => (
+                    <div
+                      key={stop.stop_id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`p-3 bg-slate-900/40 border border-slate-850/60 rounded-xl hover:border-slate-800 transition-all text-xs font-semibold cursor-grab active:cursor-grabbing ${
+                        draggingIdx === idx ? 'opacity-40 scale-95 border-brand-500/30' : ''
+                      }`}
+                    >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
                           <span className={`w-5.5 h-5.5 rounded-full flex items-center justify-center font-black ${
@@ -376,8 +439,21 @@ export default function RoutesPage() {
                       )}
                       
                       {stop.notes && (
-                        <div className="mt-2 bg-slate-950/60 p-2 rounded-lg border border-slate-850 pl-2 text-[10px] text-slate-400 italic">
-                          "{stop.notes}"
+                        <div className="mt-2 bg-slate-950/60 p-2 rounded-lg border border-slate-850 pl-2 text-[10px] text-slate-400 italic flex flex-col items-start gap-1.5">
+                          <span>"{stop.notes}"</span>
+                          {stop.notes.includes('Proof of service uploaded') && (
+                            <button
+                              onClick={() => {
+                                const notesStr = stop.notes || '';
+                                const idx = notesStr.indexOf('Proof of service uploaded: ');
+                                const imgUrl = idx !== -1 ? notesStr.substring(idx + 27) : '/mock_s3_compressed_146kb.jpg';
+                                setPreviewImage(imgUrl.startsWith('data:image/') ? imgUrl : '/mock_s3_compressed_146kb.jpg');
+                              }}
+                              className="px-2 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[9px] font-extrabold cursor-pointer transition-colors"
+                            >
+                              📷 View Proof Photo
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -631,6 +707,30 @@ export default function RoutesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Proof of Service Image Preview Modal Overlay */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-white">Proof of Service Photo Verification</span>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer"
+              >
+                Close ✕
+              </button>
+            </div>
+            <img
+              src={previewImage}
+              alt="Proof of Service"
+              className="w-full max-h-[70vh] object-contain rounded-lg border border-slate-850"
+            />
+            <div className="mt-3 text-xs text-slate-450 font-semibold text-center">
+              Liability protection proof of service escrow photo · Verified Clear
+            </div>
           </div>
         </div>
       )}

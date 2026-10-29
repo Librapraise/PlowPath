@@ -1,12 +1,20 @@
 import type { Request, Response } from 'express';
-import { login, refresh, logout } from '../auth.controller';
+import { login, refresh, logout, forgotPassword, resetPassword } from '../auth.controller';
 import { query } from '../../config/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
+import { sendEmail } from '../../services/email.service';
+import { sendSms } from '../../services/twilio.service';
 
 jest.mock('../../config/db', () => ({
   query: jest.fn(),
+}));
+jest.mock('../../services/email.service', () => ({
+  sendEmail: jest.fn(),
+}));
+jest.mock('../../services/twilio.service', () => ({
+  sendSms: jest.fn(),
 }));
 
 describe('Auth Controller', () => {
@@ -148,6 +156,153 @@ describe('Auth Controller', () => {
       await logout(mockReq as Request, mockRes as Response);
       expect(mockStatus).toHaveBeenCalledWith(204);
       expect(mockEnd).toHaveBeenCalled();
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('should send an email reset code when identifier is an email', async () => {
+      mockReq.body = { identifier: 'owner@plowpath.com' };
+      (query as jest.Mock).mockResolvedValueOnce({
+        rows: [{
+          user_id: 'user-123',
+          email: 'owner@plowpath.com',
+          phone: null,
+          name: 'Owner User',
+        }],
+      });
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] }); // For the update query
+
+      await forgotPassword(mockReq as Request, mockRes as Response);
+
+      expect(query).toHaveBeenNthCalledWith(1, expect.stringContaining('email = $1'), ['owner@plowpath.com']);
+      expect(query).toHaveBeenNthCalledWith(2, expect.stringContaining('UPDATE users'), expect.any(Array));
+      expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        to: 'owner@plowpath.com',
+        subject: 'PlowPath Password Reset Code',
+      }));
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'If the account exists, a reset code has been sent.' });
+    });
+
+    it('should send an SMS reset code when identifier is a phone number', async () => {
+      mockReq.body = { identifier: '5550199' };
+      (query as jest.Mock).mockResolvedValueOnce({
+        rows: [{
+          user_id: 'user-123',
+          email: null,
+          phone: '5550199',
+          name: 'Owner User',
+        }],
+      });
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] }); // For the update query
+
+      await forgotPassword(mockReq as Request, mockRes as Response);
+
+      expect(query).toHaveBeenNthCalledWith(1, expect.stringContaining('phone = $1'), ['5550199']);
+      expect(query).toHaveBeenNthCalledWith(2, expect.stringContaining('UPDATE users'), expect.any(Array));
+      expect(sendSms).toHaveBeenCalledWith(expect.objectContaining({
+        to: '5550199',
+        body: expect.stringContaining('Your PlowPath password reset code is'),
+      }));
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it('should return 200 message and do nothing if user is not found', async () => {
+      mockReq.body = { identifier: 'unknown@plowpath.com' };
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      await forgotPassword(mockReq as Request, mockRes as Response);
+
+      expect(query).toHaveBeenCalledWith(expect.stringContaining('email = $1'), ['unknown@plowpath.com']);
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(sendSms).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it('should throw and log error when database fails', async () => {
+      mockReq.body = { identifier: 'owner@plowpath.com' };
+      (query as jest.Mock).mockRejectedValueOnce(new Error('DB failure'));
+
+      await expect(forgotPassword(mockReq as Request, mockRes as Response)).rejects.toThrow('DB failure');
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should update password hash successfully if code matches and is not expired', async () => {
+      mockReq.body = {
+        identifier: 'owner@plowpath.com',
+        token: '123456',
+        newPassword: 'newsecurepassword',
+      };
+      
+      const expiry = new Date(Date.now() + 5000).toISOString();
+      (query as jest.Mock).mockResolvedValueOnce({
+        rows: [{
+          user_id: 'user-123',
+          email: 'owner@plowpath.com',
+          phone: null,
+          reset_token: '123456',
+          reset_token_expires_at: expiry,
+        }],
+      });
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] }); // For the update query
+
+      await resetPassword(mockReq as Request, mockRes as Response);
+
+      expect(query).toHaveBeenNthCalledWith(1, expect.stringContaining('email = $1'), ['owner@plowpath.com']);
+      expect(query).toHaveBeenNthCalledWith(2, expect.stringContaining('UPDATE users'), expect.any(Array));
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Password has been successfully updated.' });
+    });
+
+    it('should throw badRequest if user is not found', async () => {
+      mockReq.body = {
+        identifier: 'owner@plowpath.com',
+        token: '123456',
+        newPassword: 'newsecurepassword',
+      };
+      (query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      await expect(resetPassword(mockReq as Request, mockRes as Response)).rejects.toThrow('Invalid verification code or identifier');
+    });
+
+    it('should throw badRequest if token is invalid', async () => {
+      mockReq.body = {
+        identifier: 'owner@plowpath.com',
+        token: '123456',
+        newPassword: 'newsecurepassword',
+      };
+      (query as jest.Mock).mockResolvedValueOnce({
+        rows: [{
+          user_id: 'user-123',
+          email: 'owner@plowpath.com',
+          phone: null,
+          reset_token: 'wrong_token',
+          reset_token_expires_at: new Date(Date.now() + 5000).toISOString(),
+        }],
+      });
+
+      await expect(resetPassword(mockReq as Request, mockRes as Response)).rejects.toThrow('Invalid verification code or identifier');
+    });
+
+    it('should throw badRequest if token has expired', async () => {
+      mockReq.body = {
+        identifier: 'owner@plowpath.com',
+        token: '123456',
+        newPassword: 'newsecurepassword',
+      };
+      const pastExpiry = new Date(Date.now() - 5000).toISOString();
+      (query as jest.Mock).mockResolvedValueOnce({
+        rows: [{
+          user_id: 'user-123',
+          email: 'owner@plowpath.com',
+          phone: null,
+          reset_token: '123456',
+          reset_token_expires_at: pastExpiry,
+        }],
+      });
+
+      await expect(resetPassword(mockReq as Request, mockRes as Response)).rejects.toThrow('Verification code has expired');
     });
   });
 });

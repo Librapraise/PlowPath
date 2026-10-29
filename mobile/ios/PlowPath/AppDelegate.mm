@@ -12,7 +12,16 @@
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
 
-  [FIRApp configure];
+  @try {
+    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"GoogleService-Info" ofType:@"plist"];
+    if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+      if ([FIRApp defaultApp] == nil) {
+        [FIRApp configure];
+      }
+    }
+  } @catch (NSException *exception) {
+    NSLog(@"[Firebase] Failed to configure FIRApp: %@", exception);
+  }
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }

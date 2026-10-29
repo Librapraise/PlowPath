@@ -1,11 +1,19 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const baseURL = process.env.API_URL ?? 'http://10.0.2.2:3000/api/v1';
+// Set global client type header to bypass backend CSRF checks for mobile client
+axios.defaults.headers.common['x-client-type'] = 'mobile-app';
 
-export const api = axios.create({ baseURL, timeout: 15_000 });
+const rawApiUrl = process.env.API_URL;
+const baseURL =
+  rawApiUrl && !rawApiUrl.includes('10.0.2.2') && !rawApiUrl.includes('localhost')
+    ? rawApiUrl
+    : 'https://api.plowpath.ca/api/v1';
+
+export const api = axios.create({ baseURL, timeout: 30_000 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  config.headers.set('X-Client-Type', 'mobile-app');
   const token = useAuthStore.getState().token;
   if (token) {
     config.headers.set('Authorization', `Bearer ${token}`);

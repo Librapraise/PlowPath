@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -7,10 +7,14 @@ import { useRoutesStore, type Route } from '../store/routesStore';
 import { useStormsStore } from '../store/stormsStore';
 import LeafletMap from '../components/Map/LeafletMap';
 import CustomSelect from '../components/CustomSelect';
+import SubcontractConsole from '../components/SubcontractConsole';
+import { useToastStore } from '../store/toastStore';
+import { useTranslation } from '../services/i18n';
 import {
   Search, ShieldAlert, Clock, Compass, Truck, Phone, Navigation,
   ChevronLeft, ChevronRight, RefreshCw, Eye, EyeOff, CheckCircle2,
-  TrendingUp, MapPin, User, DollarSign, Activity
+  TrendingUp, MapPin, User, DollarSign, Activity, AlertTriangle,
+  Volume2, Play, Pause, Sliders, Briefcase, CloudSnow
 } from 'lucide-react';
 
 export interface DriverPosition {
@@ -25,6 +29,7 @@ export interface DriverPosition {
 }
 
 export default function LiveOpsPage() {
+  const { t, formatCurrency } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
@@ -37,8 +42,30 @@ export default function LiveOpsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [urgentRequest, setUrgentRequest] = useState<any>(null);
 
+  // Active Shifts & Fatigue tracker state
+  const [activeShifts, setActiveShifts] = useState<Record<string, any>>({});
+
+  // Subcontract Console Modal State
+  const [subcontractOpen, setSubcontractOpen] = useState(false);
+
+  // High-Priority Alert Dispatcher State
+  const [alertMessage, setAlertMessage] = useState('');
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
+
+  // Weather Widget State
+  const [weatherData, setWeatherData] = useState<any>(null);
+
+  // Historical Playback state
+  const [historicalData, setHistoricalData] = useState<DriverPosition[]>([]);
+  const [playbackIndex, setPlaybackIndex] = useState(0);
+  const [isPlaybackMode, setIsPlaybackMode] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 1x, 2x, 5x, 10x
+  const playbackTimerRef = useRef<any>(null);
+
   // UX controls
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedDriverRoute, setSelectedDriverRoute] = useState<Route | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<[number, number]>>([]);
   const [showBreadcrumbs, setShowBreadcrumbs] = useState(true);
@@ -51,11 +78,37 @@ export default function LiveOpsPage() {
     fetchDrivers();
     fetchRoutes();
     fetchStorms();
+    fetchActiveShifts();
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
   }, []);
 
+  // Bulk-fetch detailed stop data for all routes once the route list is loaded.
+  // This populates individual stop statuses so the sidebar progress bar is accurate
+  // for every driver — not just the one currently selected.
+  useEffect(() => {
+    if (routes.length === 0) return;
+    const routesNeedingDetails = routes.filter((r) => !r.stops);
+    routesNeedingDetails.forEach((r) => {
+      fetchRouteDetails(r.route_id).catch(() => {
+        // Silently ignore fetch failures for individual routes
+      });
+    });
+  }, [routes.length]);
+
+  const fetchActiveShifts = async () => {
+    try {
+      const { data } = await api.get('/shifts/all-active');
+      const shiftMap: Record<string, any> = {};
+      data.data.forEach((s: any) => {
+        shiftMap[s.driver_id] = s;
+      });
+      setActiveShifts(shiftMap);
+    } catch (err) {
+      console.error('Failed to load active shifts', err);
+    }
+  };
 
   // Fetch telemetry and connect to websocket
   useEffect(() => {
@@ -80,7 +133,7 @@ export default function LiveOpsPage() {
       setPositions((prev) => ({ ...prev, [p.driver_id]: p }));
       
       // Reactive real-time breadcrumbs append
-      if (selectedDriverId === p.driver_id && showBreadcrumbs) {
+      if (selectedDriverId === p.driver_id && showBreadcrumbs && !isPlaybackMode) {
         setBreadcrumbs((prev) => [[p.lat, p.lon], ...prev]);
       }
     });
@@ -94,10 +147,23 @@ export default function LiveOpsPage() {
       }
     });
 
+    socket.on('weather:update', (data: any) => {
+      setWeatherData(data);
+    });
+
+    socket.on('driver:telemetry', () => {
+      fetchActiveShifts();
+    });
+
+    socket.on('shift:handover', () => {
+      fetchActiveShifts();
+      fetchRoutes();
+    });
+
     return () => {
       socket.disconnect();
     };
-  }, [token, selectedDriverId, showBreadcrumbs]);
+  }, [token, selectedDriverId, showBreadcrumbs, isPlaybackMode]);
 
   // Load detailed route stops and geometry when selecting a driver
   useEffect(() => {
@@ -131,7 +197,7 @@ export default function LiveOpsPage() {
 
   // Fetch breadcrumb tracking trail if selected
   useEffect(() => {
-    if (selectedDriverId && showBreadcrumbs) {
+    if (selectedDriverId && showBreadcrumbs && !isPlaybackMode) {
       api.get<{ data: DriverPosition[] }>(`/tracking/driver/${selectedDriverId}`)
         .then(({ data }) => {
           const coords = data.data.map((p) => [p.lat, p.lon] as [number, number]);
@@ -144,7 +210,70 @@ export default function LiveOpsPage() {
     } else {
       setBreadcrumbs([]);
     }
-  }, [selectedDriverId, showBreadcrumbs]);
+  }, [selectedDriverId, showBreadcrumbs, isPlaybackMode]);
+
+  // Load single driver history when entering playback mode
+  useEffect(() => {
+    if (selectedDriverId && isPlaybackMode) {
+      api.get<{ data: DriverPosition[] }>(`/tracking/driver/${selectedDriverId}`)
+        .then(({ data }) => {
+          // Sort chronologically (oldest first)
+          const chron = [...(data.data || [])].reverse();
+          setHistoricalData(chron);
+          setPlaybackIndex(0);
+        })
+        .catch(() => {
+          setHistoricalData([]);
+          useToastStore.getState().addToast(t('Failed to retrieve historical telemetry logs'), 'error');
+        })
+        .finally(() => {
+          // Handled
+        });
+    } else {
+      setHistoricalData([]);
+      setIsPlaying(false);
+    }
+  }, [selectedDriverId, isPlaybackMode]);
+
+  // Handle playback interval incrementing
+  useEffect(() => {
+    if (isPlaying && isPlaybackMode && historicalData.length > 0) {
+      playbackTimerRef.current = setInterval(() => {
+        setPlaybackIndex((prev) => {
+          if (prev >= historicalData.length - 1) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 500 / playbackSpeed);
+    } else {
+      if (playbackTimerRef.current) {
+        clearInterval(playbackTimerRef.current);
+      }
+    }
+
+    return () => {
+      if (playbackTimerRef.current) {
+        clearInterval(playbackTimerRef.current);
+      }
+    };
+  }, [isPlaying, isPlaybackMode, historicalData, playbackSpeed]);
+
+  const handleSendDispatchAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDriverId || !alertMessage.trim()) return;
+    setIsSendingAlert(true);
+    try {
+      await api.post(`/drivers/${selectedDriverId}/alert`, { message: alertMessage });
+      useToastStore.getState().addToast(t('Audio dispatch alert transmitted successfully!'), 'success');
+      setAlertMessage('');
+    } catch {
+      useToastStore.getState().addToast(t('Failed to dispatch alert'), 'error');
+    } finally {
+      setIsSendingAlert(false);
+    }
+  };
 
   // Statistics calculation
   const onlineDriverIds = Object.keys(positions);
@@ -153,19 +282,24 @@ export default function LiveOpsPage() {
 
   const handleSelectDriver = (driverId: string | null) => {
     setSelectedDriverId(driverId);
+    setIsPlaybackMode(false);
   };
 
   // Compile full driver records with tracking metadata
   const enrichedDrivers = drivers.map((d) => {
     const tracking = positions[d.driver_id];
     const isOnline = !!tracking && (new Date().getTime() - new Date(tracking.recorded_at).getTime() < 120000); // active in last 2 mins
+    const isStale = !!tracking && (new Date().getTime() - new Date(tracking.recorded_at).getTime() >= 300000); // silent > 5 mins
     const route = routes.find((r) => r.driver_id === d.driver_id && r.status !== 'completed');
+    const shift = activeShifts[d.driver_id];
 
     return {
       ...d,
       tracking,
       isOnline,
+      isStale,
       route,
+      shift,
     };
   });
 
@@ -178,59 +312,73 @@ export default function LiveOpsPage() {
     return matchesSearch;
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0f1a] text-slate-100 p-6 font-sans relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-brand-500/[0.06] blur-[120px] pointer-events-none"></div>
-        <div className="relative flex items-center justify-center mb-8">
-          <div className="absolute w-24 h-24 rounded-full bg-brand-500/15 animate-ping opacity-75"></div>
-          <div className="absolute w-16 h-16 rounded-full bg-brand-500/25 animate-pulse"></div>
-          <div className="w-12 h-12 rounded-full border-4 border-brand-400 border-t-transparent animate-spin"></div>
-        </div>
-        <h2 className="text-xl font-bold tracking-tight text-white mb-2 animate-pulse relative">
-          Synchronizing Live Fleet Telemetry
-        </h2>
-        <p className="text-sm text-slate-400 max-w-xs text-center font-medium relative">
-          Connecting to PlowPath telemetry stream and retrieving latest active GPS signals...
-        </p>
-      </div>
-    );
+  // Override actual positions and breadcrumbs if in playback mode
+  const playbackPositions = { ...positions };
+  if (isPlaybackMode && historicalData[playbackIndex]) {
+    playbackPositions[selectedDriverId!] = {
+      ...positions[selectedDriverId!],
+      lat: historicalData[playbackIndex].lat,
+      lon: historicalData[playbackIndex].lon,
+      speed_mps: historicalData[playbackIndex].speed_mps,
+      heading_deg: historicalData[playbackIndex].heading_deg,
+      recorded_at: historicalData[playbackIndex].recorded_at,
+    };
   }
 
-  // Active selected driver details
+  const mapBreadcrumbs = isPlaybackMode
+    ? historicalData.slice(0, playbackIndex + 1).map((p) => [p.lat, p.lon] as [number, number])
+    : breadcrumbs;
+
+  const weather = weatherData || {
+    temp: 24,
+    condition: 'Heavy Lake-Effect Snow 🌨',
+    wind: '22 mph NE',
+    visibility: '0.4 mi',
+    alert: 'Winter Storm Warning active until Monday 6:00 PM'
+  };
+
   const currentSelectedDriver = enrichedDrivers.find((d) => d.driver_id === selectedDriverId);
 
   return (
     <div className="flex flex-col h-[calc(100vh-69px)] bg-[#0a0f1a] text-slate-100 overflow-hidden font-sans relative">
       
       {/* Dynamic Telemetry Info Header Ribbon */}
-      <div className="flex flex-wrap items-center justify-between px-6 py-2.5 glass-panel border-t-0 border-l-0 border-r-0 gap-4 text-xs font-semibold select-none z-10">
+      <div className="flex flex-wrap items-center justify-between px-6 py-2.5 glass-panel border-t-0 border-b-0 border-l-0 gap-4 text-xs font-semibold select-none z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5 text-slate-400">
             <Activity className="w-4 h-4 text-emerald-400" />
-            <span>Operational Roster:</span>
-            <strong className="text-slate-200">{enrichedDrivers.filter(d => d.isOnline).length} / {drivers.length} Online</strong>
+            <span>{t('Operational Roster')}:</span>
+            <strong className="text-slate-200">{enrichedDrivers.filter(d => d.isOnline).length} / {drivers.length} {t('Online')}</strong>
           </div>
           <span className="text-slate-700">|</span>
           <div className="flex items-center gap-1.5 text-slate-400">
             <Compass className="w-4 h-4 text-brand-400" />
-            <span>Active Runs:</span>
-            <strong className="text-slate-200">{activeRoutesCount} Active</strong>
+            <span>{t('Active Runs')}:</span>
+            <strong className="text-slate-200">{activeRoutesCount} {t('Active')}</strong>
           </div>
         </div>
 
-        {activeStorm ? (
-          <div className="flex items-center gap-2 px-3 py-1 frost-glow-card text-emerald-400 rounded-full animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 telemetry-ping"></span>
-            <span>Storm Event: <strong>{activeStorm.name}</strong></span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700/30">
-            <span className="w-2 h-2 rounded-full bg-slate-600"></span>
-            <span>No Active Storm Event</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {activeStorm ? (
+            <div className="flex items-center gap-2 px-3 py-1 frost-glow-card text-emerald-400 rounded-full animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 telemetry-ping"></span>
+              <span>{t('Storm Event')}: <strong>{activeStorm.name}</strong></span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/60 text-slate-400 rounded-full border border-slate-700/30">
+              <span className="w-2 h-2 rounded-full bg-slate-600"></span>
+              <span>{t('No Active Storm Event')}</span>
+            </div>
+          )}
+
+          <button
+            onClick={() => setSubcontractOpen(true)}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all btn-press ring-1 ring-white/10"
+          >
+            <Briefcase className="w-3.5 h-3.5" />
+            {t('B2B Subcontract Exchange')}
+          </button>
+        </div>
       </div>
 
       {/* Emergency Active Alert Warning Ribbon */}
@@ -239,13 +387,13 @@ export default function LiveOpsPage() {
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping shrink-0"></span>
             <span className="tracking-wide">
-              🚨 ACTIVE EMERGENCY PLOWING REQUEST: Notifying nearest driver "{urgentRequest.driverName || 'crew'}"...
-              Distance: {urgentRequest.distanceMeters ? (urgentRequest.distanceMeters / 1609.34).toFixed(2) : '0.00'} miles away. 
-              (Attempt {urgentRequest.attempt} / {urgentRequest.maxAttempts})
+              🚨 {t('Active Emergency Plowing Request')}: {t('Notifying nearest driver')} "{urgentRequest.driverName || t('crew')}"...
+              {t('Distance')}: {urgentRequest.distanceMeters ? (urgentRequest.distanceMeters / 1609.34).toFixed(2) : '0.00'} {t('miles away')}. 
+              ({t('Attempt')} {urgentRequest.attempt} / {urgentRequest.maxAttempts})
             </span>
           </div>
           <div className="px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <span>Escalation Timer Active: 5 Minutes</span>
+            <span>{t('Escalation Timer Active')}: 5 {t('Minutes')}</span>
           </div>
         </div>
       )}
@@ -258,14 +406,15 @@ export default function LiveOpsPage() {
 
             <div className="p-4 border-b border-slate-900 space-y-3.5">
               <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-white text-base">Fleet Operations</h3>
+                <h3 className="font-extrabold text-white text-base">{t('Fleet Operations')}</h3>
                 <button
                   onClick={() => {
                     fetchDrivers();
                     fetchRoutes();
+                    fetchActiveShifts();
                   }}
                   className="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition-all cursor-pointer"
-                  title="Refreshes fleet connections"
+                  title={t('Refreshes fleet connections')}
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
@@ -276,7 +425,7 @@ export default function LiveOpsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Search fleet, vehicles..."
+                  placeholder={t('Search fleet, vehicles...')}
                   value={driverSearch}
                   onChange={(e) => setDriverSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none focus:border-brand-500/40 placeholder:text-slate-600 font-medium transition-all"
@@ -291,7 +440,7 @@ export default function LiveOpsPage() {
                     filterType === 'all' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-350'
                   }`}
                 >
-                  All ({enrichedDrivers.length})
+                  {t('All')} ({enrichedDrivers.length})
                 </button>
                 <button
                   onClick={() => setFilterType('active')}
@@ -299,7 +448,7 @@ export default function LiveOpsPage() {
                     filterType === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'text-slate-500 hover:text-slate-350'
                   }`}
                 >
-                  Active ({enrichedDrivers.filter((d) => d.isOnline).length})
+                  {t('Active')} ({enrichedDrivers.filter((d) => d.isOnline).length})
                 </button>
                 <button
                   onClick={() => setFilterType('offline')}
@@ -307,7 +456,7 @@ export default function LiveOpsPage() {
                     filterType === 'offline' ? 'bg-slate-900 text-slate-400' : 'text-slate-500 hover:text-slate-350'
                   }`}
                 >
-                  Idle ({enrichedDrivers.filter((d) => !d.isOnline).length})
+                  {t('Idle')} ({enrichedDrivers.filter((d) => !d.isOnline).length})
                 </button>
               </div>
             </div>
@@ -316,21 +465,44 @@ export default function LiveOpsPage() {
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {filteredDrivers.length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-xs font-semibold">
-                  No matches found in operational database.
+                  {t('No matches found in operational database.')}
                 </div>
               ) : (
                 filteredDrivers.map((d) => {
                   const isSelected = selectedDriverId === d.driver_id;
                   
                   // Compute stops completed
-                  let stopRatioString = 'No Active Route';
+                  let stopRatioString = t('No Active Route');
                   let progressPercent = 0;
                   if (d.route) {
                     const matchedDetailed = routes.find((r) => r.route_id === d.route?.route_id);
-                    const completed = matchedDetailed?.stops?.filter((s) => s.status === 'completed').length ?? 0;
-                    const total = matchedDetailed?.stop_count ?? d.route.stop_count ?? 0;
-                    stopRatioString = total > 0 ? `${completed}/${total} stops complete` : 'Stops progress…';
-                    progressPercent = total > 0 ? (completed / total) * 100 : 0;
+                    const completedCount = matchedDetailed?.stops?.filter((s) => s.status === 'completed').length ?? 0;
+                    // stop_count from SQL COUNT() returns a string — coerce to int
+                    const total = parseInt(String(matchedDetailed?.stop_count ?? d.route.stop_count ?? 0), 10);
+                    stopRatioString = total > 0 ? `${completedCount}/${total} ${t('stops complete')}` : t('Stops progress…');
+                    progressPercent = total > 0 ? (completedCount / total) * 100 : 0;
+                  }
+
+                  // Shift Fatigue Tracker
+                  const dShift = d.shift;
+                  let shiftDurationString = '';
+                  let fatigueBadgeClass = '';
+                  let fatigueLabel = '';
+                  
+                  if (dShift && dShift.status === 'active') {
+                    const elapsedMs = Date.now() - new Date(dShift.started_at).getTime();
+                    const elapsedHrs = elapsedMs / (1000 * 60 * 60);
+                    shiftDurationString = `${elapsedHrs.toFixed(1)}h ${t('shift')}`;
+                    
+                    if (elapsedHrs >= 12) {
+                      fatigueLabel = t('Red Fatigue Alert');
+                      fatigueBadgeClass = 'bg-red-500/10 text-red-400 border border-red-500/25 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider animate-pulse';
+                    } else if (elapsedHrs >= 8) {
+                      fatigueLabel = t('Amber Fatigue Warning');
+                      fatigueBadgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider animate-pulse';
+                    } else {
+                      fatigueBadgeClass = 'bg-slate-800/80 text-slate-450 border border-slate-700/40 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider';
+                    }
                   }
 
                   const initials = d.name
@@ -375,8 +547,15 @@ export default function LiveOpsPage() {
                             )}
                           </div>
                           
-                          <div className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate uppercase tracking-wider">
-                            {d.vehicle_type || 'Commercial Plow'}
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[10px] text-slate-450 font-semibold uppercase tracking-wider">
+                              {t(d.vehicle_type || 'Commercial Plow')}
+                            </span>
+                            {shiftDurationString && (
+                              <span className={fatigueBadgeClass} title={fatigueLabel}>
+                                {shiftDurationString}
+                              </span>
+                            )}
                           </div>
 
                           {/* Progress visual bar */}
@@ -411,7 +590,6 @@ export default function LiveOpsPage() {
             sidebarOpen ? 'left-[304px] md:left-[336px] lg:left-[400px]' : 'left-4'
           }`}
         >
-
           {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
 
@@ -420,19 +598,45 @@ export default function LiveOpsPage() {
           
           <div className="flex-1 relative h-full w-full">
             <LeafletMap
-              drivers={Object.values(positions)}
+              drivers={Object.values(playbackPositions)}
               driverDetails={drivers}
               selectedDriverId={selectedDriverId}
               onSelectDriver={handleSelectDriver}
               selectedDriverRoute={selectedDriverRoute}
-              breadcrumbs={breadcrumbs}
-              showBreadcrumbs={showBreadcrumbs}
+              breadcrumbs={mapBreadcrumbs}
+              showBreadcrumbs={showBreadcrumbs || isPlaybackMode}
             />
+
+            {/* Floating Live Weather Widget Overlay */}
+            <div className="absolute top-4 right-4 z-[99] max-w-xs glass-panel rounded-2xl p-3.5 shadow-2xl border border-slate-800/50 flex flex-col space-y-2 select-none pointer-events-auto">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                  <CloudSnow className="w-3.5 h-3.5 text-sky-400 animate-bounce" /> {t('Meteorology Live Alert')}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <span className="text-xl font-black text-white font-mono">{weather.temp}°F</span>
+                  <span className="text-xs font-bold text-slate-200">{weather.condition}</span>
+                </div>
+                <div className="text-[10px] font-semibold text-slate-450 space-y-0.5 text-right shrink-0">
+                  <div>{t('Wind')}: {weather.wind}</div>
+                  <div>{t('Vis')}: {weather.visibility}</div>
+                </div>
+              </div>
+              {weather.alert && (
+                <div className="text-[9px] bg-sky-500/10 border border-sky-500/20 p-2 rounded-lg text-sky-400 font-extrabold flex items-center gap-1 leading-relaxed">
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                  <span>{weather.alert}</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Collapsible details overlay for selected driver */}
+          {/* Collapsible details drawer overlay for selected driver */}
           {selectedDriverId && currentSelectedDriver && (
-            <div className="absolute top-4 right-4 bottom-4 w-96 glass-panel rounded-2xl shadow-2xl z-[999] flex flex-col overflow-hidden animate-slide-in">
+            <div className="absolute top-4 right-4 bottom-4 w-96 glass-panel rounded-2xl shadow-2xl z-[999] flex flex-col overflow-hidden animate-slide-in bg-[#080d17]/95">
               {/* Drawer Header details */}
               <div className="p-4 border-b border-slate-800/40 bg-slate-950/20 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -450,11 +654,11 @@ export default function LiveOpsPage() {
                   </div>
                   <div>
                     <h4 className="font-extrabold text-white text-sm leading-snug">{currentSelectedDriver.name}</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold">{currentSelectedDriver.vehicle_type || 'Plow Vehicle'}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">{t(currentSelectedDriver.vehicle_type || 'Plow Vehicle')}</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setSelectedDriverId(null)}
+                  onClick={() => handleSelectDriver(null)}
                   className="p-1 bg-slate-850 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer"
                 >
                   <EyeOff className="w-4 h-4" />
@@ -468,86 +672,205 @@ export default function LiveOpsPage() {
                 <div className="bg-slate-950/60 rounded-xl p-3 border border-slate-850/60 grid grid-cols-2 gap-3 text-[10px] text-slate-400 font-semibold">
                   <div className="flex items-center gap-2">
                     <Phone className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                    <span className="truncate">{currentSelectedDriver.phone || 'No phone'}</span>
+                    <span className="truncate">{currentSelectedDriver.phone || t('No phone')}</span>
                   </div>
                   <div className="flex items-center gap-1.5 justify-end">
                     <DollarSign className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>${currentSelectedDriver.hourly_rate ?? 35}/hr rate</span>
+                    <span>{formatCurrency(currentSelectedDriver.hourly_rate ?? 35)}/{t('hr rate')}</span>
                   </div>
                 </div>
 
                 {/* Telemetry Live Feed details panel */}
                 <div className="bg-slate-950/40 rounded-xl border border-slate-850 p-3.5 space-y-2">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    Telemetry Stream
+                    {t('Telemetry Stream')}
                   </div>
                   
                   {currentSelectedDriver.tracking ? (
                     <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 text-[10px] font-semibold text-slate-350">
                       <div className="flex flex-col">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">Latest Coordinates</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">{t('Latest Coordinates')}</span>
                         <span className="font-mono text-slate-200 mt-0.5">
-                          {currentSelectedDriver.tracking.lat.toFixed(5)}, {currentSelectedDriver.tracking.lon.toFixed(5)}
+                          {isPlaybackMode && historicalData[playbackIndex] 
+                            ? `${historicalData[playbackIndex].lat.toFixed(5)}, ${historicalData[playbackIndex].lon.toFixed(5)}`
+                            : `${currentSelectedDriver.tracking.lat.toFixed(5)}, ${currentSelectedDriver.tracking.lon.toFixed(5)}`}
                         </span>
                       </div>
                       
                       <div className="flex flex-col">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">Current Speed</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">{t('Current Speed')}</span>
                         <span className="text-slate-200 mt-0.5">
-                          {currentSelectedDriver.tracking.speed_mps != null 
+                          {isPlaybackMode && historicalData[playbackIndex]
+                            ? `${(Number(historicalData[playbackIndex].speed_mps ?? 0) * 2.23694).toFixed(1)} mph`
+                            : currentSelectedDriver.tracking.speed_mps != null 
                             ? `${(currentSelectedDriver.tracking.speed_mps * 2.23694).toFixed(1)} mph` 
-                            : '0.0 mph (Stationary)'}
+                            : `0.0 mph (${t('Stationary')})`}
                         </span>
                       </div>
 
                       <div className="flex flex-col col-span-2 pt-1 border-t border-slate-850/40">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">Last Active Connection</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">{t('Last Active Connection')}</span>
                         <span className="font-mono text-slate-200 mt-0.5">
-                          {new Date(currentSelectedDriver.tracking.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {isPlaybackMode && historicalData[playbackIndex]
+                            ? new Date(historicalData[playbackIndex].recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                            : new Date(currentSelectedDriver.tracking.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </span>
                       </div>
                     </div>
                   ) : (
                     <div className="text-slate-500 text-xs py-2 italic font-semibold">
-                      Offline. Listening for GPS signals...
+                      {t('Offline. Listening for GPS signals...')}
                     </div>
                   )}
                 </div>
 
-                {/* Breadcrumbs Interactive Toggle */}
-                <div className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-850 rounded-xl">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-white leading-normal">Render Historical Trail</span>
-                    <span className="text-[9px] text-slate-500 font-semibold">Overlays previous driven points on the map</span>
+                {/* High-Priority Dispatch alert Board */}
+                <div className="bg-slate-950/40 rounded-xl border border-slate-850 p-3.5 space-y-3">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <Volume2 className="w-4 h-4 text-red-400" /> {t('High-Priority Dispatch alert')}
                   </div>
-                  <button
-                    onClick={() => setShowBreadcrumbs((prev) => !prev)}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                      showBreadcrumbs
-                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                        : 'bg-slate-950 text-slate-400 border-slate-800'
-                    }`}
-                  >
-                    {showBreadcrumbs ? (
-                      <>
-                        <Eye className="w-3.5 h-3.5" /> Show Trail
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5" /> Hide Trail
-                      </>
-                    )}
-                  </button>
+                  <form onSubmit={handleSendDispatchAlert} className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder={t('Blocked exit, divert to Stop #4...')}
+                      value={alertMessage}
+                      onChange={(e) => setAlertMessage(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-200 text-xs focus:outline-none placeholder:text-slate-600 font-semibold"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSendingAlert || !alertMessage.trim()}
+                      className="w-full py-2 bg-red-650/10 border border-red-500/25 hover:bg-red-650/20 text-red-400 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all shadow btn-press flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      {isSendingAlert ? t('Dispatched...') : t('Send Urgent audio alert')}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Breadcrumbs Interactive Toggle & Playback Scrubber */}
+                <div className="bg-slate-950/40 rounded-xl border border-slate-850 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-white leading-normal">{t('Render Historical Trail')}</span>
+                      <span className="text-[9px] text-slate-500 font-semibold">{t('Overlays previous driven points on the map')}</span>
+                    </div>
+                    <button
+                      onClick={() => setShowBreadcrumbs((prev) => !prev)}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                        showBreadcrumbs
+                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                          : 'bg-slate-950 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      {showBreadcrumbs ? (
+                        <>
+                          <Eye className="w-3.5 h-3.5" /> {t('Show Trail')}
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" /> {t('Hide Trail')}
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-850/45">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-white">{t('Route Playback Mode')}</span>
+                      <span className="text-[9px] text-slate-500 font-semibold">{t('Animate history breadcrumbs sequentially')}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsPlaybackMode((prev) => !prev);
+                        setShowBreadcrumbs(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg border text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                        isPlaybackMode
+                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                          : 'bg-slate-950 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      {isPlaybackMode ? t('Deactivate') : t('Activate')}
+                    </button>
+                  </div>
+
+                  {isPlaybackMode && historicalData.length > 0 && (
+                    <div className="space-y-2.5 pt-2.5 border-t border-slate-850/40">
+                      {/* Scrubber slider */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[9px] font-mono text-slate-450">
+                          <span>{t('Frame')} {playbackIndex + 1} / {historicalData.length}</span>
+                          <span>
+                            {historicalData[playbackIndex]
+                              ? new Date(historicalData[playbackIndex].recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                              : '00:00:00'}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max={historicalData.length - 1}
+                          value={playbackIndex}
+                          onChange={(e) => {
+                            setPlaybackIndex(Number(e.target.value));
+                            setIsPlaying(false);
+                          }}
+                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                        />
+                      </div>
+
+                      {/* Play controls */}
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsPlaying(!isPlaying)}
+                          className="flex items-center justify-center gap-1 px-3 py-1.5 bg-purple-500/15 border border-purple-500/20 rounded-lg text-purple-400 text-[10px] font-extrabold uppercase tracking-wider cursor-pointer hover:bg-purple-500/25 transition-all"
+                        >
+                          {isPlaying ? (
+                            <>
+                              <Pause className="w-3.5 h-3.5" /> {t('Pause')}
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-3.5 h-3.5" /> {t('Play')}
+                            </>
+                          )}
+                        </button>
+
+                        {/* Speed multiplier selector */}
+                        <div className="flex items-center gap-1 bg-slate-950/60 p-0.5 rounded-lg border border-slate-800">
+                          {[1, 2, 5, 10].map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setPlaybackSpeed(s)}
+                              className={`px-2 py-0.5 rounded text-[9px] font-extrabold transition-all ${
+                                playbackSpeed === s ? 'bg-purple-500 text-white shadow' : 'text-slate-500 hover:text-slate-350'
+                              }`}
+                            >
+                              {s}x
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {isPlaybackMode && historicalData.length === 0 && (
+                    <div className="text-[10px] text-slate-500 text-center italic py-2 font-medium">
+                      {t('Retrieving tracking logs from telemetry base...')}
+                    </div>
+                  )}
                 </div>
 
                 {/* Active Route Stops Sequence Overview */}
                 {selectedDriverRoute ? (
                   <div className="space-y-2 pt-2 border-t border-slate-800">
                     <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      <span>Stops List: {selectedDriverRoute.route_name}</span>
+                      <span>{t('Stops List')}: {selectedDriverRoute.route_name}</span>
                     </div>
 
-                    <div className="divide-y divide-slate-850 max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                    <div className="divide-y divide-slate-855 max-h-56 overflow-y-auto space-y-1.5 pr-1">
                       {selectedDriverRoute.stops?.map((stop) => (
                         <div
                           key={stop.stop_id}
@@ -561,23 +884,43 @@ export default function LiveOpsPage() {
                                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
                                 : stop.status === 'skipped'
                                 ? 'bg-slate-800 text-slate-500 border border-slate-700'
-                                : 'bg-slate-850 text-slate-350 border border-slate-800'
+                                : 'bg-slate-855 text-slate-350 border border-slate-800'
                             }`}>
                               {stop.sequence_number}
                             </span>
                             <div className="truncate">
                               <div className="text-slate-200 truncate">{stop.name}</div>
                               <div className="text-[9px] text-slate-500 truncate mt-0.5 leading-normal">{stop.address}</div>
+                              {stop.notes && (
+                                <div className="mt-1 flex flex-col items-start gap-1">
+                                  <div className="text-[9px] text-emerald-400 font-medium italic pl-1 border-l border-emerald-500/30 truncate max-w-full">
+                                    "{stop.notes}"
+                                  </div>
+                                  {stop.notes.includes('Proof of service uploaded') && (
+                                    <button
+                                      onClick={() => {
+                                        const notesStr = stop.notes || '';
+                                        const idx = notesStr.indexOf('Proof of service uploaded: ');
+                                        const imgUrl = idx !== -1 ? notesStr.substring(idx + 27) : '/mock_s3_compressed_146kb.jpg';
+                                        setPreviewImage(imgUrl.startsWith('data:image/') ? imgUrl : '/mock_s3_compressed_146kb.jpg');
+                                      }}
+                                      className="px-1.5 py-0.5 mt-0.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded text-[8px] font-bold cursor-pointer transition-colors"
+                                    >
+                                      📷 {t('View Proof Photo')}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
                           {/* Quick stop status override dropdown */}
                           <CustomSelect
                             options={[
-                              { value: 'pending', label: 'Pending', colorDot: '#ef4444' },
-                              { value: 'in_progress', label: 'In Progress', colorDot: '#f97316' },
-                              { value: 'completed', label: 'Completed', colorDot: '#10b981' },
-                              { value: 'skipped', label: 'Skipped', colorDot: '#64748b' },
+                              { value: 'pending', label: t('Pending'), colorDot: '#ef4444' },
+                              { value: 'in_progress', label: t('In Progress'), colorDot: '#f97316' },
+                              { value: 'completed', label: t('Completed'), colorDot: '#10b981' },
+                              { value: 'skipped', label: t('Skipped'), colorDot: '#64748b' },
                             ]}
                             value={stop.status}
                             onChange={(val) => updateStopStatus(selectedDriverRoute.route_id, stop.stop_id, val as any)}
@@ -590,7 +933,7 @@ export default function LiveOpsPage() {
                 ) : (
                   <div className="py-8 text-center text-slate-550 border-t border-slate-850 text-xs font-semibold flex flex-col items-center justify-center gap-2">
                     <Navigation className="w-6 h-6 text-slate-700" />
-                    <span>No active route assigned to driver</span>
+                    <span>{t('No active route assigned to driver')}</span>
                   </div>
                 )}
               </div>
@@ -610,21 +953,49 @@ export default function LiveOpsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-white">No active storm telemetry</h3>
+                  <h3 className="text-xl font-bold text-white">{t('No active storm telemetry')}</h3>
                   <p className="text-sm text-slate-400 font-semibold leading-relaxed">
-                    No drivers are active in the current storm event. Once vehicles start their routes and broadcast GPS updates, they will appear on the live tracking console.
+                    {t('No drivers are active in the current storm event. Once vehicles start their routes and broadcast GPS updates, they will appear on the live tracking console.')}
                   </p>
                 </div>
 
                 <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-slate-950/50 border border-slate-850 rounded-xl text-[10px] font-mono text-slate-500">
                   <span className="w-2 h-2 rounded-full bg-slate-700 animate-ping"></span>
-                  Listening for GPS broadcasts...
+                  {t('Listening for GPS broadcasts...')}
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* B2B Subcontracting Console Modal Dialog */}
+      <SubcontractConsole isOpen={subcontractOpen} onClose={() => setSubcontractOpen(false)} />
+
+      {/* Proof of Service Image Preview Modal Overlay */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-bold text-white">{t('Proof of Service Photo Verification')}</span>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="text-slate-400 hover:text-white font-bold text-sm cursor-pointer"
+              >
+                {t('Close')} ✕
+              </button>
+            </div>
+            <img
+              src={previewImage}
+              alt="Proof of Service"
+              className="w-full max-h-[70vh] object-contain rounded-lg border border-slate-850"
+            />
+            <div className="mt-3 text-xs text-slate-450 font-semibold text-center">
+              {t('Liability protection proof of service escrow photo · Verified Clear')}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

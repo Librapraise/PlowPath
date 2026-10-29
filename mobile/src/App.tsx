@@ -1,20 +1,39 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './navigation/RootNavigator';
-import { initSentry } from './services/sentry';
+import { initSentry, wrapApp } from './services/sentry';
 import { navigationRef } from './services/navigation';
-import * as Sentry from '@sentry/react-native';
+import SplashScreen from './screens/SplashScreen';
+import { pushService } from './services/push.service';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Initialize Sentry crash reporting
 initSentry();
 
-export default Sentry.wrap(function App() {
+const App = function App() {
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
+
+  useEffect(() => {
+    // Register FCM foreground/background handlers so incoming push
+    // notifications get logged to AsyncStorage (visible in the Notifications screen).
+    const unsubscribe = pushService.registerNotificationHandlers();
+    return unsubscribe;
+  }, []);
+
   return (
-    <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>
-        <RootNavigator />
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer ref={navigationRef}>
+          <RootNavigator />
+        </NavigationContainer>
+        {isSplashVisible && (
+          <SplashScreen onAnimationComplete={() => setIsSplashVisible(false)} />
+        )}
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
-});
+};
+
+export default wrapApp(App);
+

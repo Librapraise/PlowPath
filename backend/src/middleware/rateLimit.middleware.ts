@@ -12,6 +12,7 @@ export const apiRateLimit = rateLimit({
     sendCommand: (...args: string[]) => redis.call(args[0], ...args.slice(1) as any) as any,
     prefix: 'rl:api:',
   }),
+  passOnStoreError: true,
   keyGenerator: (req) => (req.user?.sub ? `u:${req.user.sub}` : `ip:${req.ip}`),
 });
 
@@ -25,4 +26,5 @@ export const authRateLimit = rateLimit({
     sendCommand: (...args: string[]) => redis.call(args[0], ...args.slice(1) as any) as any,
     prefix: 'rl:auth:',
   }),
+  passOnStoreError: true,
 });

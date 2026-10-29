@@ -20,6 +20,28 @@ interface AuthState {
   logout: () => void;
 }
 
+let keychainPromise = Promise.resolve<any>(null);
+
+async function runExclusive<T>(operation: () => Promise<T>): Promise<T> {
+  const currentPromise = keychainPromise;
+  let resolveNext: () => void = () => {};
+  keychainPromise = new Promise<void>((resolve) => {
+    resolveNext = resolve;
+  });
+
+  try {
+    await currentPromise;
+  } catch {
+    // Ignore errors from previous operations so subsequent calls are not blocked
+  }
+
+  try {
+    return await operation();
+  } finally {
+    resolveNext();
+  }
+}
+
 const hybridStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     const userStr = await AsyncStorage.getItem(`${name}.user`);
@@ -27,7 +49,9 @@ const hybridStateStorage = {
     let refreshToken: string | null = null;
 
     try {
-      const credentials = await Keychain.getGenericPassword({ service: 'plowpath.auth' });
+      const credentials = await runExclusive(() =>
+        Keychain.getGenericPassword({ service: 'plowpath.auth' })
+      );
       if (credentials) {
         token = credentials.username;
         refreshToken = credentials.password;
@@ -41,16 +65,19 @@ const hybridStateStorage = {
     }
 
     return JSON.stringify({
-      token,
-      refreshToken,
-      user: userStr ? JSON.parse(userStr) : null,
+      state: {
+        token,
+        refreshToken,
+        user: userStr ? JSON.parse(userStr) : null,
+      },
+      version: 0,
     });
   },
 
   setItem: async (name: string, value: string): Promise<void> => {
     try {
       const parsed = JSON.parse(value);
-      const { token, refreshToken, user } = parsed;
+      const { token, refreshToken, user } = parsed.state || {};
 
       if (user) {
         await AsyncStorage.setItem(`${name}.user`, JSON.stringify(user));
@@ -59,9 +86,13 @@ const hybridStateStorage = {
       }
 
       if (token && refreshToken) {
-        await Keychain.setGenericPassword(token, refreshToken, { service: 'plowpath.auth' });
+        await runExclusive(() =>
+          Keychain.setGenericPassword(token, refreshToken, { service: 'plowpath.auth' })
+        );
       } else {
-        await Keychain.resetGenericPassword({ service: 'plowpath.auth' });
+        await runExclusive(() =>
+          Keychain.resetGenericPassword({ service: 'plowpath.auth' })
+        );
       }
     } catch (err) {
       console.error('Failed to parse/set state in hybridStateStorage', err);
@@ -71,7 +102,9 @@ const hybridStateStorage = {
   removeItem: async (name: string): Promise<void> => {
     await AsyncStorage.removeItem(`${name}.user`);
     try {
-      await Keychain.resetGenericPassword({ service: 'plowpath.auth' });
+      await runExclusive(() =>
+        Keychain.resetGenericPassword({ service: 'plowpath.auth' })
+      );
     } catch (err) {
       console.error('Failed to reset Keychain', err);
     }

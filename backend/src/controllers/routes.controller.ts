@@ -21,7 +21,7 @@ const generateSchema = z.object({
 
 const updateStopSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed', 'skipped']),
-  notes: z.string().max(2000).optional(),
+  notes: z.string().max(500000).optional(),
 });
 
 type CustomerRow = {
@@ -251,60 +251,124 @@ export async function updateStop(req: Request, res: Response): Promise<void> {
     });
   }
 
-  res.json(currentStop);
-}
-
-const updateRouteSchema = z.object({
-  status: z.enum(['assigned', 'in_progress', 'completed']),
-});
-
-export async function updateRoute(req: Request, res: Response): Promise<void> {
-  const body = updateRouteSchema.parse(req.body);
-  const fields: string[] = [];
-  const params: unknown[] = [];
-  const push = (sql: string, v: unknown) => {
-    params.push(v);
-    fields.push(sql.replace('?', `$${params.length}`));
-  };
-
-  push('status = ?', body.status);
-  if (body.status === 'in_progress') {
-    fields.push('start_time = COALESCE(start_time, NOW())');
-  } else if (body.status === 'completed') {
-    fields.push('end_time = COALESCE(end_time, NOW())');
-  }
-
-  params.push(req.params.id);
-  const { rows } = await query(
-    `UPDATE routes SET ${fields.join(', ')}, updated_at = NOW()
-      WHERE route_id = $${params.length} AND deleted_at IS NULL
-      RETURNING route_id, status, start_time, end_time`,
-    params,
-  );
-  if (!rows[0]) throw HttpError.notFound();
-  
-  const updatedRoute = rows[0];
-  if (body.status === 'in_progress') {
-    // Notify the first customer that their plow has started their route
-    query<{ customer_id: string }>(
-      'SELECT customer_id FROM route_stops WHERE route_id = $1 AND sequence_number = 1',
-      [updatedRoute.route_id],
-    ).then(({ rows: firstRows }) => {
-      const firstStop = firstRows[0];
-      if (firstStop) {
-        void enqueueSmsNotification(
-          firstStop.customer_id,
-          'en_route',
-          'PlowPath is en-route to your property now. Please ensure your driveway is clear of all vehicles.'
+  // Auto-promote the route to 'completed' when all stops are finished (completed or skipped).
+  // This ensures the route-level status always reflects reality — even when the driver
+  // completes all stops individually without tapping "Emergency Finalize Route".
+  if (body.status === 'completed' || body.status === 'skipped') {
+    query<{ pending_count: string }>(
+      `SELECT COUNT(*) AS pending_count
+         FROM route_stops
+        WHERE route_id = $1
+          AND status NOT IN ('completed', 'skipped')`,
+      [currentStop.route_id],
+    ).then(({ rows: countRows }) => {
+      const remaining = parseInt(countRows[0]?.pending_count ?? '1', 10);
+      if (remaining === 0) {
+        // All stops done — mark the route itself as completed.
+        void query(
+          `UPDATE routes
+              SET status = 'completed', end_time = COALESCE(end_time, NOW()), updated_at = NOW()
+            WHERE route_id = $1 AND status != 'completed' AND deleted_at IS NULL`,
+          [currentStop.route_id],
         );
       }
     }).catch((err) => {
       // eslint-disable-next-line no-console
-      console.error('Failed to notify first customer on route start:', err);
+      console.error('Failed to auto-promote route to completed:', err);
     });
   }
 
-  res.json(updatedRoute);
+  res.json(currentStop);
+}
+
+const updateRouteSchema = z.object({
+  status: z.enum(['assigned', 'in_progress', 'completed']).optional(),
+  stops: z.array(
+    z.object({
+      stop_id: z.string().uuid(),
+      sequence_number: z.number().int().positive(),
+    })
+  ).optional(),
+});
+
+export async function updateRoute(req: Request, res: Response): Promise<void> {
+  const body = updateRouteSchema.parse(req.body);
+
+  if (body.stops && body.stops.length > 0) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Phase 1: Set temporary sequence numbers to avoid unique constraint violations
+      for (const stop of body.stops) {
+        await client.query(
+          `UPDATE route_stops SET sequence_number = sequence_number + 1000000, updated_at = NOW() WHERE stop_id = $1 AND route_id = $2`,
+          [stop.stop_id, req.params.id],
+        );
+      }
+      // Phase 2: Set final sequence numbers
+      for (const stop of body.stops) {
+        await client.query(
+          `UPDATE route_stops SET sequence_number = $1, updated_at = NOW() WHERE stop_id = $2 AND route_id = $3`,
+          [stop.sequence_number, stop.stop_id, req.params.id],
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  let updatedRoute = null;
+  if (body.status) {
+    const fields: string[] = [];
+    const params: unknown[] = [];
+    const push = (sql: string, v: unknown) => {
+      params.push(v);
+      fields.push(sql.replace('?', `$${params.length}`));
+    };
+
+    push('status = ?', body.status);
+    if (body.status === 'in_progress') {
+      fields.push('start_time = COALESCE(start_time, NOW())');
+    } else if (body.status === 'completed') {
+      fields.push('end_time = COALESCE(end_time, NOW())');
+    }
+
+    params.push(req.params.id);
+    const { rows } = await query(
+      `UPDATE routes SET ${fields.join(', ')}, updated_at = NOW()
+        WHERE route_id = $${params.length} AND deleted_at IS NULL
+        RETURNING route_id, status, start_time, end_time`,
+      params,
+    );
+    if (!rows[0]) throw HttpError.notFound();
+    updatedRoute = rows[0];
+
+    if (body.status === 'in_progress') {
+      // Notify the first customer that their plow has started their route
+      query<{ customer_id: string }>(
+        'SELECT customer_id FROM route_stops WHERE route_id = $1 AND sequence_number = 1',
+        [updatedRoute.route_id],
+      ).then(({ rows: firstRows }) => {
+        const firstStop = firstRows[0];
+        if (firstStop) {
+          void enqueueSmsNotification(
+            firstStop.customer_id,
+            'en_route',
+            'PlowPath is en-route to your property now. Please ensure your driveway is clear of all vehicles.'
+          );
+        }
+      }).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to notify first customer on route start:', err);
+      });
+    }
+  }
+
+  res.json(updatedRoute || { route_id: req.params.id, message: 'Route stop sequences reordered successfully' });
 }
 
 const broadcastSchema = z.object({

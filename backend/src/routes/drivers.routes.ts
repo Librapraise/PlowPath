@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { authenticate, requireRole } from '../middleware/auth.middleware';
-import { create, getOne, list, remove, update, updateFcmToken } from '../controllers/drivers.controller';
+import { create, getOne, list, remove, update, updateFcmToken, alertDriver } from '../controllers/drivers.controller';
 import { getDriverSettings, updateDriverSettings } from '../controllers/settings.controller';
 import { HttpError } from '../utils/httpError';
 
@@ -24,5 +24,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', requireRole('owner'), asyncHandler(remove));
 
 router.post('/me/fcm-token', asyncHandler(updateFcmToken));
+router.post('/:id/alert', requireRole('owner', 'manager'), asyncHandler(alertDriver));
 
 export default router;

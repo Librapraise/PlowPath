@@ -3,15 +3,18 @@ import { env } from './config/env';
 import { logger } from './utils/logger';
 import { initSockets } from './sockets';
 import { app } from './app';
-import { scheduleSeasonalReminders } from './services/notification.service';
+import { scheduleSeasonalReminders, scheduleWeatherUpdates } from './services/notification.service';
 
 const server = http.createServer(app);
 initSockets(server);
 
-server.listen(env.PORT, () => {
-  logger.info(`PlowPath API listening on :${env.PORT} (${env.NODE_ENV})`);
+server.listen(env.PORT, '0.0.0.0', () => {
+  logger.info(`PlowPath API listening on 0.0.0.0:${env.PORT} (${env.NODE_ENV})`);
   scheduleSeasonalReminders().catch((err) => {
     logger.error('Failed to initialize seasonal reminders on server boot:', err);
+  });
+  scheduleWeatherUpdates().catch((err) => {
+    logger.error('Failed to initialize weather sync updates on server boot:', err);
   });
 });
 
@@ -22,3 +25,5 @@ const shutdown = (signal: string) => () => {
 };
 process.on('SIGINT', shutdown('SIGINT'));
 process.on('SIGTERM', shutdown('SIGTERM'));
+// Trigger reload after updating Redis config in .env
+

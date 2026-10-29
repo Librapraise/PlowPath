@@ -26,7 +26,15 @@ export function initSockets(httpServer: HttpServer): SocketIOServer {
   });
 
   const pubClient = redis.duplicate();
+  pubClient.on('error', (err) => {
+    logger.error('Socket.io Redis adapter pubClient error:', err);
+  });
+
   const subClient = redis.duplicate();
+  subClient.on('error', (err) => {
+    logger.error('Socket.io Redis adapter subClient error:', err);
+  });
+
   io.adapter(createAdapter(pubClient, subClient));
 
   // JWT handshake — the same access token the REST API uses.
@@ -81,4 +89,8 @@ export function broadcastRouteUpdate(payload: { route_id: string; status: string
 export function broadcastUrgentRequestUpdate(payload: any): void {
   if (!io) return;
   io.to(DASHBOARD_ROOM).emit('urgent_request:update', payload);
+}
+
+export function getIo(): SocketIOServer | null {
+  return io;
 }

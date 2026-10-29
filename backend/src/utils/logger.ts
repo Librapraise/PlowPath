@@ -5,7 +5,12 @@ import { env } from '../config/env';
 const { combine, timestamp, errors, splat, json, colorize, printf } = winston.format;
 
 const devFormat = printf(({ level, message, timestamp: ts, stack }) => {
-  return `${ts} ${level} ${stack ?? message}`;
+  if (stack) {
+    const stackStr = String(stack);
+    const hasCustomMessage = message && typeof message === 'string' && !stackStr.includes(message);
+    return `${ts} ${level} ${hasCustomMessage ? `${message} ` : ''}${stackStr}`;
+  }
+  return `${ts} ${level} ${message}`;
 });
 
 const transports: winston.transport[] = [

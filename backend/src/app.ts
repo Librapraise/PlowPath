@@ -8,6 +8,8 @@ import { apiRateLimit } from './middleware/rateLimit.middleware';
 import { query } from './config/db';
 import { redis } from './config/redis';
 
+import compression from 'compression';
+import { csrfProtection } from './middleware/csrf.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/users.routes';
 import driverRoutes from './routes/drivers.routes';
@@ -18,14 +20,19 @@ import trackingRoutes from './routes/tracking.routes';
 import twilioRoutes from './routes/twilio.routes';
 import signRoutes from './routes/signs.routes';
 import settingsRoutes from './routes/settings.routes';
+import shiftsRoutes from './routes/shifts.routes';
+import subcontractsRoutes from './routes/subcontracts.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 const app = express();
 
 app.disable('x-powered-by');
+app.use(compression());
 app.use(helmet());
 app.use(cors({ origin: corsOrigins, credentials: true }));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(csrfProtection);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(morgan(
   env.NODE_ENV === 'production' ? 'combined' : 'dev',
@@ -142,6 +149,9 @@ app.use('/api/v1/tracking', trackingRoutes);
 app.use('/api/v1/webhooks/twilio', twilioRoutes);
 app.use('/api/v1/signs', signRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/shifts', shiftsRoutes);
+app.use('/api/v1/subcontracts', subcontractsRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Route not found' } });

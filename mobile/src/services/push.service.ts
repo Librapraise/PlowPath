@@ -1,8 +1,9 @@
 import messaging, { type FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { api } from './api';
-import { Alert, Platform, Vibration } from 'react-native';
+import { Alert, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigate } from './navigation';
+import { useAuthStore } from '../store/authStore';
 
 export interface NotificationItem {
   id: string;
@@ -56,6 +57,22 @@ export class PushNotificationService {
    * Calls the POST /drivers/me/fcm-token backend endpoint to save/update the FCM token.
    */
   public async syncTokenWithBackend(fcmToken: string): Promise<void> {
+    // Wait for the auth store to finish hydrating if it hasn't already done so
+    if (!useAuthStore.persist.hasHydrated()) {
+      await new Promise<void>((resolve) => {
+        const unsub = useAuthStore.persist.onFinishHydration(() => {
+          unsub();
+          resolve();
+        });
+      });
+    }
+
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      console.log('[PUSH] No active session token. Skipping FCM token sync with backend.');
+      return;
+    }
+
     try {
       await api.post('/drivers/me/fcm-token', { fcm_token: fcmToken });
       console.log('[PUSH] Successfully synced FCM token with the backend database roster');
@@ -143,50 +160,64 @@ export class PushNotificationService {
    * and registers token refresh listeners so changing tokens are automatically synced.
    */
   public registerNotificationHandlers(): () => void {
-    // 1. Foreground message handler
-    const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
-      console.log('[PUSH] A new push message arrived in the foreground!', remoteMessage);
-      const title = remoteMessage.notification?.title ?? 'PlowPath Alert';
-      const body = remoteMessage.notification?.body ?? 'A new event has occurred.';
-      const category = (remoteMessage.data?.category as string) || 'alert';
+    try {
+      if (!messaging().isDeviceRegisteredForRemoteMessages) {
+        return () => {};
+      }
 
-      // Record in logs history & run customized haptic vibration
-      await this.logToHistory(remoteMessage);
-      this.triggerVibration(category);
-      
-      Alert.alert(title, body, [
-        {
-          text: 'Open',
-          onPress: () => this.handleNotificationTap(remoteMessage),
-        },
-        { text: 'Dismiss', style: 'cancel' }
-      ]);
-    });
+      // 1. Foreground message handler
+      const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+        console.log('[PUSH] A new push message arrived in the foreground!', remoteMessage);
+        const title = remoteMessage.notification?.title ?? 'PlowPath Alert';
+        const body = remoteMessage.notification?.body ?? 'A new event has occurred.';
+        const category = (remoteMessage.data?.category as string) || 'alert';
 
-    // 2. Tapped from background / closed state
-    messaging().onNotificationOpenedApp((remoteMessage) => {
-      this.handleNotificationTap(remoteMessage);
-    });
-
-    messaging()
-      .getInitialNotification()
-      .then((remoteMessage) => {
-        if (remoteMessage) {
-          this.handleNotificationTap(remoteMessage);
-        }
+        // Record in logs history & run customized haptic vibration
+        await this.logToHistory(remoteMessage);
+        this.triggerVibration(category);
+        
+        Alert.alert(title, body, [
+          {
+            text: 'Open',
+            onPress: () => this.handleNotificationTap(remoteMessage),
+          },
+          { text: 'Dismiss', style: 'cancel' }
+        ]);
       });
 
-    // 3. Token refresh handler
-    const unsubscribeOnTokenRefresh = messaging().onTokenRefresh(async (token) => {
-      console.log('[PUSH] FCM Token refreshed:', token);
-      await this.syncTokenWithBackend(token);
-    });
+      // 2. Tapped from background / closed state
+      messaging().onNotificationOpenedApp((remoteMessage) => {
+        this.handleNotificationTap(remoteMessage);
+      });
 
-    // Return an unsubscribe cleanup handler
-    return () => {
-      unsubscribeOnMessage();
-      unsubscribeOnTokenRefresh();
-    };
+      messaging()
+        .getInitialNotification()
+        .then((remoteMessage) => {
+          if (remoteMessage) {
+            this.handleNotificationTap(remoteMessage);
+          }
+        })
+        .catch((err) => console.warn('[PUSH] getInitialNotification error:', err));
+
+      // 3. Token refresh handler
+      const unsubscribeOnTokenRefresh = messaging().onTokenRefresh(async (token) => {
+        console.log('[PUSH] FCM Token refreshed:', token);
+        await this.syncTokenWithBackend(token);
+      });
+
+      // Return an unsubscribe cleanup handler
+      return () => {
+        try {
+          unsubscribeOnMessage();
+          unsubscribeOnTokenRefresh();
+        } catch {
+          // ignore cleanup errors on unregister
+        }
+      };
+    } catch (err) {
+      console.warn('[PUSH] Firebase messaging init omitted or unavailable:', err);
+      return () => {};
+    }
   }
 }
 

@@ -12,6 +12,7 @@ jest.mock('../../config/redis', () => ({
     get: jest.fn().mockResolvedValue(null),
     quit: jest.fn().mockResolvedValue('OK'),
   },
+  getBullOptions: jest.fn().mockReturnValue({}),
 }));
 
 jest.mock('../../services/ivr.service', () => ({

@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 import { api } from '../services/api';
 
 export interface DriverSettings {
   theme: 'light' | 'dark';
+  theme_mode?: 'light' | 'dark' | 'auto';
   navigation_app: 'google_maps' | 'apple_maps' | 'waze';
   tracking_accuracy: 'high' | 'power_saver';
   upload_frequency_seconds: number;
+  high_contrast_map?: boolean;
+  language?: 'fr-QC' | 'en-CA' | 'en-US' | 'en-GB';
 }
 
 interface SettingsState {
@@ -21,9 +25,19 @@ interface SettingsState {
 
 const defaultSettings: DriverSettings = {
   theme: 'light',
+  theme_mode: 'light',
   navigation_app: 'google_maps',
   tracking_accuracy: 'high',
   upload_frequency_seconds: 30,
+  high_contrast_map: false,
+  language: 'fr-QC',
+};
+
+const resolveTheme = (themeMode: 'light' | 'dark' | 'auto'): 'light' | 'dark' => {
+  if (themeMode === 'auto') {
+    return Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
+  }
+  return themeMode;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -41,7 +55,12 @@ export const useSettingsStore = create<SettingsState>()(
         set({ loading: true, error: null });
         try {
           const { data } = await api.get<DriverSettings>('/drivers/me/settings');
-          set({ settings: { ...defaultSettings, ...data }, loading: false });
+          const merged = { ...defaultSettings, ...data };
+          if (!merged.theme_mode) {
+            merged.theme_mode = merged.theme;
+          }
+          merged.theme = resolveTheme(merged.theme_mode);
+          set({ settings: merged, loading: false });
         } catch (err: any) {
           console.warn('[SETTINGSSTORE] Failed to fetch settings from backend:', err?.message || err);
           // Don't overwrite local storage on failure (e.g. offline)
@@ -50,7 +69,11 @@ export const useSettingsStore = create<SettingsState>()(
       },
       updateSettings: async (newSettings) => {
         set({ loading: true, error: null });
-        const merged = { ...get().settings, ...newSettings };
+        const current = get().settings;
+        const merged = { ...current, ...newSettings };
+        if (newSettings.theme_mode !== undefined) {
+          merged.theme = resolveTheme(newSettings.theme_mode);
+        }
         // Optimistically update local state
         set({ settings: merged });
         try {
@@ -68,3 +91,14 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 );
+
+// Listen for system appearance changes
+Appearance.addChangeListener(({ colorScheme }) => {
+  const state = useSettingsStore.getState();
+  if (state.settings.theme_mode === 'auto') {
+    const resolvedTheme = colorScheme === 'dark' ? 'dark' : 'light';
+    if (state.settings.theme !== resolvedTheme) {
+      state.setLocalSettings({ theme: resolvedTheme });
+    }
+  }
+});

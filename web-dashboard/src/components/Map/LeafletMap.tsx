@@ -156,6 +156,7 @@ export default function LeafletMap({
         const name = detail?.name ?? `Driver ${d.driver_id.slice(0, 4)}`;
         const vehicleType = detail?.vehicle_type ?? 'Truck';
         const isSelected = selectedDriverId === d.driver_id;
+        const isStale = new Date().getTime() - new Date(d.recorded_at).getTime() >= 300000; // stale if > 5 minutes
         
         return (
           <DriverMarker
@@ -164,6 +165,7 @@ export default function LeafletMap({
             name={name}
             vehicleType={vehicleType}
             isSelected={isSelected}
+            isStale={isStale}
             onClick={() => {
               if (onSelectDriver) onSelectDriver(d.driver_id);
             }}

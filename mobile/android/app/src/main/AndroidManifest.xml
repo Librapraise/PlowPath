@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
   package="com.plowpathtemp">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -7,16 +8,41 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+
+    <queries>
+        <!-- For Google Maps navigation -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="google.navigation" />
+        </intent>
+        <!-- For Waze navigation -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="waze" />
+        </intent>
+    </queries>
 
     <application
       android:name=".MainApplication"
-      android:label="PlowPath Driver"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
-      android:theme="@style/AppTheme">
+      android:theme="@style/AppTheme"
+      android:extractNativeLibs="false"
+      android:networkSecurityConfig="@xml/network_security_config"
+      tools:replace="android:label,android:allowBackup,android:icon,android:roundIcon,android:extractNativeLibs">
       
       <activity
         android:name=".MainActivity"
-        android:label="PlowPath Driver"
+        android:label="@string/app_name"
         android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
@@ -29,12 +55,10 @@
 
       <!-- @mauron85/react-native-background-geolocation auto-merges its own
            LocationServiceImpl manifest via gradle library merging. We only need
-           to assert the foregroundServiceType so Android 14+ accepts the service.
-           If the library's manifest stops being merged after a RN upgrade, the
-           explicit declaration below can be uncommented:
-           <service
-             android:name="com.marianhello.bgloc.service.LocationServiceImpl"
-             android:foregroundServiceType="location"
-             android:exported="false" /> -->
+           to assert the foregroundServiceType so Android 14+ accepts the service. -->
+      <service
+          android:name="com.marianhello.bgloc.service.LocationServiceImpl"
+          android:foregroundServiceType="location"
+          android:exported="false" />
     </application>
 </manifest>

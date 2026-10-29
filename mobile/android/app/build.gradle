@@ -55,7 +55,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -72,16 +72,30 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
+    //buildToolsVersion rootProject.ext.buildToolsVersion
+    //compileSdk rootProject.ext.compileSdkVersion
+    buildToolsVersion "36.0.0"
+    compileSdk 36
 
     namespace "com.plowpathtemp"
     defaultConfig {
         applicationId "com.plowpath.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 27
+        versionName "1.1.2"
+
+        externalNativeBuild {
+            ndkBuild {
+                arguments "APP_LDFLAGS+=-Wl,-z,max-page-size=16384"
+            }
+            cmake {
+                arguments "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+            }
+        }
+    }
+    aaptOptions {
+        cruncherEnabled = false
     }
     signingConfigs {
         debug {
@@ -90,25 +104,31 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
 }
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation("com.facebook.react:flipper-integration")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
@@ -123,3 +143,58 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+tasks.whenTaskAdded { task ->
+    if (task.name.startsWith('merge') && task.name.endsWith('NativeLibs')) {
+        task.doLast {
+            def raw = task.name.substring('merge'.length(), task.name.length() - 'NativeLibs'.length())
+            def variant = raw.substring(0, 1).toLowerCase() + raw.substring(1)
+
+            def mergedDir = new File(buildDir, "intermediates/merged_native_libs/${variant}/${task.name}/out/lib")
+            if (!mergedDir.exists()) {
+                mergedDir = new File(buildDir, "intermediates/merged_native_libs/${variant}/out/lib")
+            }
+
+            if (mergedDir.exists()) {
+                println "16KB ELF patch: scanning ${mergedDir}"
+                exec {
+                    commandLine 'python',
+                        "${rootProject.projectDir}/../android-16kb-fix/scripts/patch_elf_16kb.py",
+                        mergedDir.absolutePath
+                }
+            } else {
+                println "16KB ELF patch: directory not found, skipping"
+            }
+        }
+    }
+
+    if (task.name == 'bundleRelease') {
+        task.doLast {
+            def bundleDir = new File(buildDir, "outputs/bundle/release")
+            def aabFile = new File(bundleDir, "app-release.aab")
+
+            if (aabFile.exists()) {
+                def patchScript = "${rootProject.projectDir}/../android-16kb-fix/scripts/patch_bundleconfig_16kb.py"
+
+                def patchedTmp = new File(aabFile.parent, "_patched_tmp.aab")
+                println "16KB AAB: patching BundleConfig.pb..."
+                exec { commandLine 'python', patchScript, aabFile.absolutePath, patchedTmp.absolutePath }
+                aabFile.delete()
+                patchedTmp.renameTo(aabFile)
+
+                if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                    println "16KB AAB: re-signing with jarsigner..."
+                    exec {
+                        commandLine 'jarsigner',
+                            '-keystore', file(MYAPP_UPLOAD_STORE_FILE).absolutePath,
+                            '-storepass', MYAPP_UPLOAD_STORE_PASSWORD,
+                            '-keypass', MYAPP_UPLOAD_KEY_PASSWORD,
+                            aabFile.absolutePath,
+                            MYAPP_UPLOAD_KEY_ALIAS
+                    }
+                }
+                println "16KB AAB: done"
+            }
+        }
+    }
+}

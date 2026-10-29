@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { pool, query } from '../config/db';
 import { HttpError } from '../utils/httpError';
+import { getIo } from '../sockets';
+import { enqueuePushNotification } from '../services/notification.service';
 
 const createSchema = z.object({
   name: z.string().min(1).max(255),
@@ -53,23 +55,28 @@ export async function getOne(req: Request, res: Response): Promise<void> {
 export async function create(req: Request, res: Response): Promise<void> {
   const body = createSchema.parse(req.body);
   const passwordHash = await bcrypt.hash(body.password, 10);
+  
+  const orgId = req.user?.orgId;
+  if (!orgId) {
+    throw HttpError.badRequest('User does not belong to an organization');
+  }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const userRes = await client.query<{ user_id: string }>(
-      `INSERT INTO users (email, phone, password_hash, role, name)
-       VALUES ($1, $2, $3, 'driver', $4)
+      `INSERT INTO users (email, phone, password_hash, role, name, org_id)
+       VALUES ($1, $2, $3, 'driver', $4, $5)
        RETURNING user_id`,
-      [body.email ?? null, body.phone, passwordHash, body.name],
+      [body.email ?? null, body.phone, passwordHash, body.name, orgId],
     );
     const userId = userRes.rows[0].user_id;
 
     const driverRes = await client.query(
-      `INSERT INTO drivers (user_id, name, phone, hourly_rate, vehicle_type)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO drivers (user_id, name, phone, hourly_rate, vehicle_type, org_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING driver_id, user_id, name, phone, hourly_rate, vehicle_type, status, created_at, updated_at`,
-      [userId, body.name, body.phone, body.hourly_rate ?? null, body.vehicle_type ?? null],
+      [userId, body.name, body.phone, body.hourly_rate ?? null, body.vehicle_type ?? null, orgId],
     );
 
     await client.query('COMMIT');
@@ -142,3 +149,30 @@ export async function updateFcmToken(req: Request, res: Response): Promise<void>
 
   res.json(rows[0]);
 }
+
+const alertSchema = z.object({
+  message: z.string().min(1).max(1000),
+});
+
+export async function alertDriver(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw HttpError.unauthorized();
+  const { id } = req.params;
+  const { message } = alertSchema.parse(req.body);
+
+  // 1. Send via WebSocket if online
+  const ioServer = getIo();
+  if (ioServer) {
+    ioServer.to(`driver:${id}`).emit('dispatch:alert', { message });
+  }
+
+  // 2. Send via FCM Push Notification (Bull queue)
+  await enqueuePushNotification(
+    id,
+    '🚨 High-Priority Dispatch Alert',
+    message,
+    { type: 'dispatch_alert', message }
+  );
+
+  res.json({ success: true, message: 'Alert dispatched to driver successfully' });
+}
+

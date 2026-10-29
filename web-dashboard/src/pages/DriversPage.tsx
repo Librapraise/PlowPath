@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useDriversStore, type Driver } from '../store/driversStore';
-import { Plus, Edit2, Trash2, Phone, Mail, DollarSign, Truck, ShieldAlert, CheckCircle, ShieldX, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from '../services/i18n';
+import { Plus, Edit2, Trash2, Phone, Mail, DollarSign, Truck, ShieldAlert, ShieldX, Eye, EyeOff } from 'lucide-react';
 
 export default function DriversPage() {
+  const { t } = useTranslation();
   const { drivers, isLoading, fetchDrivers, createDriver, updateDriver, deleteDriver } = useDriversStore();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -17,7 +19,6 @@ export default function DriversPage() {
   const [hourlyRate, setHourlyRate] = useState('');
   const [vehicleType, setVehicleType] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
 
   useEffect(() => {
     fetchDrivers();
@@ -34,7 +35,6 @@ export default function DriversPage() {
     setShowPassword(false);
     setModalOpen(true);
   };
-
 
   const openEditModal = (d: Driver) => {
     setEditingDriver(d);
@@ -96,15 +96,15 @@ export default function DriversPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-up">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Active Crew Directory</h2>
-          <p className="text-sm text-slate-400 mt-1 font-medium">Add heavy machinery operators, update rates, and manage active duty rosters</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">{t('Fleet Drivers')}</h2>
+          <p className="text-sm text-slate-400 mt-1 font-medium">{t('Manage driver profiles, shifts, and equipment assignments')}</p>
         </div>
         <button
           onClick={openAddModal}
           className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
         >
           <Plus className="w-5 h-5" />
-          Add Crew Member
+          {t('Add Driver')}
         </button>
       </div>
 
@@ -117,7 +117,7 @@ export default function DriversPage() {
         </div>
       ) : drivers.length === 0 ? (
         <div className="text-center py-20 glass-card rounded-2xl text-slate-500 font-medium">
-          No operators registered. Click "Add Crew Member" to expand the crew.
+          {t('No drivers found.')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -141,7 +141,7 @@ export default function DriversPage() {
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-xs shadow-inner ring-1 ring-white/5 transition-all ${
                       d.status === 'active'
                         ? 'bg-gradient-to-br from-brand-500/20 to-indigo-500/10 border border-brand-500/20 text-brand-400'
-                        : 'bg-slate-800/80 border border-slate-700/60 text-slate-400'
+                        : 'bg-slate-800/80 border border-slate-700/60 text-slate-440'
                     }`}>
                       {d.name.slice(0, 2).toUpperCase()}
                     </div>
@@ -165,9 +165,9 @@ export default function DriversPage() {
                     {d.status === 'active' ? (
                       <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 telemetry-ping"></span>
-                        Active
+                        {t('Active')}
                       </span>
-                    ) : 'Inactive'}
+                    ) : t('Idle')}
                   </button>
                 </div>
 
@@ -186,11 +186,11 @@ export default function DriversPage() {
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800/40 text-slate-450">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <Truck className="w-4 h-4 text-brand-500/50 shrink-0" />
-                      <span className="truncate">{d.vehicle_type || 'No vehicle'}</span>
+                      <span className="truncate">{d.vehicle_type || t('No Active Route')}</span>
                     </div>
                     <div className="flex items-center gap-1 min-w-0">
                       <DollarSign className="w-4 h-4 text-brand-500/50 shrink-0" />
-                      <span className="truncate">{d.hourly_rate ? `${d.hourly_rate}/hr` : 'No rate'}</span>
+                      <span className="truncate">{d.hourly_rate ? `${d.hourly_rate}/hr` : t('No Active Route')}</span>
                     </div>
                   </div>
                 </div>
@@ -199,20 +199,20 @@ export default function DriversPage() {
               {/* Action Buttons */}
               <div className="flex items-center justify-between border-t border-slate-800/40 pt-4 mt-4">
                 <span className="text-[10px] text-slate-550 font-bold uppercase tracking-wider">
-                  Role: driver
+                  Role: {t('driver')}
                 </span>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => openEditModal(d)}
                     className="p-1.5 hover:bg-white/5 text-slate-500 hover:text-white rounded-lg border border-transparent hover:border-slate-700/50 transition-all cursor-pointer"
-                    title="Edit Operator Profile"
+                    title={t('Edit Driver')}
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setDeactivateId(d.driver_id)}
                     className="p-1.5 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-lg border border-transparent hover:border-red-500/15 transition-all cursor-pointer"
-                    title="Deactivate Operator"
+                    title={t('Delete Driver')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -229,13 +229,13 @@ export default function DriversPage() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setModalOpen(false)}></div>
           <div className="relative glass-card rounded-2xl max-w-md w-full shadow-2xl p-6 sm:p-8 animate-scale-up space-y-6 gradient-border">
             <h3 className="text-xl font-bold text-white">
-              {editingDriver ? 'Modify Operator Profile' : 'Enlist Crew Member'}
+              {editingDriver ? t('Modify Driver Details') : t('Create Driver Profile')}
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Full Name
+                  {t('Driver name')}
                 </label>
                 <input
                   type="text"
@@ -250,7 +250,7 @@ export default function DriversPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Phone Number
+                    {t('Phone number')}
                   </label>
                   <input
                     type="tel"
@@ -263,7 +263,7 @@ export default function DriversPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Email Address
+                    {t('Email address')}
                   </label>
                   <input
                     type="email"
@@ -278,7 +278,7 @@ export default function DriversPage() {
               {!editingDriver && (
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Initial Password
+                    {t('Password override')}
                   </label>
                   <div className="relative">
                     <input
@@ -286,7 +286,7 @@ export default function DriversPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min 8 characters"
+                      placeholder={t('Leave blank to keep existing password')}
                       className="w-full pl-4 pr-11 py-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-slate-100 text-sm focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20 transition-all font-sans"
                     />
                     <button
@@ -301,11 +301,10 @@ export default function DriversPage() {
                 </div>
               )}
 
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Vehicle Type
+                    {t('Vehicle Type / Name')}
                   </label>
                   <input
                     type="text"
@@ -317,7 +316,7 @@ export default function DriversPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Hourly rate ($)
+                    {t('Hourly Billing Rate')}
                   </label>
                   <input
                     type="number"
@@ -336,14 +335,14 @@ export default function DriversPage() {
                   onClick={() => setModalOpen(false)}
                   className="px-5 py-2.5 bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 font-semibold text-sm rounded-xl transition-all cursor-pointer border border-slate-700/40"
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
                   className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-indigo-500 hover:from-brand-400 hover:to-indigo-400 disabled:opacity-40 text-white font-semibold text-sm rounded-xl shadow-lg shadow-brand-500/20 transition-all btn-press cursor-pointer ring-1 ring-white/10"
                 >
-                  {isLoading ? 'Saving...' : editingDriver ? 'Update Profile' : 'Enlist Driver'}
+                  {isLoading ? t('loading') : t('Save Driver')}
                 </button>
               </div>
             </form>
@@ -360,7 +359,7 @@ export default function DriversPage() {
               <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center ring-4 ring-red-500/5">
                 <ShieldX className="w-5 h-5" />
               </div>
-              <h4 className="text-lg font-bold text-white font-sans">Deactivate Driver?</h4>
+              <h4 className="text-lg font-bold text-white font-sans">{t('Delete Driver')}</h4>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed font-sans">
               This will soft-delete the driver from PlowPath. They will no longer be able to log into the mobile app, receive routes, or transmit live GPS signals.
@@ -370,13 +369,13 @@ export default function DriversPage() {
                 onClick={() => setDeactivateId(null)}
                 className="px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-350 font-semibold text-xs rounded-xl cursor-pointer border border-slate-700/40"
               >
-                Keep Active
+                {t('Cancel')}
               </button>
               <button
                 onClick={handleDeactivate}
                 className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-semibold text-xs rounded-xl shadow-md cursor-pointer ring-1 ring-white/10"
               >
-                Deactivate
+                {t('Delete Driver')}
               </button>
             </div>
           </div>
