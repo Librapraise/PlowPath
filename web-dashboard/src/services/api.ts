@@ -5,7 +5,18 @@ import { useAuthStore } from '../store/authStore';
 axios.defaults.xsrfCookieName = 'csrf-token';
 axios.defaults.xsrfHeaderName = 'x-csrf-token';
 
-const baseURL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    if (import.meta.env.PROD && envUrl.includes('localhost')) {
+      return 'https://api.plowpath.ca/api/v1';
+    }
+    return envUrl;
+  }
+  return import.meta.env.PROD ? 'https://api.plowpath.ca/api/v1' : 'http://localhost:3000/api/v1';
+};
+
+const baseURL = getBaseURL();
 
 export const api = axios.create({ baseURL, timeout: 15_000 });
 

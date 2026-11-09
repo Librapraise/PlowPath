@@ -9,6 +9,7 @@ export class HttpError extends Error {
     this.status = status;
     this.code = code;
     this.details = details;
+    Object.setPrototypeOf(this, HttpError.prototype);
   }
 
   static badRequest(message: string, details?: unknown) {

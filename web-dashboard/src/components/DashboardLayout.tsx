@@ -27,7 +27,10 @@ export default function DashboardLayout({ children }: Props) {
   // Monitor Socket.io connection state
   useEffect(() => {
     if (!token) return;
-    const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:3000';
+    const envWs = import.meta.env.VITE_WS_URL;
+    const wsUrl = (import.meta.env.PROD && (!envWs || envWs.includes('localhost')))
+      ? 'wss://api.plowpath.ca'
+      : (envWs ?? 'http://localhost:3000');
     const socket = io(wsUrl, { auth: { token } });
 
     socket.on('connect', () => setSocketConnected(true));

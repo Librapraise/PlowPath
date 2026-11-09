@@ -4,10 +4,12 @@ import { HttpError } from '../utils/httpError';
 import { logger } from '../utils/logger';
 
 export const errorMiddleware: ErrorRequestHandler = (err, _req, res, _next) => {
-  if (err instanceof HttpError) {
-    logger.warn('HttpError handled: %d %s - %s', err.status, err.code, err.message);
-    res.status(err.status).json({
-      error: { code: err.code, message: err.message, details: err.details },
+  if (err instanceof HttpError || (err && (err.name === 'HttpError' || (typeof err.status === 'number' && typeof err.code === 'string')))) {
+    const status = err.status || 500;
+    const code = err.code || 'error';
+    logger.warn('HttpError handled: %d %s - %s', status, code, err.message);
+    res.status(status).json({
+      error: { code, message: err.message, details: err.details },
     });
     return;
   }

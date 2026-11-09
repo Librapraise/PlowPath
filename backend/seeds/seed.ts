@@ -119,7 +119,7 @@ async function main(): Promise<void> {
            VALUES ($1, $2, $3, 'owner', $4) RETURNING user_id`
         : `INSERT INTO users (email, phone, password_hash, role, name)
            VALUES ($1, $2, $3, 'owner', $4)
-           ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
+           ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash
            RETURNING user_id`,
       [adminEmail, adminPhone, adminHash, 'PlowPath Admin'],
     );
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
            VALUES ($1, $2, $3, 'driver', $4) RETURNING user_id`
         : `INSERT INTO users (phone, password_hash, role, name)
            VALUES ($1, $2, 'driver', $3)
-           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name
+           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash
            RETURNING user_id`,
       isClean
         ? [null, driver1Phone, driverHash, 'Mike Plowman']
@@ -143,7 +143,7 @@ async function main(): Promise<void> {
            VALUES ($1, $2, $3, 'driver', $4) RETURNING user_id`
         : `INSERT INTO users (phone, password_hash, role, name)
            VALUES ($1, $2, 'driver', $3)
-           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name
+           ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, password_hash = EXCLUDED.password_hash
            RETURNING user_id`,
       isClean
         ? [null, driver2Phone, driverHash, 'Sara Snow']
