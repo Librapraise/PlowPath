@@ -65,6 +65,7 @@ export default function CustomersPage() {
   const [importCsvText, setImportCsvText] = useState('');
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   // Smart Import Wizard states
   const [importStep, setImportStep] = useState<'upload' | 'map' | 'validate'>('upload');
@@ -73,6 +74,9 @@ export default function CustomersPage() {
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({
     name: '',
     address: '',
+    city: '',
+    postal_code: '',
+    province: '',
     phone: '',
     email: '',
     property_type: '',
@@ -158,7 +162,11 @@ export default function CustomersPage() {
       payment_status: c.payment_status || 'pending',
       sign_status: c.sign_status || 'removed',
     });
-    setPreviewCoords([c.lat, c.lon]);
+    if (c.lat != null && c.lon != null && !isNaN(Number(c.lat)) && !isNaN(Number(c.lon))) {
+      setPreviewCoords([Number(c.lat), Number(c.lon)]);
+    } else {
+      setPreviewCoords(null);
+    }
     setPreviewName(c.address);
     setModalOpen(true);
   };
@@ -277,6 +285,9 @@ export default function CustomersPage() {
     const mapping: Record<string, string> = {
       name: '',
       address: '',
+      city: '',
+      postal_code: '',
+      province: '',
       phone: '',
       email: '',
       property_type: '',
@@ -290,8 +301,11 @@ export default function CustomersPage() {
     };
 
     mapping.name = lookup(['name', 'client', 'customer', 'full name', 'company', 'nom', 'nom complet']);
-    mapping.address = lookup(['address', 'street', 'location', 'property', 'site', 'adresse']);
-    mapping.phone = lookup(['phone', 'telephone', 'mobile', 'tel', 'cell']);
+    mapping.address = lookup(['address', 'street', 'location', 'property', 'site', 'adresse', 'rue', 'no civique']);
+    mapping.city = lookup(['city', 'ville', 'municipalité', 'municipality', 'town']);
+    mapping.postal_code = lookup(['postal', 'code postal', 'postal code', 'zip', 'zipcode', 'code_postal']);
+    mapping.province = lookup(['province', 'state', 'prov', 'région', 'region', 'qc', 'quebec', 'québec']);
+    mapping.phone = lookup(['phone', 'telephone', 'mobile', 'tel', 'cell', 'téléphone']);
     mapping.email = lookup(['email', 'mail', 'courriel']);
     mapping.property_type = lookup(['type', 'property type', 'residential', 'commercial', 'class', 'catégorie']);
     mapping.outstanding_balance = lookup(['balance', 'outstanding', 'due', 'amount', 'solde', 'facture', 'solde dû']);
@@ -299,11 +313,39 @@ export default function CustomersPage() {
     return mapping;
   };
 
+  // Download official CSV/Excel template
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      ['Nom complet', 'Adresse', 'Ville', 'Province', 'Code postal', 'Téléphone', 'Courriel', 'Type de propriété', 'Solde dû', 'Statut panneau'],
+      ['Trevor Smith', '215 Rue Benoit', 'Saint-Jean-sur-Richelieu', 'QC', 'J3B 2M1', '514-555-0100', 'trevor@example.com', 'residential', 0, 'removed'],
+      ['Centre Commercial Benoit', '1461 Rue Madeleine', 'Chambly', 'QC', 'J3L 1K2', '450-555-0199', 'service@centrebenoit.ca', 'commercial', 250.00, 'installed'],
+      ['Marie Tremblay', '100 Boulevard Saint-Joseph', 'Montréal', 'QC', 'H2T 2P8', '514-555-0122', 'marie.t@example.com', 'residential', 0, 'removed'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Modele_Clients');
+    XLSX.writeFile(wb, 'modele_import_clients_plowpath.xlsx');
+  };
+
+  // Export failed import rows as CSV for easy correction
+  const handleExportErrorsCsv = () => {
+    if (importErrors.length === 0) return;
+    const csvContent = 'data:text/csv;charset=utf-8,' + ['Error Description', ...importErrors.map(e => `"${e.replace(/"/g, '""')}"`)].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'erreurs_import_clients.csv');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   // Handle file select & parsing
   const handleImportFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsImporting(true);
+    setImportErrors([]);
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -349,7 +391,10 @@ export default function CustomersPage() {
       };
 
       const name = getVal('name');
-      const address = getVal('address');
+      const rawAddress = getVal('address');
+      const city = getVal('city');
+      const postalCode = getVal('postal_code');
+      const province = getVal('province');
       const phone = getVal('phone');
       const email = getVal('email');
       const propertyTypeVal = getVal('property_type').toLowerCase();
@@ -360,6 +405,16 @@ export default function CustomersPage() {
       
       const signVal = getVal('sign_status').toLowerCase();
       const sign_status = ['installed', 'removed', 'needs_service'].includes(signVal) ? signVal : 'removed';
+
+      // Build consolidated address with city/province/postal code if separate
+      let address = rawAddress;
+      const extraParts: string[] = [];
+      if (city && !address.toLowerCase().includes(city.toLowerCase())) extraParts.push(city);
+      if (province && !address.toLowerCase().includes(province.toLowerCase())) extraParts.push(province);
+      if (postalCode && !address.toLowerCase().includes(postalCode.toLowerCase())) extraParts.push(postalCode);
+      if (extraParts.length > 0) {
+        address = `${address}, ${extraParts.join(' ')}`;
+      }
 
       const recordErrors: string[] = [];
       if (!name) recordErrors.push(t('Name is required'));
@@ -410,47 +465,45 @@ export default function CustomersPage() {
     }
 
     setIsImporting(true);
+    setImportErrors([]);
     try {
-      // Format mapped objects to standard CSV string
-      const headers = ['Name', 'Address', 'Phone', 'Email', 'Property Type', 'Outstanding Balance', 'Sign Status'];
-      const csvLines = [headers.join(',')];
+      const payload = validatedRecords.map(r => ({
+        name: r.name,
+        address: r.address,
+        phone: r.phone || null,
+        email: r.email || null,
+        property_type: r.property_type,
+        outstanding_balance: r.outstanding_balance,
+        sign_status: r.sign_status,
+      }));
 
-      validatedRecords.forEach(r => {
-        const line = [
-          `"${r.name.replace(/"/g, '""')}"`,
-          `"${r.address.replace(/"/g, '""')}"`,
-          `"${(r.phone || '').replace(/"/g, '""')}"`,
-          `"${(r.email || '').replace(/"/g, '""')}"`,
-          r.property_type,
-          r.outstanding_balance,
-          r.sign_status,
-        ];
-        csvLines.push(line.join(','));
-      });
-
-      const csvText = csvLines.join('\n');
-      const { data } = await api.post('/customers/import', { csv: csvText });
+      const { data } = await api.post('/customers/import', { customers: payload });
       
-      useToastStore.getState().addToast(
-        t('Successfully imported {{count}} customers! Errors: {{errors}}', { 
-          count: data.imported_count, 
-          errors: data.errors_count 
-        }), 
-        'success'
-      );
+      const successMsg = t('Import completed: {{count}} created, {{updated}} updated!', { 
+        count: data.imported_count || 0,
+        updated: data.updated_count || 0,
+      });
+      useToastStore.getState().addToast(successMsg, 'success');
+
+      if (data.pending_geocodes > 0) {
+        useToastStore.getState().addToast(
+          t('{{count}} addresses queued for background geocoding', { count: data.pending_geocodes }),
+          'info'
+        );
+      }
       
       if (data.errors && data.errors.length > 0) {
-        console.error('Import Warnings:', data.errors);
+        setImportErrors(data.errors);
+      } else {
+        setImportModalOpen(false);
+        setParsedHeaders([]);
+        setParsedRows([]);
+        setValidatedRecords([]);
+        setImportStep('upload');
       }
-
-      setImportModalOpen(false);
-      setParsedHeaders([]);
-      setParsedRows([]);
-      setValidatedRecords([]);
-      setImportStep('upload');
       fetchCustomers();
     } catch (err: any) {
-      const msg = err.response?.data?.error?.message ?? t('Failed to import CSV');
+      const msg = err.response?.data?.error?.message ?? err.message ?? t('Failed to import CSV');
       useToastStore.getState().addToast(msg, 'error');
     } finally {
       setIsImporting(false);
@@ -1242,9 +1295,20 @@ export default function CustomersPage() {
 
             {importStep === 'upload' && (
               <div className="space-y-4">
-                <p className="text-xs text-slate-400 leading-relaxed font-medium">
-                  {t('Upload any standard spreadsheet (Excel, Google Sheets, or CSV). The intelligent parser will automatically scan your columns and let you map the fields.')}
-                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                    {t('Upload any standard spreadsheet (Excel, Google Sheets, or CSV). The intelligent parser will automatically scan your columns and let you map the fields.')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleDownloadTemplate}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/20 font-semibold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                    title={t('Download pre-formatted spreadsheet template')}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{t('Download Template')}</span>
+                  </button>
+                </div>
                 <div className="border-2 border-dashed border-slate-800 hover:border-brand-500/40 bg-slate-950/40 rounded-xl p-8 text-center transition-all cursor-pointer relative group">
                   <input
                     type="file"
@@ -1282,10 +1346,22 @@ export default function CustomersPage() {
                 <div className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-900">
                   {Object.keys(columnMapping).map((targetField) => {
                     const isRequired = ['name', 'address'].includes(targetField);
+                    const fieldLabels: Record<string, string> = {
+                      name: t('Customer Name'),
+                      address: t('Street Address'),
+                      city: t('City'),
+                      postal_code: t('Postal Code'),
+                      province: t('Province / State'),
+                      phone: t('Phone'),
+                      email: t('Email'),
+                      property_type: t('Property Type'),
+                      outstanding_balance: t('Outstanding Balance'),
+                      sign_status: t('Sign Status'),
+                    };
                     return (
                       <div key={targetField} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/50 pb-2.5 last:border-b-0 last:pb-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold text-slate-300 capitalize">{targetField.replace('_', ' ')}</span>
+                          <span className="text-xs font-bold text-slate-300">{fieldLabels[targetField] || targetField.replace('_', ' ')}</span>
                           {isRequired && <span className="text-red-400 text-xs">*</span>}
                         </div>
                         <div className="w-full sm:w-64">
@@ -1335,6 +1411,30 @@ export default function CustomersPage() {
                     {t('Validation Warnings')}: <strong className={validatedRecords.filter(r => !r.isValid).length > 0 ? 'text-red-400' : 'text-slate-400'}>{validatedRecords.filter(r => !r.isValid).length}</strong>
                   </span>
                 </div>
+
+                {importErrors.length > 0 && (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-amber-400 text-xs font-bold">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>{t('Some records had warnings or could not be imported:')}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleExportErrorsCsv}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded text-[11px] font-semibold cursor-pointer border border-amber-500/30"
+                      >
+                        <Download className="w-3 h-3" />
+                        {t('Download Errors (.csv)')}
+                      </button>
+                    </div>
+                    <div className="max-h-32 overflow-y-auto text-[11px] text-amber-200/80 font-mono space-y-1 bg-black/30 p-2 rounded">
+                      {importErrors.map((err, i) => (
+                        <div key={i}>• {err}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {validatedRecords.filter(r => !r.isValid).length > 0 ? (
                   <div className="space-y-3">

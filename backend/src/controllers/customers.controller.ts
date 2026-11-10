@@ -5,6 +5,7 @@ import { HttpError } from '../utils/httpError';
 import { geocodeAddress } from '../services/geocoding.service';
 import { logger } from '../utils/logger';
 import { sendEmail } from '../services/email.service';
+import { sleep } from '../utils/sleep';
 
 const upsertSchema = z.object({
   name: z.string().min(1).max(255),
@@ -328,95 +329,336 @@ export async function exportCsv(req: Request, res: Response): Promise<void> {
   res.status(200).send(csvLines.join('\n'));
 }
 
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+let isGeocodingActive = false;
+const failedGeocodeCustomerIds = new Set<string>();
+
+export async function processPendingGeocodes(): Promise<void> {
+  if (isGeocodingActive) return;
+  isGeocodingActive = true;
+
+  try {
+    while (true) {
+      const res = await query<{ customer_id: string; address: string; name: string }>(
+        `SELECT customer_id, address, name
+           FROM customers
+          WHERE location IS NULL AND deleted_at IS NULL
+          ORDER BY created_at ASC
+          LIMIT 25`
+      );
+
+      const pending = res?.rows ?? [];
+      const candidates = pending.filter((p) => !failedGeocodeCustomerIds.has(p.customer_id));
+      if (candidates.length === 0) break;
+
+      for (const cust of candidates) {
+        try {
+          await sleep(1100);
+          const geocode = await geocodeAddress(cust.address);
+          await query(
+            `UPDATE customers
+                SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                    updated_at = NOW()
+              WHERE customer_id = $3`,
+            [geocode.lon, geocode.lat, cust.customer_id]
+          );
+          logger.info(`[Background Geocode] Successfully geocoded "${cust.name}" (${cust.customer_id})`);
+        } catch (err) {
+          failedGeocodeCustomerIds.add(cust.customer_id);
+          logger.warn(`[Background Geocode] Could not resolve address for "${cust.name}" (${cust.address}): ${(err as Error).message}`);
+        }
+      }
+    }
+  } catch (err) {
+    logger.error('Error during background geocoding run:', err);
+  } finally {
+    isGeocodingActive = false;
+  }
+}
+
+export async function getGeocodingStatus(_req: Request, res: Response): Promise<void> {
+  const { rows } = await query<{ count: string }>(
+    `SELECT COUNT(*) AS count FROM customers WHERE location IS NULL AND deleted_at IS NULL`
+  );
+  res.json({
+    pending_count: parseInt(rows[0]?.count || '0', 10),
+    is_active: isGeocodingActive,
+  });
+}
+
+export async function triggerGeocoding(_req: Request, res: Response): Promise<void> {
+  if (!isGeocodingActive) {
+    setImmediate(() => {
+      void processPendingGeocodes();
+    });
+  }
+  res.json({ success: true, message: 'Background geocoding triggered' });
+}
+
+interface CustomerImportPayload {
+  name: string;
+  address: string;
+  city?: string;
+  postal_code?: string;
+  province?: string;
+  phone?: string | null;
+  email?: string | null;
+  property_type?: 'residential' | 'commercial';
+  outstanding_balance?: number;
+  sign_status?: string;
+  lat?: number | null;
+  lon?: number | null;
+}
+
 export async function importCsv(req: Request, res: Response): Promise<void> {
-  const { csv } = req.body;
-  if (!csv) {
-    throw HttpError.badRequest('CSV content is required in the "csv" field');
+  const { csv, customers: jsonCustomers } = req.body;
+  if (!csv && (!jsonCustomers || !Array.isArray(jsonCustomers))) {
+    throw HttpError.badRequest('Either "csv" string or "customers" array must be provided');
   }
 
-  const lines = csv.split(/\r?\n/).filter((l: string) => l.trim().length > 0);
-  if (lines.length <= 1) {
-    throw HttpError.badRequest('CSV must contain a header and at least one data row');
-  }
+  const itemsToProcess: CustomerImportPayload[] = [];
+  const errors: string[] = [];
 
-  const headers = lines[0].split(',').map((h: string) => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
-  const nameIdx = headers.indexOf('name');
-  const addrIdx = headers.indexOf('address');
-  const latIdx = headers.indexOf('latitude');
-  const lonIdx = headers.indexOf('longitude');
-  const phoneIdx = headers.indexOf('phone');
-  const emailIdx = headers.indexOf('email');
-  const typeIdx = headers.indexOf('property type');
-  const balanceIdx = headers.indexOf('outstanding balance');
-  const signIdx = headers.indexOf('sign status');
+  if (Array.isArray(jsonCustomers)) {
+    jsonCustomers.forEach((item: any, idx: number) => {
+      const name = String(item.name || '').trim();
+      let address = String(item.address || '').trim();
+      const city = item.city ? String(item.city).trim() : '';
+      const postalCode = item.postal_code ? String(item.postal_code).trim() : '';
+      const province = item.province ? String(item.province).trim() : '';
 
-  if (nameIdx === -1 || addrIdx === -1) {
-    throw HttpError.badRequest('CSV must at least contain "Name" and "Address" columns');
-  }
+      const addrParts: string[] = [];
+      if (city && !address.toLowerCase().includes(city.toLowerCase())) addrParts.push(city);
+      if (province && !address.toLowerCase().includes(province.toLowerCase())) addrParts.push(province);
+      if (postalCode && !address.toLowerCase().includes(postalCode.toLowerCase())) addrParts.push(postalCode);
+      if (addrParts.length > 0) {
+        address = `${address}, ${addrParts.join(' ')}`;
+      }
 
-  const imported = [];
-  const errors = [];
+      if (!name || !address) {
+        errors.push(`Row ${idx + 1}: Missing Name or Address`);
+        return;
+      }
 
-  for (let i = 1; i < lines.length; i++) {
-    // Simple CSV row parser splitting by comma but respecting double quotes
-    const rowMatches = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-    const row = rowMatches.map((v: string) => v.trim().replace(/^["']|["']$/g, ''));
-
-    const name = row[nameIdx];
-    const address = row[addrIdx];
-
-    if (!name || !address) {
-      errors.push(`Row ${i}: Missing Name or Address`);
-      continue;
+      itemsToProcess.push({
+        name,
+        address,
+        phone: item.phone ? String(item.phone).trim() : null,
+        email: item.email ? String(item.email).trim() : null,
+        property_type: item.property_type === 'commercial' ? 'commercial' : 'residential',
+        outstanding_balance: Number(item.outstanding_balance) || 0,
+        sign_status: ['installed', 'removed', 'needs_service'].includes(item.sign_status) ? item.sign_status : 'removed',
+        lat: item.lat != null && !isNaN(Number(item.lat)) ? Number(item.lat) : null,
+        lon: item.lon != null && !isNaN(Number(item.lon)) ? Number(item.lon) : null,
+      });
+    });
+  } else {
+    const lines = csv.split(/\r?\n/).filter((l: string) => l.trim().length > 0);
+    if (lines.length <= 1) {
+      throw HttpError.badRequest('CSV must contain a header and at least one data row');
     }
 
-    let lat = latIdx !== -1 && row[latIdx] ? Number(row[latIdx]) : null;
-    let lon = lonIdx !== -1 && row[lonIdx] ? Number(row[lonIdx]) : null;
+    const headers = parseCsvLine(lines[0]).map((h: string) => h.trim().toLowerCase());
+    const nameIdx = headers.findIndex((h: string) => ['name', 'nom', 'nom complet', 'client', 'customer'].some(k => h.includes(k)));
+    const addrIdx = headers.findIndex((h: string) => ['address', 'adresse', 'street', 'rue'].some(k => h.includes(k)));
+    const cityIdx = headers.findIndex((h: string) => ['city', 'ville', 'municipalité'].some(k => h.includes(k)));
+    const postalIdx = headers.findIndex((h: string) => ['postal', 'code postal', 'zip'].some(k => h.includes(k)));
+    const provIdx = headers.findIndex((h: string) => ['province', 'state', 'région'].some(k => h.includes(k)));
+    const latIdx = headers.findIndex((h: string) => h === 'lat' || h === 'latitude');
+    const lonIdx = headers.findIndex((h: string) => h === 'lon' || h === 'longitude' || h === 'lng');
+    const phoneIdx = headers.findIndex((h: string) => ['phone', 'telephone', 'téléphone', 'tel', 'cell', 'mobile'].some(k => h.includes(k)));
+    const emailIdx = headers.findIndex((h: string) => ['email', 'courriel', 'mail'].some(k => h.includes(k)));
+    const typeIdx = headers.findIndex((h: string) => ['property type', 'type', 'catégorie'].some(k => h.includes(k)));
+    const balanceIdx = headers.findIndex((h: string) => ['balance', 'solde', 'solde dû', 'due', 'amount'].some(k => h.includes(k)));
+    const signIdx = headers.findIndex((h: string) => ['sign', 'panneau'].some(k => h.includes(k)));
 
-    if (lat === null || lon === null || isNaN(lat) || isNaN(lon)) {
-      try {
-        // Respect API rate limits sequentially
-        await new Promise((resolve) => setTimeout(resolve, 1100));
-        const geocode = await geocodeAddress(address);
-        lat = geocode.lat;
-        lon = geocode.lon;
-      } catch (err) {
-        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-          lat = 42.8864;
-          lon = -78.8784;
-        } else {
-          errors.push(`Row ${i} ("${name}"): Geocoding failed - ${(err as Error).message}`);
-          continue;
+    if (nameIdx === -1 || addrIdx === -1) {
+      throw HttpError.badRequest('CSV must at least contain "Name" and "Address" columns');
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseCsvLine(lines[i]);
+      const name = row[nameIdx] || '';
+      let address = row[addrIdx] || '';
+      const city = cityIdx !== -1 ? row[cityIdx] : '';
+      const postal = postalIdx !== -1 ? row[postalIdx] : '';
+      const prov = provIdx !== -1 ? row[provIdx] : '';
+
+      const addrParts: string[] = [];
+      if (city && !address.toLowerCase().includes(city.toLowerCase())) addrParts.push(city);
+      if (prov && !address.toLowerCase().includes(prov.toLowerCase())) addrParts.push(prov);
+      if (postal && !address.toLowerCase().includes(postal.toLowerCase())) addrParts.push(postal);
+      if (addrParts.length > 0) {
+        address = `${address}, ${addrParts.join(' ')}`;
+      }
+
+      if (!name || !address) {
+        errors.push(`Row ${i}: Missing Name or Address`);
+        continue;
+      }
+
+      const lat = latIdx !== -1 && row[latIdx] ? Number(row[latIdx]) : null;
+      const lon = lonIdx !== -1 && row[lonIdx] ? Number(row[lonIdx]) : null;
+      const phone = phoneIdx !== -1 ? row[phoneIdx] : null;
+      const email = emailIdx !== -1 ? row[emailIdx] : null;
+      const propertyType = typeIdx !== -1 && row[typeIdx]?.toLowerCase().includes('commercial') ? 'commercial' : 'residential';
+      const balance = balanceIdx !== -1 && row[balanceIdx] ? Number(row[balanceIdx].replace(/[^0-9.-]/g, '')) || 0 : 0;
+      const signStatus = signIdx !== -1 && ['installed', 'removed', 'needs_service'].includes(row[signIdx]?.toLowerCase()) ? row[signIdx].toLowerCase() : 'removed';
+
+      itemsToProcess.push({
+        name,
+        address,
+        lat: lat != null && !isNaN(lat) ? lat : null,
+        lon: lon != null && !isNaN(lon) ? lon : null,
+        phone: phone || null,
+        email: email || null,
+        property_type: propertyType,
+        outstanding_balance: balance,
+        sign_status: signStatus,
+      });
+    }
+  }
+
+  let importedCount = 0;
+  let updatedCount = 0;
+  let pendingGeocodes = 0;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    for (let idx = 0; idx < itemsToProcess.length; idx++) {
+      const item = itemsToProcess[idx];
+      let lat = item.lat;
+      let lon = item.lon;
+
+      if ((lat == null || lon == null) && process.env.NODE_ENV === 'test') {
+        lat = 42.8864;
+        lon = -78.8784;
+      }
+
+      const payStatus = (item.outstanding_balance || 0) <= 0 ? 'paid' : 'pending';
+
+      const { rows: existing } = await client.query<{ customer_id: string; lat: number | null; lon: number | null }>(
+        `SELECT customer_id, ST_Y(location::geography) AS lat, ST_X(location::geography) AS lon
+           FROM customers
+          WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+            AND (LOWER(TRIM(address)) = LOWER(TRIM($2)) OR ($3::text IS NOT NULL AND LOWER(TRIM(email)) = LOWER(TRIM($3))))
+          LIMIT 1`,
+        [item.name, item.address, item.email || null]
+      );
+
+      if (existing.length > 0) {
+        const existingCust = existing[0];
+        if (lat == null && existingCust.lat != null) {
+          lat = existingCust.lat;
+          lon = existingCust.lon;
+        }
+
+        await client.query(
+          `UPDATE customers
+              SET address = $1,
+                  phone = COALESCE($2, phone),
+                  email = COALESCE($3, email),
+                  property_type = COALESCE($4::customer_prop_type, property_type),
+                  outstanding_balance = $5,
+                  payment_status = $6::customer_pay_status,
+                  sign_status = COALESCE($7::customer_sign_status, sign_status),
+                  location = CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL THEN ST_SetSRID(ST_MakePoint($9, $8), 4326)::geography ELSE location END,
+                  status = 'active',
+                  deleted_at = NULL,
+                  updated_at = NOW()
+            WHERE customer_id = $10`,
+          [
+            item.address,
+            item.phone || null,
+            item.email || null,
+            item.property_type || 'residential',
+            item.outstanding_balance || 0,
+            payStatus,
+            item.sign_status || 'removed',
+            lat,
+            lon,
+            existingCust.customer_id
+          ]
+        );
+        updatedCount++;
+        if (lat == null || lon == null) {
+          pendingGeocodes++;
+        }
+      } else {
+        await client.query(
+          `INSERT INTO customers
+             (name, address, location, phone, email, status, property_type, sign_status, payment_status, outstanding_balance)
+           VALUES
+             ($1, $2,
+              CASE WHEN $3::float8 IS NOT NULL AND $4::float8 IS NOT NULL THEN ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography ELSE NULL END,
+              $5, $6, 'active', $7::customer_prop_type, $8::customer_sign_status, $9::customer_pay_status, $10)`,
+          [
+            item.name,
+            item.address,
+            lat,
+            lon,
+            item.phone || null,
+            item.email || null,
+            item.property_type || 'residential',
+            item.sign_status || 'removed',
+            payStatus,
+            item.outstanding_balance || 0
+          ]
+        );
+        importedCount++;
+        if (lat == null || lon == null) {
+          pendingGeocodes++;
         }
       }
     }
 
-    const phone = phoneIdx !== -1 ? row[phoneIdx] : null;
-    const email = emailIdx !== -1 ? row[emailIdx] : null;
-    const propertyType = typeIdx !== -1 && row[typeIdx] === 'commercial' ? 'commercial' : 'residential';
-    const balance = balanceIdx !== -1 && row[balanceIdx] ? Number(row[balanceIdx]) : 0.00;
-    const signStatus = signIdx !== -1 && ['installed', 'removed', 'needs_service'].includes(row[signIdx]) ? row[signIdx] : 'removed';
-    const payStatus = balance <= 0 ? 'paid' : 'pending';
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('Import transaction failed:', err);
+    throw HttpError.badRequest(`Import transaction failed: ${(err as Error).message}`);
+  } finally {
+    client.release();
+  }
 
-    try {
-      const { rows: inserted } = await query(
-        `INSERT INTO customers
-           (name, address, location, phone, email, status, property_type, sign_status, payment_status, outstanding_balance)
-         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5, $6, 'active', $7::customer_prop_type, $8::customer_sign_status, $9::customer_pay_status, $10)
-         RETURNING ${SELECT_COLS}`,
-        [name, address, lat, lon, phone || null, email || null, propertyType, signStatus, payStatus, balance],
-      );
-      imported.push(inserted[0]);
-    } catch (err) {
-      errors.push(`Row ${i} ("${name}"): Database insert failed - ${(err as Error).message}`);
-    }
+  if (pendingGeocodes > 0 && process.env.NODE_ENV !== 'test') {
+    setImmediate(() => {
+      void processPendingGeocodes();
+    });
   }
 
   res.json({
     success: true,
-    imported_count: imported.length,
+    imported_count: importedCount,
+    updated_count: updatedCount,
     errors_count: errors.length,
     errors,
+    pending_geocodes: pendingGeocodes,
   });
 }
 
